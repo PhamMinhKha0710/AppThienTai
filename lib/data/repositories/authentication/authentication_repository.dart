@@ -1,10 +1,10 @@
-import 'package:cuutrobaolu/features/admin/navigation_admin_menu.dart';
-import 'package:cuutrobaolu/features/authentication/screens/login/login.dart';
-import 'package:cuutrobaolu/features/authentication/screens/onboarding/onboarding.dart';
-import 'package:cuutrobaolu/features/authentication/screens/singup/verifi_email.dart';
-import 'package:cuutrobaolu/navigation_menu.dart';
-import 'package:cuutrobaolu/util/exceptions/exports.dart';
-import 'package:cuutrobaolu/util/local_storage/storage_utility.dart';
+import 'package:cuutrobaolu/presentation/features/admin/navigation_admin_menu.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/onboarding/onboarding.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
+import 'package:cuutrobaolu/presentation/features/shop/navigation_menu.dart';
+import 'package:cuutrobaolu/core/exceptions/exports.dart';
+import 'package:cuutrobaolu/core/storage/storage_utility.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -26,7 +26,9 @@ class AuthenticationRepository extends GetxController {
 
   @override
   void onReady() {
+    // Tắt splash screen ngay để UI responsive hơn
     FlutterNativeSplash.remove();
+    // Chạy screenRedirect async để không chặn UI
     screenRedirect();
   }
 
@@ -35,18 +37,22 @@ class AuthenticationRepository extends GetxController {
 
     if (user != null) {
       if (user.emailVerified) {
-        MinhLocalStorage.init(user.uid); // khởi tạo
+        // Khởi tạo storage và repository song song
+        await Future.wait([
+          MinhLocalStorage.init(user.uid),
+          Future.microtask(() => Get.put(UserRepository())),
+        ]);
 
-        final userRepository = Get.put(UserRepository());
+        final userRepository = Get.find<UserRepository>();
 
+        // Fetch user data (có thể cache sau này)
         final useCurrent = await userRepository.getCurrentUser();
-
-
-
 
         final userType = useCurrent?.userType;
 
-        print('userType: ${userType}');
+        if (kDebugMode) {
+          print('userType: ${userType}');
+        }
 
         if (userType != null &&
             (userType.enName.toLowerCase() == 'admin' ||
@@ -55,8 +61,6 @@ class AuthenticationRepository extends GetxController {
         } else {
           Get.offAll(() => NavigationMenu()); // Vào trang chính user/supporter
         }
-
-
       } else {
         Get.offAll(
           () => VerifyEmailScreen(email: _auth.currentUser?.email),

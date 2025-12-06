@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuutrobaolu/data/DummyData/MinhDummyData.dart';
-import 'package:cuutrobaolu/features/shop/models/help_request_modal.dart';
-import 'package:cuutrobaolu/features/shop/models/supporter_modal.dart';
+import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/shop/models/supporter_modal.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
 import 'package:uuid/uuid.dart';
 
-import '../../../util/constants/enums.dart';
+import '../../../core/constants/enums.dart' as core;
 
 
 class InMemoryHelpRepository extends GetxController {
@@ -62,7 +62,7 @@ class InMemoryHelpRepository extends GetxController {
     return true;
   }
 
-  Future<void> updateHelpStatus(String id, RequestStatus newStatus) async {
+  Future<void> updateHelpStatus(String id, core.RequestStatus newStatus) async {
     final index = _reqs.indexWhere((e) => e.id == id);
     if (index == -1) return;
 

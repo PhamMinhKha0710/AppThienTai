@@ -1,6 +1,6 @@
-import 'package:cuutrobaolu/features/shop/models/banner_model.dart';
+import 'package:cuutrobaolu/presentation/features/shop/models/banner_model.dart';
 import 'package:cuutrobaolu/service/CloudinaryService.dart';
-import 'package:cuutrobaolu/util/exceptions/exports.dart';
+import 'package:cuutrobaolu/core/exceptions/exports.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
