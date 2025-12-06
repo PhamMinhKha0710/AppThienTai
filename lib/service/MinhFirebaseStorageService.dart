@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:cuutrobaolu/util/exceptions/exports.dart';
+import 'package:cuutrobaolu/core/exceptions/exports.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/services.dart';

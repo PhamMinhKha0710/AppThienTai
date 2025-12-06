@@ -1,7 +1,7 @@
-import 'package:cuutrobaolu/bindings/general_bindings.dart';
-import 'package:cuutrobaolu/routes/app_routes.dart';
-import 'package:cuutrobaolu/util/constants/colors.dart';
-import 'package:cuutrobaolu/util/theme/theme.dart';
+import 'package:cuutrobaolu/presentation/bindings/app_bindings.dart';
+import 'package:cuutrobaolu/presentation/routes/app_routes.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/splash/splash_screen.dart';
+import 'package:cuutrobaolu/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,15 +15,9 @@ class App extends StatelessWidget {
       theme: MinhAppTheme.lightTheme, // màu bth light
       darkTheme: MinhAppTheme.darkTheme, // màu dark
       debugShowCheckedModeBanner: false,
-      initialBinding: GeneralBindings(),
+      initialBinding: AppBindings(),
       getPages: AppRoutes.pages,
-      // home: OnboardingScreen(),
-      home: Scaffold(
-        backgroundColor: MinhColors.primary,
-        body: Center(
-          child: CircularProgressIndicator(color: MinhColors.white,),
-        ),
-      ),
+      home: const SplashScreen(), // Sử dụng SplashScreen để khởi tạo AuthRedirectController
     );
   }
 }

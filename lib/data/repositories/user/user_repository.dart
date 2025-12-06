@@ -1,11 +1,10 @@
 import 'dart:io';
 
-import 'package:cuutrobaolu/data/repositories/authentication/authentication_repository.dart';
-import 'package:cuutrobaolu/features/personalization/models/user_model.dart';
-import 'package:cuutrobaolu/service/CloudinaryService.dart';
-import 'package:cuutrobaolu/util/exceptions/exports.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/models/user_model.dart';
+import 'package:cuutrobaolu/service/CloudinaryService.dart';
+import 'package:cuutrobaolu/core/exceptions/exports.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -51,7 +50,7 @@ class UserRepository extends GetxController {
       final documentSnapshot = await _db
           .collection("Users")
           .doc(
-            AuthenticationRepository.instance.authUser?.uid,
+            FirebaseAuth.instance.currentUser?.uid,
           ) // có id thì tìm theo id, ko có thì tạo id random ,
           .get();
       if (documentSnapshot.exists) {
@@ -96,7 +95,7 @@ class UserRepository extends GetxController {
     try {
       await _db
           .collection("Users")
-          .doc(AuthenticationRepository.instance.authUser?.uid)
+          .doc(FirebaseAuth.instance.currentUser?.uid)
           .update(json);
 
     } on FirebaseException catch (e) {
