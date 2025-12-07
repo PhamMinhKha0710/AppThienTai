@@ -14,15 +14,12 @@ class VerifyEmailController extends GetxController
 {
   static VerifyEmailController get instance => Get.find();
 
-  // Use Case - Clean Architecture
-  late final SendEmailVerificationUseCase _sendEmailVerificationUseCase;
+  // Use Case - Clean Architecture (lazy getter để tránh LateInitializationError)
+  SendEmailVerificationUseCase get _sendEmailVerificationUseCase => Get.find<SendEmailVerificationUseCase>();
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Case
-    _sendEmailVerificationUseCase = Get.find<SendEmailVerificationUseCase>();
-    
     sendEmailVerification();
     setTimeForAutoRedirect();
   }

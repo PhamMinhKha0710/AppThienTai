@@ -5,6 +5,7 @@ import 'package:cuutrobaolu/core/widgets/list_titles/MinhSettingsMenuTitle.dart'
 import 'package:cuutrobaolu/core/widgets/list_titles/MinhUserProfileTitle.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
+import 'package:cuutrobaolu/domain/repositories/authentication_repository.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:get/get.dart';
@@ -167,13 +168,31 @@ class SettingScreen extends StatelessWidget {
                       width: double.infinity,
                       child: OutlinedButton(onPressed: () async {
                         try {
-                          final logoutUseCase = Get.find<LogoutUseCase>();
+                          // Lấy LogoutUseCase - tạo nếu chưa có
+                          LogoutUseCase logoutUseCase;
+                          try {
+                            logoutUseCase = Get.find<LogoutUseCase>();
+                          } catch (e) {
+                            // Nếu không tìm thấy, tạo mới từ dependencies
+                            try {
+                              final authRepo = Get.find<AuthenticationRepository>();
+                              logoutUseCase = LogoutUseCase(authRepo);
+                              Get.put(logoutUseCase);
+                            } catch (e2) {
+                              Get.snackbar("Lỗi", "Không thể khởi tạo LogoutUseCase: ${e2.toString()}");
+                              return;
+                            }
+                          }
+                          
+                          // Thực hiện logout
                           await logoutUseCase();
+                          
+                          // Navigate to login (logout đã clear session)
                           Get.offAll(() => LoginScreen());
                         } on Failure catch (failure) {
                           Get.snackbar("Lỗi", failure.message);
                         } catch (e) {
-                          Get.snackbar("Lỗi", e.toString());
+                          Get.snackbar("Lỗi", "Không thể đăng xuất: ${e.toString()}");
                         }
                       }, child: Text("Logout")),
                   ),

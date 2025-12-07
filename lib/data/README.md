@@ -16,3 +16,5 @@ Layer này chịu trách nhiệm lấy dữ liệu từ các nguồn (Firebase, 
 - Models ở đây là DTOs, có thể khác với entities
 - Xử lý exception mapping (từ Firebase/API exceptions sang domain failures)
 
+
+

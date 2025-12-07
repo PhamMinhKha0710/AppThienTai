@@ -4,9 +4,11 @@ import 'package:get_storage/get_storage.dart';
 import '../../core/storage/storage_utility.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../features/admin/navigation_admin_menu.dart';
+import '../features/volunteer/navigation_volunteer_menu.dart';
 import '../features/authentication/screens/login/login.dart';
 import '../features/authentication/screens/onboarding/onboarding.dart';
-import '../features/authentication/screens/singup/verifi_email.dart';
+// TẮT XÁC THỰC EMAIL: Không cần import VerifyEmailScreen nữa
+// import '../features/authentication/screens/singup/verifi_email.dart';
 import '../features/shop/navigation_menu.dart';
 import 'package:flutter/foundation.dart';
 
@@ -16,29 +18,39 @@ class NavigationHelper {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      if (user.emailVerified) {
-        // Khởi tạo storage
-        await MinhLocalStorage.init(user.uid);
+      // TẮT XÁC THỰC EMAIL: Bỏ qua kiểm tra emailVerified
+      // Cho phép user vào app ngay sau khi đăng ký
+      
+      // Khởi tạo storage
+      await MinhLocalStorage.init(user.uid);
 
-        // Lấy user data để check user type
-        final getCurrentUserUseCase = Get.find<GetCurrentUserUseCase>();
-        final currentUser = await getCurrentUserUseCase();
+      // Lấy user data để check user type
+      final getCurrentUserUseCase = Get.find<GetCurrentUserUseCase>();
+      final currentUser = await getCurrentUserUseCase();
 
-        final userType = currentUser?.userType;
+      final userType = currentUser?.userType;
 
-        if (kDebugMode) {
-          print('userType: ${userType?.enName}');
-        }
+      if (kDebugMode) {
+        print('userType: ${userType?.enName}');
+      }
 
-        if (userType != null &&
-            (userType.enName.toLowerCase() == 'admin' ||
-                userType.viName.toLowerCase() == 'quản trị viên')) {
+      // Phân biệt 3 loại user: Admin, Volunteer, Victim
+      if (userType != null) {
+        if (userType.enName.toLowerCase() == 'admin' ||
+            userType.viName.toLowerCase() == 'quản trị viên') {
+          // Admin → NavigationAdminMenu
           Get.offAll(() => NavigationAdminMenu());
+        } else if (userType.enName.toLowerCase() == 'volunteer' ||
+            userType.viName.toLowerCase() == 'tình nguyện viên') {
+          // Volunteer → NavigationVolunteerMenu
+          Get.offAll(() => NavigationVolunteerMenu());
         } else {
+          // Victim (nạn nhân) → NavigationMenu
           Get.offAll(() => NavigationMenu());
         }
       } else {
-        Get.offAll(() => VerifyEmailScreen(email: user.email));
+        // Default: Victim menu
+        Get.offAll(() => NavigationMenu());
       }
     } else {
       // Lần đầu mở app?

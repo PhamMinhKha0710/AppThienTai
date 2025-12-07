@@ -13,50 +13,64 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../user/user_repository.dart';
+// DEPRECATED: Không còn dùng UserRepository.instance
+// import '../user/user_repository.dart';
 
-class AuthenticationRepository extends GetxController {
-  static AuthenticationRepository get instance => Get.find();
+/// DEPRECATED: Legacy AuthenticationRepository (GetX Controller)
+/// Đã được thay thế bởi AuthenticationRepositoryImpl (Clean Architecture)
+/// Class này chỉ tồn tại để tương thích ngược, không nên sử dụng nữa
+/// Đổi tên thành AuthenticationRepositoryLegacy để tránh xung đột với domain interface
+@Deprecated('Use AuthenticationRepositoryImpl instead')
+class AuthenticationRepositoryLegacy extends GetxController {
+  // DEPRECATED: Vô hiệu hóa instance getter để tránh lỗi "not found"
+  // Không còn code nào nên dùng class này nữa
+  // static AuthenticationRepositoryLegacy get instance => Get.find();
 
   final deviceStorage = GetStorage();
   final _auth = FirebaseAuth.instance;
 
   User? get authUser => _auth.currentUser;
 
-  @override
-  void onReady() {
-    // Tắt splash screen ngay để UI responsive hơn
-    FlutterNativeSplash.remove();
-    // Chạy screenRedirect async để không chặn UI
-    screenRedirect();
-  }
+  // DEPRECATED: onReady() đã được chuyển sang AuthRedirectController
+  // Không còn sử dụng để tránh xung đột với Clean Architecture
+  // @override
+  // void onReady() {
+  //   // Tắt splash screen ngay để UI responsive hơn
+  //   FlutterNativeSplash.remove();
+  //   // Chạy screenRedirect async để không chặn UI
+  //   screenRedirect();
+  // }
 
   void screenRedirect() async {
     final user = _auth.currentUser;
 
     if (user != null) {
       if (user.emailVerified) {
-        // Khởi tạo storage và repository song song
-        await Future.wait([
-          MinhLocalStorage.init(user.uid),
-          Future.microtask(() => Get.put(UserRepository())),
-        ]);
-
-        final userRepository = Get.find<UserRepository>();
-
-        // Fetch user data (có thể cache sau này)
-        final useCurrent = await userRepository.getCurrentUser();
-
-        final userType = useCurrent?.userType;
+        // DEPRECATED: Logic này đã được chuyển sang AuthRedirectController
+        // Khởi tạo storage
+        await MinhLocalStorage.init(user.uid);
+        
+        // Fetch user data trực tiếp từ Firestore (tạm thời)
+        // TODO: Nên dùng GetCurrentUserUseCase thay vì truy cập trực tiếp
+        final snapshot = await FirebaseFirestore.instance
+            .collection("Users")
+            .doc(user.uid)
+            .get();
+        
+        // Parse userType từ snapshot data
+        final userData = snapshot.exists ? snapshot.data() : null;
+        final userTypeMap = userData?['userType'];
+        final userTypeName = userTypeMap is Map ? userTypeMap['enName'] : null;
 
         if (kDebugMode) {
-          print('userType: ${userType}');
+          print('userType: $userTypeName');
         }
 
-        if (userType != null &&
-            (userType.enName.toLowerCase() == 'admin' ||
-                userType.viName.toLowerCase() == 'quản trị viên')) {
+        if (userTypeName != null &&
+            (userTypeName.toString().toLowerCase() == 'admin' ||
+                userTypeMap is Map && userTypeMap['viName']?.toString().toLowerCase() == 'quản trị viên')) {
           Get.offAll(() => NavigationAdminMenu());
         } else {
           Get.offAll(() => NavigationMenu()); // Vào trang chính user/supporter
@@ -263,9 +277,12 @@ class AuthenticationRepository extends GetxController {
   }
 
   /// DELETE USER - Remove user Auth and Firestore Account.
+  /// DEPRECATED: Sử dụng DeleteAccountUseCase thay thế
   Future<void> deleteAccount() async {
     try {
-      await UserRepository.instance.removeUserRecord(_auth.currentUser!.uid);
+      // Không dùng UserRepository.instance nữa, dùng trực tiếp Firestore
+      final userId = _auth.currentUser!.uid;
+      await FirebaseFirestore.instance.collection("Users").doc(userId).delete();
       await _auth.currentUser?.delete();
     } on FirebaseAuthException catch (e) {
       throw MinhFirebaseAuthException(e.code).message;

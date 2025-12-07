@@ -30,14 +30,14 @@ class  UserController extends GetxController
   final profileLoading = false.obs;
   final imageLoading = false.obs;
 
-  // Use Cases - Clean Architecture
-  late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  late final SaveUserUseCase _saveUserUseCase;
-  late final UpdateUserUseCase _updateUserUseCase;
-  late final UploadImageUseCase _uploadImageUseCase;
-  late final ReAuthenticateUseCase _reAuthenticateUseCase;
-  late final DeleteAccountUseCase _deleteAccountUseCase;
-  late final SignInWithGoogleUseCase _signInWithGoogleUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  GetCurrentUserUseCase get _getCurrentUserUseCase => Get.find<GetCurrentUserUseCase>();
+  SaveUserUseCase get _saveUserUseCase => Get.find<SaveUserUseCase>();
+  UpdateUserUseCase get _updateUserUseCase => Get.find<UpdateUserUseCase>();
+  UploadImageUseCase get _uploadImageUseCase => Get.find<UploadImageUseCase>();
+  ReAuthenticateUseCase get _reAuthenticateUseCase => Get.find<ReAuthenticateUseCase>();
+  DeleteAccountUseCase get _deleteAccountUseCase => Get.find<DeleteAccountUseCase>();
+  SignInWithGoogleUseCase get _signInWithGoogleUseCase => Get.find<SignInWithGoogleUseCase>();
 
   Rx<UserModel> user = UserModel.empty().obs ;
 
@@ -50,15 +50,6 @@ class  UserController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Cases
-    _getCurrentUserUseCase = Get.find<GetCurrentUserUseCase>();
-    _saveUserUseCase = Get.find<SaveUserUseCase>();
-    _updateUserUseCase = Get.find<UpdateUserUseCase>();
-    _uploadImageUseCase = Get.find<UploadImageUseCase>();
-    _reAuthenticateUseCase = Get.find<ReAuthenticateUseCase>();
-    _deleteAccountUseCase = Get.find<DeleteAccountUseCase>();
-    _signInWithGoogleUseCase = Get.find<SignInWithGoogleUseCase>();
-    
     fetchUser();
   }
 

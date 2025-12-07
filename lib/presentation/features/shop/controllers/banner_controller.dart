@@ -3,7 +3,6 @@ import 'package:cuutrobaolu/domain/usecases/upload_banners_usecase.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:cuutrobaolu/NavigationController.dart';
 import 'package:cuutrobaolu/data/DummyData/MinhDummyData.dart';
-import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/settings.dart';
 import 'package:cuutrobaolu/presentation/features/shop/models/banner_model.dart';
 import 'package:cuutrobaolu/presentation/features/shop/navigation_menu.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
@@ -21,17 +20,13 @@ class BannerController extends GetxController
 
   RxList<BannerModel> allBanner = <BannerModel>[].obs;
 
-  // Use Cases - Clean Architecture
-  late final GetAllBannersUseCase _getAllBannersUseCase;
-  late final UploadBannersUseCase _uploadBannersUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  GetAllBannersUseCase get _getAllBannersUseCase => Get.find<GetAllBannersUseCase>();
+  UploadBannersUseCase get _uploadBannersUseCase => Get.find<UploadBannersUseCase>();
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Cases
-    _getAllBannersUseCase = Get.find<GetAllBannersUseCase>();
-    _uploadBannersUseCase = Get.find<UploadBannersUseCase>();
-    
     fetchBanner();
   }
 

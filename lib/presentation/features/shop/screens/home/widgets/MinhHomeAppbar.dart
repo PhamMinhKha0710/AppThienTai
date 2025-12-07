@@ -24,10 +24,22 @@ class MinhHomeAppbar extends StatelessWidget {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            MinhTexts.homeAppbarTitle,
-            style: Theme.of(context).textTheme.labelMedium!.apply(color: MinhColors.grey),
-          ),
+          // Hiển thị title khác nhau theo user type
+          Obx(() {
+            final userType = controller.user.value.userType;
+            String title = MinhTexts.homeAppbarTitle;
+            if (userType.enName.toLowerCase() == 'volunteer') {
+              title = "Tình nguyện viên";
+            } else if (userType.enName.toLowerCase() == 'admin') {
+              title = "Quản trị viên";
+            } else {
+              title = MinhTexts.homeAppbarTitle;
+            }
+            return Text(
+              title,
+              style: Theme.of(context).textTheme.labelMedium!.apply(color: MinhColors.grey),
+            );
+          }),
           SizedBox(height: MinhSizes.spaceBtwItems,),
           Obx(
             () {
@@ -40,9 +52,16 @@ class MinhHomeAppbar extends StatelessWidget {
               }
               else
               {
+                // Hiển thị thông tin khác nhau theo user type
+                final userType = controller.user.value.userType;
+                String subtitle = controller.user.value.fullName;
+                if (userType.enName.toLowerCase() == 'volunteer') {
+                  subtitle = "${controller.user.value.fullName}\nTrạng thái: ${controller.user.value.volunteerStatus.viName}";
+                } else if (userType.enName.toLowerCase() == 'admin') {
+                  subtitle = "${controller.user.value.fullName}\nQuản trị hệ thống";
+                }
                 return Text(
-                  // MinhTexts.homeAppbarSubTitle,
-                  controller.user.value.fullName,
+                  subtitle,
                   style: Theme.of(context).textTheme.headlineSmall!.apply(color: MinhColors.white),
                 );
               }

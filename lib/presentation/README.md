@@ -19,3 +19,5 @@ Layer này chứa UI và logic trình bày, phụ thuộc vào domain layer.
 - Screens chỉ phụ thuộc vào controllers
 - Widgets có thể reusable hoặc feature-specific
 
+
+
