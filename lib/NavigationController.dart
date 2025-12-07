@@ -10,7 +10,7 @@ import 'package:cuutrobaolu/presentation/features/personalization/screens/settin
 class NavigationController extends GetxController {
   static final Rx<int> selectedIndex = 0.obs;
 
-  final screen = <Widget>[
+  List<Widget> get screen => [
     HomeScreen(),
     HelpScreen(),
     FavoriteScreen(),

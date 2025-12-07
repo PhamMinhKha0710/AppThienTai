@@ -59,7 +59,6 @@
 
 
 
-import 'package:cuutrobaolu/NavigationController.dart';
 import 'package:cuutrobaolu/presentation/features/admin/NavigationAdminController.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/utils/helper_functions.dart';
@@ -79,9 +78,9 @@ class NavigationAdminMenu extends StatelessWidget {
     return Scaffold(
       bottomNavigationBar: Obx(
             () => NavigationBar(
-          selectedIndex: NavigationController.selectedIndex.value,
+          selectedIndex: NavigationAdminController.selectedIndex.value,
           onDestinationSelected: (value) {
-            NavigationController.selectedIndex.value = value;
+            NavigationAdminController.selectedIndex.value = value;
           },
           backgroundColor: isDark ? MinhColors.black : MinhColors.white,
           indicatorColor: isDark
@@ -90,15 +89,14 @@ class NavigationAdminMenu extends StatelessWidget {
           height: 80,
           elevation: 0,
           destinations: [
-            NavigationDestination(icon: Icon(Iconsax.home), label: "Home"),
-            NavigationDestination(icon: Icon(Iconsax.heart), label: "Help"),
-            NavigationDestination(icon: Icon(Iconsax.shop), label: "Setting"),
-            NavigationDestination(icon: Icon(Iconsax.user), label: "Profile"),
+            NavigationDestination(icon: Icon(Iconsax.home), label: "Trang chủ"),
+            NavigationDestination(icon: Icon(Iconsax.heart), label: "Yêu cầu"),
+            NavigationDestination(icon: Icon(Iconsax.setting_2), label: "Cài đặt"),
+            NavigationDestination(icon: Icon(Iconsax.user), label: "Cá nhân"),
           ],
         ),
       ),
-      body: Obx(()=> controller.screen[NavigationController.selectedIndex.value] ),
-      // body: Obx(()=> NavigationController.screen[NavigationController.selectedIndex.value] ),
+      body: Obx(()=> controller.screen[NavigationAdminController.selectedIndex.value] ),
     );
   }
 }

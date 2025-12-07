@@ -1,12 +1,6 @@
-import 'package:cuutrobaolu/core/widgets/appbar/MinhAppbar.dart';
-import 'package:cuutrobaolu/core/widgets/icons/MinhCircularIcon.dart';
-
-
-import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/utils/vietnam_provinces_helper.dart';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:vietnam_provinces/vietnam_provinces.dart';
 
 // class FavoriteScreen extends StatelessWidget {
@@ -61,9 +55,19 @@ class _HomePageState extends State<FavoriteScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeProvinces();
+  }
 
-    filteredProvinces = VietnamProvinces.getProvinces();
-    currentVersion = VietnamProvinces.version;
+  Future<void> _initializeProvinces() async {
+    try {
+      await VietnamProvincesHelper.ensureInitialized(version: currentVersion);
+      final provinces = await VietnamProvincesHelper.getProvinces(version: currentVersion);
+      setState(() {
+        filteredProvinces = provinces;
+      });
+    } catch (e) {
+      print('Error initializing provinces: $e');
+    }
   }
 
   Future<void> switchVersion(AdministrativeDivisionVersion newVersion) async {
@@ -78,63 +82,93 @@ class _HomePageState extends State<FavoriteScreen> {
       filteredWards = [];
     });
 
-    await VietnamProvinces.initialize(version: newVersion);
-
-    setState(() {
-      currentVersion = newVersion;
-      filteredProvinces = VietnamProvinces.getProvinces();
-      isLoading = false;
-    });
+    try {
+      await VietnamProvincesHelper.ensureInitialized(version: newVersion);
+      final provinces = await VietnamProvincesHelper.getProvinces(version: newVersion);
+      setState(() {
+        currentVersion = newVersion;
+        filteredProvinces = provinces;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error switching version: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
-  void updateFilteredProvinces(String query) {
+  Future<void> updateFilteredProvinces(String query) async {
     selectedProvince = null;
     selectedDistrict = null;
     selectedWard = null;
     filteredWards = [];
     filteredDistricts = [];
-    setState(() {
-      filteredProvinces = VietnamProvinces.getProvinces(query: query);
-    });
+    try {
+      final provinces = await VietnamProvincesHelper.getProvinces(
+        query: query.isEmpty ? null : query,
+        version: currentVersion,
+      );
+      setState(() {
+        filteredProvinces = provinces;
+      });
+    } catch (e) {
+      print('Error filtering provinces: $e');
+    }
   }
 
-  void updateFilteredDistricts(String query) {
+  Future<void> updateFilteredDistricts(String query) async {
     selectedDistrict = null;
     selectedWard = null;
     filteredWards = [];
     if (selectedProvince != null) {
-      setState(() {
-        filteredDistricts = VietnamProvinces.getDistricts(
-          provinceCode: selectedProvince!.code,
-          query: query,
+      try {
+        final districts = await VietnamProvincesHelper.getDistricts(
+          provinceCode: selectedProvince!.code.toString(),
+          query: query.isEmpty ? null : query,
+          version: currentVersion,
         );
-      });
+        setState(() {
+          filteredDistricts = districts;
+        });
+      } catch (e) {
+        print('Error filtering districts: $e');
+      }
     }
   }
 
-  void updateFilteredWards(String query) {
+  Future<void> updateFilteredWards(String query) async {
     selectedWard = null;
-    if (currentVersion == AdministrativeDivisionVersion.v2) {
-      // For v2, wards are directly under province
-      if (selectedProvince != null) {
-        setState(() {
-          filteredWards = VietnamProvinces.getWards(
-            provinceCode: selectedProvince!.code,
-            query: query,
+    try {
+      if (currentVersion == AdministrativeDivisionVersion.v2) {
+        // For v2, wards are directly under province
+        if (selectedProvince != null) {
+          final wards = await VietnamProvincesHelper.getWards(
+            districtCode: '0',
+            provinceCode: selectedProvince!.code.toString(),
+            query: query.isEmpty ? null : query,
+            version: currentVersion,
           );
-        });
-      }
-    } else {
-      // For v1, wards are under district
-      if (selectedDistrict != null) {
-        setState(() {
-          filteredWards = VietnamProvinces.getWards(
-            provinceCode: selectedProvince!.code,
-            districtCode: selectedDistrict!.code,
-            query: query,
+          setState(() {
+            filteredWards = wards;
+          });
+        }
+      } else {
+        // For v1, wards are under district
+        if (selectedDistrict != null && selectedProvince != null) {
+          final wards = await VietnamProvincesHelper.getWards(
+            districtCode: selectedDistrict!.code.toString(),
+            provinceCode: selectedProvince!.code.toString(),
+            query: query.isEmpty ? null : query,
+            version: currentVersion,
           );
-        });
+          setState(() {
+            filteredWards = wards;
+          });
+        }
       }
+    } catch (e) {
+      print('Error filtering wards: $e');
     }
   }
 
@@ -229,28 +263,41 @@ class _HomePageState extends State<FavoriteScreen> {
               items: filteredProvinces.map((p) => p.name).toList(),
               onSearchChanged: updateFilteredProvinces,
               currentValueSelected: selectedProvince?.name,
-              onItemSelected: (value) {
+              onItemSelected: (value) async {
                 setState(() {
                   selectedProvince = filteredProvinces
                       .firstWhere((p) => p.name == value);
                   selectedDistrict = null;
                   selectedWard = null;
+                });
 
+                try {
                   if (currentVersion ==
                       AdministrativeDivisionVersion.v1) {
                     // For v1, load districts
-                    filteredDistricts = VietnamProvinces.getDistricts(
-                      provinceCode: selectedProvince!.code,
+                    final districts = await VietnamProvincesHelper.getDistricts(
+                      provinceCode: selectedProvince!.code.toString(),
+                      version: currentVersion,
                     );
-                    filteredWards = [];
+                    setState(() {
+                      filteredDistricts = districts;
+                      filteredWards = [];
+                    });
                   } else {
                     // For v2, load wards directly
-                    filteredDistricts = [];
-                    filteredWards = VietnamProvinces.getWards(
-                      provinceCode: selectedProvince!.code,
+                    final wards = await VietnamProvincesHelper.getWards(
+                      districtCode: '0',
+                      provinceCode: selectedProvince!.code.toString(),
+                      version: currentVersion,
                     );
+                    setState(() {
+                      filteredDistricts = [];
+                      filteredWards = wards;
+                    });
                   }
-                });
+                } catch (e) {
+                  print('Error loading districts/wards: $e');
+                }
               },
             ),
 
@@ -263,16 +310,24 @@ class _HomePageState extends State<FavoriteScreen> {
                 items: filteredDistricts.map((d) => d.name).toList(),
                 onSearchChanged: updateFilteredDistricts,
                 currentValueSelected: selectedDistrict?.name,
-                onItemSelected: (value) {
+                onItemSelected: (value) async {
                   setState(() {
                     selectedDistrict = filteredDistricts
                         .firstWhere((d) => d.name == value);
                     selectedWard = null;
-                    filteredWards = VietnamProvinces.getWards(
-                      provinceCode: selectedProvince!.code,
-                      districtCode: selectedDistrict!.code,
-                    );
                   });
+                  try {
+                    final wards = await VietnamProvincesHelper.getWards(
+                      districtCode: selectedDistrict!.code.toString(),
+                      provinceCode: selectedProvince!.code.toString(),
+                      version: currentVersion,
+                    );
+                    setState(() {
+                      filteredWards = wards;
+                    });
+                  } catch (e) {
+                    print('Error loading wards: $e');
+                  }
                 },
               ),
 

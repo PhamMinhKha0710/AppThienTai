@@ -1,9 +1,9 @@
 import 'package:cuutrobaolu/domain/usecases/register_usecase.dart';
 import 'package:cuutrobaolu/domain/usecases/save_user_usecase.dart';
 import 'package:cuutrobaolu/domain/entities/user_entity.dart' as domain;
-import 'package:cuutrobaolu/presentation/utils/user_mapper.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
-import 'package:cuutrobaolu/presentation/features/personalization/models/user_model.dart';
+import 'package:cuutrobaolu/presentation/utils/navigation_helper.dart';
+// TẮT XÁC THỰC EMAIL: Không cần import VerifyEmailScreen nữa
+// import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:cuutrobaolu/core/utils/exports.dart';
@@ -35,16 +35,13 @@ class SignupController extends GetxController
 
   GlobalKey<FormState> signUpFormKey = GlobalKey<FormState>();
 
-  // Use Cases - Clean Architecture
-  late final RegisterUseCase _registerUseCase;
-  late final SaveUserUseCase _saveUserUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  RegisterUseCase get _registerUseCase => Get.find<RegisterUseCase>();
+  SaveUserUseCase get _saveUserUseCase => Get.find<SaveUserUseCase>();
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Cases
-    _registerUseCase = Get.find<RegisterUseCase>();
-    _saveUserUseCase = Get.find<SaveUserUseCase>();
   }
 
   void toggleConfirmPasswordVisibility() {
@@ -119,13 +116,12 @@ class SignupController extends GetxController
       // Hiển thị thông báo thành công
       MinhLoaders.successSnackBar(
           title: "Chúc mừng",
-          message: "Tài khoản của bạn đã được tạo! Vui lòng xác thực email để tiếp tục"
+          message: "Tài khoản của bạn đã được tạo thành công!"
       );
 
-      // Chuyển tới màn hình Verify Email
-      Get.to(() => VerifyEmailScreen(
-        email: email.text.trim(),
-      ));
+      // TẮT XÁC THỰC EMAIL: Không chuyển đến VerifyEmailScreen
+      // Redirect trực tiếp vào app
+      await NavigationHelper.redirectAfterAuth();
 
     } on Failure catch (failure) {
       // Tắt Loader

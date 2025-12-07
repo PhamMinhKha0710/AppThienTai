@@ -18,19 +18,15 @@ class UpdateNameController extends GetxController
 
   final userController = UserController.instance;
 
-  // Use Cases - Clean Architecture
-  late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  late final UpdateUserUseCase _updateUserUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  GetCurrentUserUseCase get _getCurrentUserUseCase => Get.find<GetCurrentUserUseCase>();
+  UpdateUserUseCase get _updateUserUseCase => Get.find<UpdateUserUseCase>();
 
   GlobalKey<FormState> updateNameFormKey =  GlobalKey<FormState>();
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Cases
-    _getCurrentUserUseCase = Get.find<GetCurrentUserUseCase>();
-    _updateUserUseCase = Get.find<UpdateUserUseCase>();
-    
     initializeNames();
   }
 

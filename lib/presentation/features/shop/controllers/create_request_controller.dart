@@ -18,8 +18,8 @@ class CreateRequestController extends GetxController {
   final locationService = Get.put(LocationService());
   final uuid = Uuid();
 
-  // Use Case - Clean Architecture
-  CreateHelpRequestUseCase? _createHelpRequestUseCase;
+  // Use Case - Clean Architecture (lazy getter để tránh LateInitializationError)
+  CreateHelpRequestUseCase get _createHelpRequestUseCase => Get.find<CreateHelpRequestUseCase>();
 
   // Text controllers
   final titleController = TextEditingController();
@@ -51,22 +51,10 @@ class CreateRequestController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Case - đợi đến onReady để đảm bảo AppBindings đã hoàn tất
     // Initialize provinces list async
     _initializeAddressData();
     // Get location khi controller khởi tạo
     _getLocationIfNeeded();
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
-    // Initialize Use Case trong onReady để đảm bảo AppBindings đã sẵn sàng
-    try {
-      _createHelpRequestUseCase = Get.find<CreateHelpRequestUseCase>();
-    } catch (e) {
-      print('Error getting CreateHelpRequestUseCase: $e');
-    }
   }
 
   Future<void> _initializeAddressData() async {
@@ -536,17 +524,8 @@ class CreateRequestController extends GetxController {
       );
 
       // Convert to Entity and use Use Case
-      if (_createHelpRequestUseCase == null) {
-        // Thử lấy lại Use Case nếu chưa có
-        try {
-          _createHelpRequestUseCase = Get.find<CreateHelpRequestUseCase>();
-        } catch (e) {
-          throw Exception('CreateHelpRequestUseCase chưa được khởi tạo. Vui lòng thử lại.');
-        }
-      }
-      
       final helpRequestEntity = HelpRequestMapper.toEntity(helpRequest);
-      final createdId = await _createHelpRequestUseCase!(helpRequestEntity);
+      final createdId = await _createHelpRequestUseCase(helpRequestEntity);
 
       Get.snackbar(
         'Thành công!',

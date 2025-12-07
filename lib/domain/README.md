@@ -14,3 +14,5 @@ Layer này chứa business logic thuần túy, không phụ thuộc vào framewo
 - Chỉ chứa business logic thuần túy
 - Entities không có methods toJson/fromJson (chuyển sang DTO ở data layer)
 
+
+

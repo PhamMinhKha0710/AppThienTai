@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
 import 'package:cuutrobaolu/domain/usecases/get_help_requests_usecase.dart';
 import 'package:cuutrobaolu/domain/usecases/get_help_requests_by_user_usecase.dart';
 import 'package:cuutrobaolu/domain/usecases/update_help_request_status_usecase.dart';
@@ -21,10 +20,10 @@ import 'package:http/http.dart' as http;
 class HelpController extends GetxController {
   static HelpController get to => Get.find();
 
-  // Use Cases - Clean Architecture
-  late final GetHelpRequestsUseCase _getHelpRequestsUseCase;
-  late final GetHelpRequestsByUserUseCase _getHelpRequestsByUserUseCase;
-  late final UpdateHelpRequestStatusUseCase _updateHelpRequestStatusUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  GetHelpRequestsUseCase get _getHelpRequestsUseCase => Get.find<GetHelpRequestsUseCase>();
+  GetHelpRequestsByUserUseCase get _getHelpRequestsByUserUseCase => Get.find<GetHelpRequestsByUserUseCase>();
+  UpdateHelpRequestStatusUseCase get _updateHelpRequestStatusUseCase => Get.find<UpdateHelpRequestStatusUseCase>();
 
   // InMemoryHelpRepository chỉ dùng cho supporter management (giữ nguyên)
   final repository = Get.put(InMemoryHelpRepository());
@@ -55,28 +54,39 @@ class HelpController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Cases
-    _getHelpRequestsUseCase = Get.find<GetHelpRequestsUseCase>();
-    _getHelpRequestsByUserUseCase = Get.find<GetHelpRequestsByUserUseCase>();
-    _updateHelpRequestStatusUseCase = Get.find<UpdateHelpRequestStatusUseCase>();
+    print('HelpController.onInit() called');
 
     // Stream từ repository (in-memory) cho supporters
     _supSub = repository.streamSupporters().listen(
-      (list) => supporters.assignAll(list),
+      (list) {
+        print('Supporters stream: ${list.length} supporters');
+        supporters.assignAll(list);
+      },
+      onError: (error) {
+        print('Error in supporters stream: $error');
+      },
     );
 
     // Stream help requests từ Use Case
+    print('Setting up help requests stream...');
     _reqSub = _getHelpRequestsUseCase().listen(
       (entities) {
+        print('Help requests stream: received ${entities.length} requests');
         final models = entities.map((e) => HelpRequestMapper.toModel(e)).toList();
         requests.assignAll(models);
+        print('Updated requests list: ${requests.length} items');
       },
       onError: (error) {
+        print('Error in help requests stream: $error');
         if (error is Failure) {
           MinhLoaders.errorSnackBar(title: "Lỗi", message: error.message);
+        } else {
+          MinhLoaders.errorSnackBar(title: "Lỗi", message: error.toString());
         }
       },
+      cancelOnError: false, // Không cancel stream khi có lỗi
     );
+    print('Help requests stream setup complete');
   }
 
   @override

@@ -15,14 +15,12 @@ class ForgetPasswordController extends GetxController
 
   GlobalKey<FormState> forgetPasswordFormKey = GlobalKey<FormState>();
 
-  // Use Case - Clean Architecture
-  late final SendPasswordResetUseCase _sendPasswordResetUseCase;
+  // Use Case - Clean Architecture (lazy getter để tránh LateInitializationError)
+  SendPasswordResetUseCase get _sendPasswordResetUseCase => Get.find<SendPasswordResetUseCase>();
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize Use Case
-    _sendPasswordResetUseCase = Get.find<SendPasswordResetUseCase>();
   }
 
   sendPasswordResetEmail() async

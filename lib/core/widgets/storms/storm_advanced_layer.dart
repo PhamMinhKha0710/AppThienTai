@@ -139,6 +139,13 @@ class _StormAdvancedLayerState extends State<StormAdvancedLayer>
 
   @override
   Widget build(BuildContext context) {
+    // Đảm bảo animation controllers đã được khởi tạo
+    if (!_spinCtrl.isAnimating && !_trackCtrl.isAnimating) {
+      // Nếu chưa bắt đầu animation, bắt đầu lại
+      _spinCtrl.repeat();
+      _trackCtrl.repeat();
+    }
+    
     return AnimatedBuilder(
       animation: Listenable.merge([_spinCtrl, _trackCtrl]),
       builder: (context, _) {

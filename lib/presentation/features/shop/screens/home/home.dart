@@ -1,15 +1,12 @@
 import 'package:cuutrobaolu/core/widgets/custom_shapes/containers/MinhPrimaryHeaderContainer.dart';
 
-import 'package:cuutrobaolu/core/widgets/shimmers/MinhShimmerEffect.dart';
-import 'package:cuutrobaolu/core/widgets/shimmers/MinhVerticalProductShimmer.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhHomeAppbar.dart';
 import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhHomeCategory.dart';
 import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhPromoSlider.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
-import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -22,6 +19,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userController = Get.find<UserController>();
 
 
     return Scaffold(
@@ -37,33 +35,51 @@ class HomeScreen extends StatelessWidget {
                   MinhHomeAppbar(),
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
-                  // Searh
-                  MinhSearchContainer(
-                    text: "Search in Store",
-                    icon: Iconsax.search_normal,
-                  ),
+                  // Search - Hiển thị khác nhau theo user type
+                  Obx(() {
+                    final userType = userController.user.value.userType;
+                    String searchText = "Tìm kiếm...";
+                    if (userType.enName.toLowerCase() == 'volunteer') {
+                      searchText = "Tìm yêu cầu cần hỗ trợ";
+                    } else if (userType.enName.toLowerCase() == 'admin') {
+                      searchText = "Tìm kiếm quản trị";
+                    } else {
+                      searchText = "Tìm kiếm hỗ trợ";
+                    }
+                    return MinhSearchContainer(
+                      text: searchText,
+                      icon: Iconsax.search_normal,
+                    );
+                  }),
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
-                  // Category
-                  Padding(
-                    padding: EdgeInsets.only(left: MinhSizes.defaultSpace),
-                    child: Column(
-                      children: [
-                        // heading
-                        MinhSectionHeading(
-                          title: "Popular Categories",
-                          buttonTitle: "buttonTitle",
-                          textColor: MinhColors.white,
-                          showActionButton: false,
-                        ),
-                        SizedBox(height: MinhSizes.spaceBtwItems),
+                  // Category - Hiển thị khác nhau theo user type
+                  Obx(() {
+                    final userType = userController.user.value.userType;
+                    return Padding(
+                      padding: EdgeInsets.only(left: MinhSizes.defaultSpace),
+                      child: Column(
+                        children: [
+                          // heading - Khác nhau theo user type
+                          MinhSectionHeading(
+                            title: userType.enName.toLowerCase() == 'volunteer'
+                                ? "Danh mục hỗ trợ"
+                                : userType.enName.toLowerCase() == 'admin'
+                                    ? "Quản lý hệ thống"
+                                    : "Danh mục cần hỗ trợ",
+                            buttonTitle: "buttonTitle",
+                            textColor: MinhColors.white,
+                            showActionButton: false,
+                          ),
+                          SizedBox(height: MinhSizes.spaceBtwItems),
 
-                        // category
-                        MinhHomeCategory(),
-                        SizedBox(height: MinhSizes.spaceBtwSections),
-                      ],
-                    ),
-                  ),
+                          // category
+                          MinhHomeCategory(),
+                          SizedBox(height: MinhSizes.spaceBtwSections),
+                        ],
+                      ),
+                    );
+                  }),
                   SizedBox(height: MinhSizes.spaceBtwItems),
                 ],
               ),
@@ -78,13 +94,23 @@ class HomeScreen extends StatelessWidget {
 
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
-                  MinhSectionHeading(
-                    title: "Popular Products",
-                    showActionButton: true,
-                    onPressed: () {
-
-                    },
-                  ),
+                  // Section heading - Khác nhau theo user type
+                  Obx(() {
+                    final userType = userController.user.value.userType;
+                    String title = "Sản phẩm phổ biến";
+                    if (userType.enName.toLowerCase() == 'volunteer') {
+                      title = "Yêu cầu cần hỗ trợ";
+                    } else if (userType.enName.toLowerCase() == 'admin') {
+                      title = "Quản lý yêu cầu";
+                    } else {
+                      title = "Yêu cầu của tôi";
+                    }
+                    return MinhSectionHeading(
+                      title: title,
+                      showActionButton: true,
+                      onPressed: () {},
+                    );
+                  }),
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
                   // Popular Product

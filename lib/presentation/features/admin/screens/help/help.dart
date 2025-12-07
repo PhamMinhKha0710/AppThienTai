@@ -15,14 +15,38 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:get/get_rx/src/rx_types/rx_types.dart';
 
-import 'package:iconsax/iconsax.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:lottie/lottie.dart' hide Marker;
 
 
-class HelpAdminScreen extends StatelessWidget {
+class HelpAdminScreen extends StatefulWidget {
+  const HelpAdminScreen({super.key});
+
+  @override
+  State<HelpAdminScreen> createState() => _HelpAdminScreenState();
+}
+
+class _HelpAdminScreenState extends State<HelpAdminScreen> {
   final _searchController = TextEditingController();
   final _debounceTimer = Rx<Timer?>(null);
+
+  @override
+  void initState() {
+    super.initState();
+    final ctrl = Get.put(HelpController());
+    // Đảm bảo stream được setup nếu controller đã tồn tại
+    if (ctrl.requests.isEmpty) {
+      print('HelpAdminScreen: requests list is empty, waiting for stream...');
+    } else {
+      print('HelpAdminScreen: requests list has ${ctrl.requests.length} items');
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer.value?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +142,43 @@ class HelpAdminScreen extends StatelessWidget {
           // Map
           Expanded(
             child: Obx(() {
+              // Hiển thị loading nếu đang tải
+              if (ctrl.isLoading.value && ctrl.requests.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Đang tải yêu cầu cứu trợ...'),
+                    ],
+                  ),
+                );
+              }
+
+              // Hiển thị thông báo nếu không có yêu cầu
+              if (ctrl.requests.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.location_off, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'Chưa có yêu cầu cứu trợ nào',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Các yêu cầu sẽ hiển thị trên bản đồ khi có',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final markers = <Marker>[];
               final stormMaps = <StormMap>[];
               final stormLayers = <StormLayer>[];
@@ -246,21 +307,24 @@ class HelpAdminScreen extends StatelessWidget {
                     subdomains: ['a', 'b', 'c'],
                   ),
                   ...stormLayers,
-                  StormAdvancedLayer(
-                    center: stormCenter,
-                    eyeRadiusKm: 25,
-                    windRadiusKm: 150,
-                    cloudSvgAsset: "assets/svgs/cloud/cloud_swirl.svg",
-                    radarAsset: "assets/image/radar/radar_overlay.png",
-                    track: [
-                      LatLng(14.5, 110.0),
-                      LatLng(15.0, 109.0),
-                      LatLng(15.5, 108.5),
-                      LatLng(16.05, 108.2),
-                      LatLng(17.0, 107.6),
-                    ],
-                    trackDuration: Duration(seconds: 25),
-                  ),
+                  // Chỉ tạo StormAdvancedLayer khi có supporters
+                  if (ctrl.supporters.isNotEmpty)
+                    StormAdvancedLayer(
+                      key: ValueKey('storm_${ctrl.supporters.length}'), // Key để tránh rebuild không cần thiết
+                      center: stormCenter,
+                      eyeRadiusKm: 25,
+                      windRadiusKm: 150,
+                      cloudSvgAsset: "assets/svgs/cloud/cloud_swirl.svg",
+                      radarAsset: "assets/image/radar/radar_overlay.png",
+                      track: [
+                        LatLng(14.5, 110.0),
+                        LatLng(15.0, 109.0),
+                        LatLng(15.5, 108.5),
+                        LatLng(16.05, 108.2),
+                        LatLng(17.0, 107.6),
+                      ],
+                      trackDuration: Duration(seconds: 25),
+                    ),
                   if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
                   MarkerLayer(markers: markers),
                 ],
@@ -303,15 +367,5 @@ class HelpAdminScreen extends StatelessWidget {
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _debounceTimer.value?.cancel();
-  }
-
-
-
-
 }
 

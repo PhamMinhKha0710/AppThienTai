@@ -13,7 +13,7 @@ import 'package:get/get.dart';
 class NavigationAdminController extends GetxController {
   static final Rx<int> selectedIndex = 0.obs;
 
-  final screen = <Widget>[
+  List<Widget> get screen => [
     HomeAdminScreen(),
     HelpAdminScreen(),
     SettingAdminScreen(),

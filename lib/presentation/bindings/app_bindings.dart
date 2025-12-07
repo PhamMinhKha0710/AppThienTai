@@ -54,7 +54,8 @@ class AppBindings extends Bindings {
     Get.lazyPut(() => LoginUseCase(Get.find()));
     Get.lazyPut(() => RegisterUseCase(Get.find()));
     Get.lazyPut(() => SignInWithGoogleUseCase(Get.find()));
-    Get.lazyPut(() => LogoutUseCase(Get.find()));
+    // LogoutUseCase - tạo ngay để đảm bảo luôn sẵn sàng
+    Get.put(LogoutUseCase(Get.find<AuthenticationRepository>()));
     Get.lazyPut(() => SendEmailVerificationUseCase(Get.find()));
     Get.lazyPut(() => SendPasswordResetUseCase(Get.find()));
     Get.lazyPut(() => ReAuthenticateUseCase(Get.find()));

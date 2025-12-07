@@ -5,7 +5,6 @@ import 'package:cuutrobaolu/domain/usecases/save_user_usecase.dart';
 import 'package:cuutrobaolu/domain/entities/user_entity.dart' as domain;
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/models/user_model.dart';
-import 'package:cuutrobaolu/presentation/utils/user_mapper.dart';
 import 'package:cuutrobaolu/presentation/utils/navigation_helper.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:cuutrobaolu/core/utils/exports.dart';
@@ -32,23 +31,17 @@ class LoginController extends GetxController {
 
   final userController = Get.put(UserController());
 
-  // Use Cases - Clean Architecture
-  late final LoginUseCase _loginUseCase;
-  late final SignInWithGoogleUseCase _signInWithGoogleUseCase;
-  late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  late final SaveUserUseCase _saveUserUseCase;
+  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
+  LoginUseCase get _loginUseCase => Get.find<LoginUseCase>();
+  SignInWithGoogleUseCase get _signInWithGoogleUseCase => Get.find<SignInWithGoogleUseCase>();
+  GetCurrentUserUseCase get _getCurrentUserUseCase => Get.find<GetCurrentUserUseCase>();
+  SaveUserUseCase get _saveUserUseCase => Get.find<SaveUserUseCase>();
 
   @override
   void onInit() {
     super.onInit();
     email.text = localStorage.read("REMEMBER_ME_EMAIL") ?? "";
     password.text = localStorage.read("REMEMBER_ME_PASSWORD") ?? "";
-    
-    // Initialize Use Cases
-    _loginUseCase = Get.find<LoginUseCase>();
-    _signInWithGoogleUseCase = Get.find<SignInWithGoogleUseCase>();
-    _getCurrentUserUseCase = Get.find<GetCurrentUserUseCase>();
-    _saveUserUseCase = Get.find<SaveUserUseCase>();
   }
 
   Future<void> emailAndPasswordSignIn() async {
