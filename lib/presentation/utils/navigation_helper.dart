@@ -5,11 +5,11 @@ import '../../core/storage/storage_utility.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../features/admin/navigation_admin_menu.dart';
 import '../features/volunteer/navigation_volunteer_menu.dart';
+import '../features/victim/navigation_victim_menu.dart';
 import '../features/authentication/screens/login/login.dart';
 import '../features/authentication/screens/onboarding/onboarding.dart';
 // TẮT XÁC THỰC EMAIL: Không cần import VerifyEmailScreen nữa
 // import '../features/authentication/screens/singup/verifi_email.dart';
-import '../features/shop/navigation_menu.dart';
 import 'package:flutter/foundation.dart';
 
 /// Helper để xử lý navigation logic sau authentication
@@ -45,12 +45,12 @@ class NavigationHelper {
           // Volunteer → NavigationVolunteerMenu
           Get.offAll(() => NavigationVolunteerMenu());
         } else {
-          // Victim (nạn nhân) → NavigationMenu
-          Get.offAll(() => NavigationMenu());
+          // Victim (nạn nhân) → NavigationVictimMenu
+          Get.offAll(() => NavigationVictimMenu());
         }
       } else {
         // Default: Victim menu
-        Get.offAll(() => NavigationMenu());
+        Get.offAll(() => NavigationVictimMenu());
       }
     } else {
       // Lần đầu mở app?

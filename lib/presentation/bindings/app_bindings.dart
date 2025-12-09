@@ -30,6 +30,7 @@ import '../../data/repositories/help_request_repository_impl.dart';
 import '../../domain/repositories/banner_repository.dart';
 import '../../domain/repositories/help_request_repository.dart';
 import '../../core/utils/network_manager.dart';
+import '../../data/services/location_service.dart';
 
 /// App Bindings - Dependency Injection cho Clean Architecture
 class AppBindings extends Bindings {
@@ -37,6 +38,9 @@ class AppBindings extends Bindings {
   void dependencies() {
     // Network Manager
     Get.put(NetworkManager());
+    
+    // Services
+    Get.put(LocationService(), permanent: true);
 
     // Data Sources
     Get.lazyPut<UserRemoteDataSource>(() => UserRemoteDataSourceImpl());
