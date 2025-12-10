@@ -8,6 +8,7 @@ import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
 import 'package:cuutrobaolu/domain/repositories/authentication_repository.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
+import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_profile_controller.dart';
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/upload_data/upload_data.dart';
@@ -24,7 +25,8 @@ class SettingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
+    // Initialize controller once
+    final victimProfileController = Get.put(VictimProfileController(), permanent: false);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -65,6 +67,133 @@ class SettingScreen extends StatelessWidget {
               padding: const EdgeInsets.all(MinhSizes.defaultSpace),
               child: Column(
                 children: [
+                  // My Requests Section
+                  MinhSectionHeading(
+                    title: "Yêu cầu của tôi",
+                    showActionButton: false,
+                  ),
+                  SizedBox(height: MinhSizes.spaceBtwItems),
+                  Obx(() {
+                    final controller = victimProfileController;
+                    
+                    if (controller.isLoading.value) {
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(MinhSizes.defaultSpace),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    if (controller.myRequests.isEmpty) {
+                      return Padding(
+                        padding: EdgeInsets.all(MinhSizes.defaultSpace),
+                        child: Text(
+                          "Chưa có yêu cầu nào",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: controller.myRequests.length,
+                      separatorBuilder: (_, __) =>
+                          SizedBox(height: MinhSizes.spaceBtwItems / 2),
+                      itemBuilder: (context, index) {
+                        final request = controller.myRequests[index];
+                        final statusColor = controller.getStatusColor(request['status']);
+                        final severityColor = controller.getSeverityColor(request['severity']);
+
+                        return Card(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.all(MinhSizes.md),
+                            leading: Container(
+                              padding: EdgeInsets.all(MinhSizes.sm),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(MinhSizes.borderRadiusSm),
+                              ),
+                              child: Icon(
+                                Iconsax.document_text,
+                                color: statusColor,
+                                size: 24,
+                              ),
+                            ),
+                            title: Text(
+                              request['title'] ?? '',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 4),
+                                Text(
+                                  request['description'] ?? '',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: MinhSizes.sm,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        request['statusVi'] ?? '',
+                                        style: Theme.of(context).textTheme.bodySmall?.apply(
+                                              color: statusColor,
+                                              fontSizeFactor: 0.9,
+                                            ),
+                                      ),
+                                    ),
+                                    SizedBox(width: MinhSizes.spaceBtwItems / 2),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: MinhSizes.sm,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: severityColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        request['severityVi'] ?? '',
+                                        style: Theme.of(context).textTheme.bodySmall?.apply(
+                                              color: severityColor,
+                                              fontSizeFactor: 0.9,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${request['timeStr']} • ${request['address'] ?? ''}',
+                                  style: Theme.of(context).textTheme.bodySmall?.apply(
+                                        color: MinhColors.darkerGrey,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            trailing: Icon(Iconsax.arrow_right_3),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+
+                  SizedBox(height: MinhSizes.spaceBtwSections),
+
                   MinhSectionHeading(
                       title: "Account Settings",
                       showActionButton: false,
