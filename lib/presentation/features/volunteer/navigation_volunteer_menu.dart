@@ -28,9 +28,11 @@ class NavigationVolunteerMenu extends StatelessWidget {
           elevation: 0,
           destinations: [
             NavigationDestination(icon: Icon(Iconsax.home), label: "Trang chủ"),
-            NavigationDestination(icon: Icon(Iconsax.heart), label: "Yêu cầu"),
+            NavigationDestination(icon: Icon(Iconsax.task_square), label: "Nhiệm vụ"),
+            NavigationDestination(icon: Icon(Iconsax.map), label: "Bản đồ"),
+            NavigationDestination(icon: Icon(Iconsax.notification), label: "Cảnh báo"),
             NavigationDestination(icon: Icon(Iconsax.message_question), label: "Hỗ trợ"),
-            NavigationDestination(icon: Icon(Iconsax.user), label: "Cá nhân"),
+            NavigationDestination(icon: Icon(Iconsax.user), label: "Hồ sơ"),
           ],
         ),
       ),

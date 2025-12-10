@@ -18,4 +18,3 @@ class NavigationVictimController extends GetxController {
   ];
 }
 
-

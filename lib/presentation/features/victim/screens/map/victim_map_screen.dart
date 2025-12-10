@@ -1,4 +1,3 @@
-import 'package:cuutrobaolu/core/widgets/appbar/MinhAppbar.dart';
 import 'package:cuutrobaolu/core/widgets/map/MinhMapLegendItem.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
@@ -18,9 +17,19 @@ class VictimMapScreen extends StatelessWidget {
     const fallbackVNCenter = LatLng(12.24507, 109.19432); // Nha Trang, VN
 
     return Scaffold(
-      appBar: MinhAppbar(
-        title: Text("Bản đồ thiên tai"),
-        showBackArrow: true,
+      appBar: AppBar(
+        title: const Text("Bản đồ thiên tai"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => controller.refreshMarkers(),
+            tooltip: 'Làm mới',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -70,11 +79,15 @@ class VictimMapScreen extends StatelessWidget {
                     ...controller.shelterMarkers.map((marker) => marker),
                   ],
                 ),
-                // Polyline route nếu có
-                if (controller.routePolyline != null)
-                  PolylineLayer(
-                    polylines: [controller.routePolyline!],
-                  ),
+                // Polyline routes
+                Obx(() {
+                  if (controller.routePolylines.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return PolylineLayer(
+                    polylines: controller.routePolylines,
+                  );
+                }),
               ],
             );
           }),

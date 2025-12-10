@@ -92,12 +92,17 @@ class HelpRequestRepository {
   /// GET REQUESTS BY USER ID
   /// ============================
   Stream<List<HelpRequest>> getRequestsByUserId(String userId) {
+    // Note: Removed orderBy to avoid requiring composite index
+    // Sorting will be done in memory instead
     return requestsCollection
         .where('UserId', isEqualTo: userId)
-        .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) {
+          final requests = snapshot.docs.map((doc) => doc.data()).toList();
+          // Sort by CreatedAt descending in memory
+          requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return requests;
+        });
   }
 
   /// ============================
@@ -147,12 +152,19 @@ class HelpRequestRepository {
   /// ============================
   /// UPDATE REQUEST STATUS
   /// ============================
-  Future<void> updateRequestStatus(String requestId, RequestStatus status) async {
+  Future<void> updateRequestStatus(String requestId, RequestStatus status, {String? volunteerId}) async {
     try {
-      await requestsCollection.doc(requestId).update({
+      final updateData = <String, dynamic>{
         'Status': status.toJson(),
         'UpdatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      
+      // If volunteerId is provided, add it to the update
+      if (volunteerId != null) {
+        updateData['VolunteerId'] = volunteerId;
+      }
+      
+      await requestsCollection.doc(requestId).update(updateData);
     } catch (e) {
       throw Exception('Failed to update request status: $e');
     }

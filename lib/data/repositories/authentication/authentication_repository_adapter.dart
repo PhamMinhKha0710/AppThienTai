@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import '../../../domain/repositories/authentication_repository.dart';
 import '../../../core/exceptions/exports.dart';
@@ -8,7 +9,6 @@ import '../../../presentation/features/authentication/screens/login/login.dart';
 import '../../../presentation/features/authentication/screens/onboarding/onboarding.dart';
 import '../../../presentation/features/authentication/screens/singup/verifi_email.dart';
 import '../../../presentation/features/shop/navigation_menu.dart';
-import '../../../data/repositories/user/user_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get_storage/get_storage.dart';
@@ -38,22 +38,26 @@ class AuthenticationRepositoryAdapter extends GetxController {
 
     if (user != null) {
       if (user.emailVerified) {
-        await Future.wait([
-          MinhLocalStorage.init(user.uid),
-          Future.microtask(() => Get.put(UserRepository())),
-        ]);
+        await MinhLocalStorage.init(user.uid);
 
-        final userRepository = Get.find<UserRepository>();
-        final useCurrent = await userRepository.getCurrentUser();
-        final userType = useCurrent?.userType;
-
-        if (kDebugMode) {
-          print('userType: ${userType}');
+        // Get user type from Firestore directly
+        final userDoc = await FirebaseFirestore.instance
+            .collection("Users")
+            .doc(user.uid)
+            .get();
+        
+        String? userTypeStr;
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          userTypeStr = data?['UserType']?.toString().toLowerCase();
         }
 
-        if (userType != null &&
-            (userType.enName.toLowerCase() == 'admin' ||
-                userType.viName.toLowerCase() == 'quản trị viên')) {
+        if (kDebugMode) {
+          print('userType: $userTypeStr');
+        }
+
+        if (userTypeStr != null &&
+            (userTypeStr == 'admin' || userTypeStr == 'quản trị viên')) {
           Get.offAll(() => NavigationAdminMenu());
         } else {
           Get.offAll(() => NavigationMenu());
@@ -168,7 +172,10 @@ class AuthenticationRepositoryAdapter extends GetxController {
   Future<void> deleteAccount() async {
     try {
       // Xóa user record trước
-      await UserRepository.instance.removeUserRecord(_auth.currentUser!.uid);
+      final userId = _auth.currentUser?.uid;
+      if (userId != null) {
+        await FirebaseFirestore.instance.collection("Users").doc(userId).delete();
+      }
       await _repository.deleteAccount();
     } catch (e) {
       throw e.toString();

@@ -2,11 +2,15 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/widgets/chatbot/MinhChatbotSuggestion.dart';
+import 'package:cuutrobaolu/data/repositories/news/news_repository.dart';
 import 'package:iconsax/iconsax.dart';
 
 class VictimNewsController extends GetxController {
+  final NewsRepository _newsRepo = NewsRepository();
+
   final selectedCategory = "Tất cả".obs;
   final searchQuery = "".obs;
+  final isLoading = false.obs;
   
   final categories = ["Tất cả", "Sơ tán", "Y tế cơ bản", "Từ chính quyền"];
   final allNews = <Map<String, dynamic>>[].obs;
@@ -17,24 +21,35 @@ class VictimNewsController extends GetxController {
     loadNews();
   }
 
-  void loadNews() {
-    // TODO: Load from Firestore
-    allNews.value = [
-      {
-        'title': 'Cách sơ tán khi bị cuốn lũ',
-        'summary': 'Hướng dẫn chi tiết cách sơ tán an toàn khi gặp lũ lụt',
-        'content': 'Khi gặp lũ lụt, bạn cần di chuyển đến nơi cao hơn ngay lập tức...',
-        'category': 'Sơ tán',
-        'image': 'https://via.placeholder.com/300',
-      },
-      {
-        'title': 'Hướng dẫn sơ cứu cơ bản',
-        'summary': 'Các bước sơ cứu cơ bản trong tình huống khẩn cấp',
-        'content': 'Trong tình huống khẩn cấp, việc sơ cứu đúng cách có thể cứu sống...',
-        'category': 'Y tế cơ bản',
-        'image': 'https://via.placeholder.com/300',
-      },
-    ];
+  Future<void> loadNews() async {
+    isLoading.value = true;
+    try {
+      if (selectedCategory.value == "Tất cả") {
+        _newsRepo.getAllNews().listen((news) {
+          allNews.value = news.map((item) => _formatNews(item)).toList();
+        });
+      } else {
+        _newsRepo.getNewsByCategory(selectedCategory.value).listen((news) {
+          allNews.value = news.map((item) => _formatNews(item)).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading news: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Map<String, dynamic> _formatNews(Map<String, dynamic> news) {
+    return {
+      'id': news['id'],
+      'title': news['Title'] ?? news['title'] ?? '',
+      'summary': news['Summary'] ?? news['summary'] ?? news['Content'] ?? '',
+      'content': news['Content'] ?? news['content'] ?? '',
+      'category': news['Category'] ?? news['category'] ?? 'Khác',
+      'image': news['ImageUrl'] ?? news['image'] ?? news['Image'] ?? '',
+      'createdAt': news['CreatedAt'],
+    };
   }
 
   List<Map<String, dynamic>> get filteredNews {
@@ -60,6 +75,11 @@ class VictimNewsController extends GetxController {
 
   void searchNews(String query) {
     searchQuery.value = query;
+  }
+
+  void onCategoryChanged(String category) {
+    selectedCategory.value = category;
+    loadNews();
   }
 
   void showChatbot() {
@@ -119,5 +139,3 @@ class VictimNewsController extends GetxController {
     );
   }
 }
-
-

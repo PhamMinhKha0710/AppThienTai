@@ -26,7 +26,7 @@ class NavigationVictimMenu extends StatelessWidget {
               : MinhColors.black.withOpacity(0.1),
           height: 80,
           elevation: 0,
-          destinations: [
+          destinations: const [
             NavigationDestination(icon: Icon(Iconsax.home), label: "Trang chủ"),
             NavigationDestination(icon: Icon(Iconsax.map), label: "Bản đồ"),
             NavigationDestination(icon: Icon(Iconsax.notification), label: "Cảnh báo"),
@@ -39,5 +39,7 @@ class NavigationVictimMenu extends StatelessWidget {
     );
   }
 }
+
+
 
 

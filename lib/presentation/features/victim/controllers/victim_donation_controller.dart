@@ -1,11 +1,14 @@
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
+import 'package:cuutrobaolu/data/repositories/donations/donation_repository.dart';
 import 'package:flutter/material.dart';
 
 class VictimDonationController extends GetxController {
+  final DonationRepository _donationRepo = DonationRepository();
+
   final selectedTab = 0.obs;
   final paymentMethod = 'wallet'.obs;
-  final totalDonation = 10000000.0.obs; // TODO: Load from Firestore
+  final totalDonation = 0.0.obs;
 
   final amountController = TextEditingController();
   final itemNameController = TextEditingController();
@@ -27,8 +30,13 @@ class VictimDonationController extends GetxController {
     super.onClose();
   }
 
-  void loadTotalDonation() {
-    // TODO: Load from Firestore
+  Future<void> loadTotalDonation() async {
+    try {
+      final total = await _donationRepo.getTotalMoneyDonations();
+      totalDonation.value = total;
+    } catch (e) {
+      print('Error loading total donation: $e');
+    }
   }
 
   Future<void> submitMoneyDonation() async {
@@ -46,10 +54,18 @@ class VictimDonationController extends GetxController {
         throw Exception("Số tiền không hợp lệ");
       }
 
-      // TODO: Process payment
-      // - Integrate with VNPay/Momo
-      // - Save to Firestore
-      // - Update total donation
+      // Create donation record
+      final donationId = await _donationRepo.createMoneyDonation(
+        amount: amount,
+        paymentMethod: paymentMethod.value,
+      );
+
+      // TODO: Process payment with VNPay/Momo
+      // After payment success, update status to 'completed'
+      await _donationRepo.updateDonationStatus(donationId, 'completed');
+
+      // Reload total
+      await loadTotalDonation();
 
       MinhLoaders.successSnackBar(
         title: "Thành công",
@@ -82,9 +98,15 @@ class VictimDonationController extends GetxController {
         throw Exception("Số lượng không hợp lệ");
       }
 
-      // TODO: Save to Firestore
-      // - Create donation record
-      // - Update transparency log
+      // Create donation record
+      final donationId = await _donationRepo.createSuppliesDonation(
+        itemName: itemNameController.text.trim(),
+        quantity: quantity,
+        description: itemDescriptionController.text.trim(),
+      );
+
+      // Update status to completed
+      await _donationRepo.updateDonationStatus(donationId, 'completed');
 
       MinhLoaders.successSnackBar(
         title: "Thành công",
@@ -103,5 +125,3 @@ class VictimDonationController extends GetxController {
     }
   }
 }
-
-
