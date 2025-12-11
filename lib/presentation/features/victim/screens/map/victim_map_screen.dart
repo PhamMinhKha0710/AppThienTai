@@ -73,6 +73,8 @@ class VictimMapScreen extends StatelessWidget {
                         height: 40,
                         child: Icon(Iconsax.location, color: Colors.blue, size: 40),
                       ),
+                    // Yêu cầu cứu trợ của chính user (ưu tiên hiển thị)
+                    ...controller.myRequestMarkers.map((marker) => marker),
                     // Các điểm thiên tai
                     ...controller.disasterMarkers.map((marker) => marker),
                     // Điểm trú ẩn
@@ -144,7 +146,9 @@ class VictimMapScreen extends StatelessWidget {
                   children: [
                     MinhMapLegendItem(icon: Iconsax.location, color: Colors.blue, label: "Vị trí bạn"),
                     SizedBox(height: 4),
-                    MinhMapLegendItem(icon: Iconsax.warning_2, color: Colors.red, label: "Thiên tai"),
+                    MinhMapLegendItem(icon: Iconsax.warning_2, color: Colors.orange, label: "Yêu cầu của tôi"),
+                    SizedBox(height: 4),
+                    MinhMapLegendItem(icon: Iconsax.danger, color: Colors.red, label: "Thiên tai"),
                     SizedBox(height: 4),
                     MinhMapLegendItem(icon: Iconsax.home_2, color: Colors.green, label: "Điểm trú ẩn"),
                   ],

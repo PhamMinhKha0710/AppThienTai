@@ -5,8 +5,10 @@ import 'package:cuutrobaolu/core/widgets/buttons/MinhShortcutButton.dart';
 import 'package:cuutrobaolu/core/widgets/cards/MinhAlertCard.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/sos/victim_sos_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart';
+import 'package:cuutrobaolu/presentation/features/victim/screens/receive/victim_receive_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_home_controller.dart';
 import 'package:cuutrobaolu/presentation/features/victim/NavigationVictimController.dart';
 import 'package:flutter/material.dart';
@@ -93,6 +95,7 @@ class VictimHomeScreen extends StatelessWidget {
                             ),
                             MarkerLayer(
                               markers: [
+                                // Vị trí hiện tại
                                 Marker(
                                   point: LatLng(position.latitude, position.longitude),
                                   width: 40,
@@ -103,6 +106,60 @@ class VictimHomeScreen extends StatelessWidget {
                                     size: 40,
                                   ),
                                 ),
+                                // Yêu cầu cứu trợ của user
+                                ...controller.myRequests.map((req) {
+                                  Color markerColor = Colors.orange;
+                                  IconData markerIcon = Iconsax.clock;
+                                  
+                                  switch (req.status) {
+                                    case RequestStatus.pending:
+                                      markerColor = Colors.orange;
+                                      markerIcon = Iconsax.clock;
+                                      break;
+                                    case RequestStatus.inProgress:
+                                      markerColor = Colors.blue;
+                                      markerIcon = Iconsax.refresh;
+                                      break;
+                                    case RequestStatus.completed:
+                                      markerColor = Colors.green;
+                                      markerIcon = Iconsax.tick_circle;
+                                      break;
+                                    case RequestStatus.cancelled:
+                                      markerColor = Colors.grey;
+                                      markerIcon = Iconsax.close_circle;
+                                      break;
+                                  }
+                                  
+                                  return Marker(
+                                    point: LatLng(req.lat, req.lng),
+                                    width: 45,
+                                    height: 45,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Get.to(() => VictimMapScreen());
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: markerColor,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: markerColor.withOpacity(0.5),
+                                              blurRadius: 8,
+                                              spreadRadius: 1,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          markerIcon,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ],
                             ),
                           ],
@@ -125,6 +182,97 @@ class VictimHomeScreen extends StatelessWidget {
                   }),
                 ),
               ),
+
+              // Nút Cần giúp / Cần nhận nổi bật
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(MinhSizes.defaultSpace),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.red.shade400,
+                        Colors.red.shade600,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(MinhSizes.borderRadiusLg),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Iconsax.warning_2,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                      SizedBox(height: MinhSizes.spaceBtwItems),
+                      Text(
+                        "Cần cứu trợ khẩn cấp?",
+                        style: Theme.of(context).textTheme.headlineSmall?.apply(
+                          color: Colors.white,
+                          fontWeightDelta: 2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: MinhSizes.spaceBtwItems / 2),
+                      Text(
+                        "Gửi yêu cầu SOS để nhận hỗ trợ ngay lập tức",
+                        style: Theme.of(context).textTheme.bodyMedium?.apply(
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: MinhSizes.spaceBtwItems),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => Get.to(() => VictimSosScreen()),
+                              icon: Icon(Iconsax.warning_2, size: 20),
+                              label: Text("Cần giúp"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.red,
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: MinhSizes.spaceBtwItems),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Get.to(() => const VictimReceiveScreen());
+                              },
+                              icon: Icon(Iconsax.receive_square, size: 20),
+                              label: Text("Cần nhận"),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(color: Colors.white, width: 2),
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: MinhSizes.spaceBtwSections),
 
               // Cảnh báo
               Padding(
@@ -266,13 +414,7 @@ class VictimHomeScreen extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.to(() => VictimSosScreen()),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        icon: Icon(Iconsax.warning_2),
-        label: Text("SOS"),
-      ),
+      // FAB đã được thay thế bằng nút nổi bật ở trên
     );
   }
 }
