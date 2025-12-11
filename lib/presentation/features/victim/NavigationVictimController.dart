@@ -10,11 +10,12 @@ class NavigationVictimController extends GetxController {
   static final Rx<int> selectedIndex = 0.obs;
 
   List<Widget> get screen => [
-    VictimHomeScreen(),
-    VictimMapScreen(),
-    VictimAlertsScreen(),
-    VictimNewsScreen(),
-    SettingScreen(),
+    const VictimHomeScreen(),
+    const VictimMapScreen(),
+    const VictimAlertsScreen(),
+    const VictimNewsScreen(),
+    const SettingScreen(),
   ];
 }
+
 

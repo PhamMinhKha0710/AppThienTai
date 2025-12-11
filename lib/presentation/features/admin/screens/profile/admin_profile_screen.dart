@@ -1,15 +1,19 @@
 import 'package:cuutrobaolu/core/widgets/appbar/MinhAppbar.dart';
 import 'package:cuutrobaolu/core/widgets/custom_shapes/containers/MinhPrimaryHeaderContainer.dart';
 import 'package:cuutrobaolu/core/widgets/list_titles/MinhSettingsMenuTitle.dart';
+import 'package:cuutrobaolu/core/widgets/list_titles/MinhUserProfileTitle.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
+import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 
-class SettingAdminScreen extends StatelessWidget {
-  const SettingAdminScreen({super.key});
+class AdminProfileScreen extends StatelessWidget {
+  const AdminProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,25 +27,70 @@ class SettingAdminScreen extends StatelessWidget {
                 children: [
                   MinhAppbar(
                     title: Text(
-                      "Cài đặt hệ thống",
+                      "Tài khoản",
                       style: Theme.of(context).textTheme.headlineMedium!.apply(
                         color: MinhColors.white,
                       ),
                     ),
+                  ),
+                  MinhUserProfileTitle(
+                    onPressed: () {
+                      Get.to(() => const ProfileScreen());
+                    },
                   ),
                   const SizedBox(height: MinhSizes.spaceBtwSections),
                 ],
               ),
             ),
 
+            const SizedBox(height: MinhSizes.spaceBtwItems),
+
             // Body
             Padding(
               padding: const EdgeInsets.all(MinhSizes.defaultSpace),
               child: Column(
                 children: [
-                  // Thông báo & Cảnh báo
+                  // Thông tin cá nhân
                   MinhSectionHeading(
-                    title: "Thông báo & Cảnh báo",
+                    title: "Thông tin cá nhân",
+                    showActionButton: false,
+                  ),
+                  const SizedBox(height: MinhSizes.spaceBtwItems),
+                  Card(
+                    child: Column(
+                      children: [
+                        MinhSettingsMenuTitle(
+                          icon: Iconsax.user,
+                          title: "Chỉnh sửa hồ sơ",
+                          subtitle: "Cập nhật thông tin cá nhân",
+                          trailing: const Icon(Iconsax.arrow_right_3),
+                          onTap: () {
+                            Get.to(() => const ProfileScreen());
+                          },
+                        ),
+                        const Divider(height: 1),
+                        MinhSettingsMenuTitle(
+                          icon: Iconsax.lock,
+                          title: "Đổi mật khẩu",
+                          subtitle: "Thay đổi mật khẩu đăng nhập",
+                          trailing: const Icon(Iconsax.arrow_right_3),
+                          onTap: () {
+                            Get.snackbar(
+                              'Thông báo',
+                              'Tính năng đang phát triển',
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: MinhSizes.spaceBtwSections),
+
+                  // Cài đặt tài khoản
+                  MinhSectionHeading(
+                    title: "Cài đặt tài khoản",
                     showActionButton: false,
                   ),
                   const SizedBox(height: MinhSizes.spaceBtwItems),
@@ -50,22 +99,34 @@ class SettingAdminScreen extends StatelessWidget {
                       children: [
                         MinhSettingsMenuTitle(
                           icon: Iconsax.notification,
-                          title: "Cài đặt thông báo",
-                          subtitle: "Quản lý thông báo push và email",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
+                          title: "Thông báo",
+                          subtitle: "Quản lý thông báo",
+                          trailing: Switch(
+                            value: true,
+                            onChanged: (value) {
+                              // TODO: Save notification preference
+                            },
+                          ),
+                          onTap: () {},
                         ),
                         const Divider(height: 1),
                         MinhSettingsMenuTitle(
-                          icon: Iconsax.danger,
-                          title: "Cảnh báo khẩn cấp",
-                          subtitle: "Cấu hình hệ thống cảnh báo",
+                          icon: Iconsax.location,
+                          title: "Vị trí",
+                          subtitle: "Chia sẻ vị trí",
+                          trailing: Switch(
+                            value: false,
+                            onChanged: (value) {
+                              // TODO: Save location sharing preference
+                            },
+                          ),
+                          onTap: () {},
+                        ),
+                        const Divider(height: 1),
+                        MinhSettingsMenuTitle(
+                          icon: Iconsax.security_user,
+                          title: "Chế độ riêng tư",
+                          subtitle: "Bảo mật tài khoản",
                           trailing: const Icon(Iconsax.arrow_right_3),
                           onTap: () {
                             Get.snackbar(
@@ -81,9 +142,9 @@ class SettingAdminScreen extends StatelessWidget {
 
                   const SizedBox(height: MinhSizes.spaceBtwSections),
 
-                  // Bảo mật & Quyền
+                  // Hỗ trợ
                   MinhSectionHeading(
-                    title: "Bảo mật & Quyền",
+                    title: "Hỗ trợ",
                     showActionButton: false,
                   ),
                   const SizedBox(height: MinhSizes.spaceBtwItems),
@@ -91,9 +152,9 @@ class SettingAdminScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         MinhSettingsMenuTitle(
-                          icon: Iconsax.shield,
-                          title: "Quản lý quyền truy cập",
-                          subtitle: "Phân quyền người dùng và admin",
+                          icon: Iconsax.message_question,
+                          title: "Trợ giúp",
+                          subtitle: "Câu hỏi thường gặp",
                           trailing: const Icon(Iconsax.arrow_right_3),
                           onTap: () {
                             Get.snackbar(
@@ -105,140 +166,9 @@ class SettingAdminScreen extends StatelessWidget {
                         ),
                         const Divider(height: 1),
                         MinhSettingsMenuTitle(
-                          icon: Iconsax.lock,
-                          title: "Bảo mật hệ thống",
-                          subtitle: "Cài đặt mật khẩu và xác thực",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                        ),
-                        const Divider(height: 1),
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.activity,
-                          title: "Nhật ký hoạt động",
-                          subtitle: "Xem lịch sử thao tác hệ thống",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: MinhSizes.spaceBtwSections),
-
-                  // Dữ liệu & Backup
-                  MinhSectionHeading(
-                    title: "Dữ liệu & Backup",
-                    showActionButton: false,
-                  ),
-                  const SizedBox(height: MinhSizes.spaceBtwItems),
-                  Card(
-                    child: Column(
-                      children: [
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.document_download,
-                          title: "Sao lưu dữ liệu",
-                          subtitle: "Tạo backup hệ thống",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                        ),
-                        const Divider(height: 1),
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.document_upload,
-                          title: "Khôi phục dữ liệu",
-                          subtitle: "Restore từ backup",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                        ),
-                        const Divider(height: 1),
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.trash,
-                          title: "Xóa dữ liệu cũ",
-                          subtitle: "Dọn dẹp dữ liệu không cần thiết",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.dialog(
-                              AlertDialog(
-                                title: const Text('Xóa dữ liệu cũ'),
-                                content: const Text('Bạn có chắc muốn xóa dữ liệu cũ? Hành động này không thể hoàn tác.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(),
-                                    child: const Text('Hủy'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Get.back();
-                                      Get.snackbar(
-                                        'Thông báo',
-                                        'Tính năng đang phát triển',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                    child: const Text('Xóa'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: MinhSizes.spaceBtwSections),
-
-                  // Hệ thống
-                  MinhSectionHeading(
-                    title: "Hệ thống",
-                    showActionButton: false,
-                  ),
-                  const SizedBox(height: MinhSizes.spaceBtwItems),
-                  Card(
-                    child: Column(
-                      children: [
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.setting_2,
-                          title: "Cấu hình chung",
-                          subtitle: "Cài đặt hệ thống cơ bản",
-                          trailing: const Icon(Iconsax.arrow_right_3),
-                          onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                        ),
-                        const Divider(height: 1),
-                        MinhSettingsMenuTitle(
-                          icon: Iconsax.global,
-                          title: "Ngôn ngữ & Vùng",
-                          subtitle: "Thiết lập ngôn ngữ hiển thị",
+                          icon: Iconsax.message,
+                          title: "Liên hệ hỗ trợ",
+                          subtitle: "Gửi phản hồi",
                           trailing: const Icon(Iconsax.arrow_right_3),
                           onTap: () {
                             Get.snackbar(
@@ -284,6 +214,51 @@ class SettingAdminScreen extends StatelessWidget {
                   ),
 
                   const SizedBox(height: MinhSizes.spaceBtwSections),
+
+                  // Đăng xuất
+                  Card(
+                    color: Colors.red.shade50,
+                    child: MinhSettingsMenuTitle(
+                      icon: Iconsax.logout,
+                      title: "Đăng xuất",
+                      subtitle: "Đăng xuất khỏi tài khoản",
+                      trailing: const Icon(Iconsax.arrow_right_3),
+                      onTap: () {
+                        Get.dialog(
+                          AlertDialog(
+                            title: const Text('Đăng xuất'),
+                            content: const Text('Bạn có chắc muốn đăng xuất?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text('Hủy'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  Get.back();
+                                  try {
+                                    final logoutUseCase = Get.find<LogoutUseCase>();
+                                    await logoutUseCase();
+                                    Get.offAll(() => const LoginScreen());
+                                  } catch (e) {
+                                    Get.snackbar(
+                                      'Lỗi',
+                                      'Không thể đăng xuất: $e',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                child: const Text('Đăng xuất'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: MinhSizes.spaceBtwSections),
                 ],
               ),
             ),
@@ -293,3 +268,4 @@ class SettingAdminScreen extends StatelessWidget {
     );
   }
 }
+

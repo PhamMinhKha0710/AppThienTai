@@ -88,9 +88,9 @@ class NavigationAdminMenu extends StatelessWidget {
               : MinhColors.black.withOpacity(0.1) ,
           height: 80,
           elevation: 0,
-          destinations: [
-            NavigationDestination(icon: Icon(Iconsax.home), label: "Trang chủ"),
-            NavigationDestination(icon: Icon(Iconsax.heart), label: "Yêu cầu"),
+          destinations: const [
+            NavigationDestination(icon: Icon(Iconsax.status), label: "Dashboard"),
+            NavigationDestination(icon: Icon(Iconsax.danger), label: "SOS"),
             NavigationDestination(icon: Icon(Iconsax.setting_2), label: "Cài đặt"),
             NavigationDestination(icon: Icon(Iconsax.user), label: "Cá nhân"),
           ],
