@@ -1,22 +1,48 @@
+import 'dart:async';
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/repositories/alerts/alert_repository.dart';
+import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
+import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
 class VictimHomeController extends GetxController {
   LocationService? _locationService;
   final AlertRepository _alertRepo = AlertRepository();
+  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
   
   final currentPosition = Rxn<Position>();
   final recentAlerts = <Map<String, dynamic>>[].obs;
+  final myRequests = <HelpRequest>[].obs;
   final forecast = Rxn<String>();
   final isLoading = false.obs;
+  
+  StreamSubscription? _myRequestsSub;
 
   @override
   void onInit() {
     super.onInit();
     _initLocationService();
     loadData();
+    _setupMyRequestsListener();
+  }
+  
+  @override
+  void onClose() {
+    _myRequestsSub?.cancel();
+    super.onClose();
+  }
+  
+  void _setupMyRequestsListener() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    _myRequestsSub = _helpRequestRepo
+        .getRequestsByUserId(user.uid)
+        .listen((requests) {
+      myRequests.value = requests;
+    });
   }
 
   void _initLocationService() {

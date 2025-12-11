@@ -20,7 +20,7 @@ class VictimSosScreen extends StatelessWidget {
       ),
       body: _SosStepper(controller: controller),
       floatingActionButton: Obx(() {
-        if (controller.currentStep.value == 2 && !controller.isSubmitting.value) {
+        if (controller.currentStep.value == 3 && !controller.isSubmitting.value) {
           return FloatingActionButton.extended(
             onPressed: () => controller.submitSOS(),
             backgroundColor: Colors.red,
@@ -107,14 +107,85 @@ class _SosStepper extends StatelessWidget {
               : StepState.indexed,
         ),
 
-        // Bước 2: Attach media
+        // Bước 2: Thông tin liên hệ
+        Step(
+          title: Text("Thông tin liên hệ"),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller.phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: "Số điện thoại liên lạc *",
+                  hintText: "Nhập số điện thoại",
+                  prefixIcon: Icon(Iconsax.call),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
+              TextField(
+                controller: controller.numberOfPeopleController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Số người cần hỗ trợ *",
+                  hintText: "Nhập số người",
+                  prefixIcon: Icon(Iconsax.people),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
+              TextField(
+                controller: controller.addressController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: "Địa chỉ chi tiết (tùy chọn)",
+                  hintText: "Nhập địa chỉ nếu khác với vị trí GPS",
+                  prefixIcon: Icon(Iconsax.location),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
+              Obx(() {
+                final position = controller.currentPosition.value;
+                if (position == null) {
+                  return SizedBox.shrink();
+                }
+                return Card(
+                  color: Colors.blue.withOpacity(0.1),
+                  child: Padding(
+                    padding: EdgeInsets.all(MinhSizes.md),
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.location, color: Colors.blue, size: 20),
+                        SizedBox(width: MinhSizes.spaceBtwItems / 2),
+                        Expanded(
+                          child: Text(
+                            "Vị trí GPS đã được lấy tự động",
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          isActive: controller.currentStep.value >= 1,
+          state: controller.currentStep.value > 1
+              ? StepState.complete
+              : StepState.indexed,
+        ),
+
+        // Bước 3: Attach media
         Step(
           title: Text("Đính kèm hình ảnh/video"),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Chụp ảnh hoặc quay video để mô tả tình huống",
+                "Chụp ảnh hoặc quay video để mô tả tình huống (tùy chọn)",
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               SizedBox(height: MinhSizes.spaceBtwItems),
@@ -174,13 +245,13 @@ class _SosStepper extends StatelessWidget {
               }),
             ],
           ),
-          isActive: controller.currentStep.value >= 1,
-          state: controller.currentStep.value > 1
+          isActive: controller.currentStep.value >= 2,
+          state: controller.currentStep.value > 2
               ? StepState.complete
               : StepState.indexed,
         ),
 
-        // Bước 3: Xác nhận và gửi
+        // Bước 4: Xác nhận và gửi
         Step(
           title: Text("Xác nhận và gửi"),
           content: Column(
@@ -197,16 +268,30 @@ class _SosStepper extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Mô tả:",
-                        style: Theme.of(context).textTheme.titleSmall,
+                      _InfoRow(
+                        label: "Mô tả:",
+                        value: controller.descriptionController.text,
                       ),
-                      SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                      Text(controller.descriptionController.text),
                       SizedBox(height: MinhSizes.spaceBtwItems),
-                      Text(
-                        "Hình ảnh: ${controller.selectedImages.length}",
-                        style: Theme.of(context).textTheme.titleSmall,
+                      _InfoRow(
+                        label: "Số điện thoại:",
+                        value: controller.phoneController.text,
+                      ),
+                      SizedBox(height: MinhSizes.spaceBtwItems),
+                      _InfoRow(
+                        label: "Số người cần hỗ trợ:",
+                        value: controller.numberOfPeopleController.text,
+                      ),
+                      SizedBox(height: MinhSizes.spaceBtwItems),
+                      if (controller.addressController.text.isNotEmpty)
+                        _InfoRow(
+                          label: "Địa chỉ:",
+                          value: controller.addressController.text,
+                        ),
+                      SizedBox(height: MinhSizes.spaceBtwItems),
+                      _InfoRow(
+                        label: "Hình ảnh:",
+                        value: "${controller.selectedImages.length} ảnh",
                       ),
                     ],
                   ),
@@ -234,5 +319,37 @@ class _SosStepper extends StatelessWidget {
         ),
       ],
     ));
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.apply(
+            fontWeightDelta: 1,
+          ),
+        ),
+        SizedBox(width: MinhSizes.spaceBtwItems / 2),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
   }
 }

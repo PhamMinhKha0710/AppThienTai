@@ -1,14 +1,18 @@
+import 'dart:async';
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/routing_service.dart';
 import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
 import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart' as di;
+import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -21,9 +25,14 @@ class VictimMapController extends GetxController {
   final currentPosition = Rxn<Position>();
   final disasterMarkers = <Marker>[].obs;
   final shelterMarkers = <Marker>[].obs;
+  final myRequestMarkers = <Marker>[].obs;
+  final myRequests = <HelpRequest>[].obs;
   final selectedShelter = Rxn<Map<String, dynamic>>();
+  final selectedRequest = Rxn<HelpRequest>();
   final isLoading = false.obs;
   final routePolylines = <Polyline>[].obs;
+  
+  StreamSubscription? _myRequestsSub;
 
   @override
   void onInit() {
@@ -32,6 +41,220 @@ class VictimMapController extends GetxController {
     getCurrentLocation();
     loadDisasterMarkers();
     loadShelterMarkers();
+    _setupMyRequestsListener();
+  }
+  
+  @override
+  void onClose() {
+    _myRequestsSub?.cancel();
+    super.onClose();
+  }
+  
+  void _setupMyRequestsListener() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    _myRequestsSub = _helpRequestRepo
+        .getRequestsByUserId(user.uid)
+        .listen((requests) {
+      myRequests.value = requests;
+      _updateMyRequestMarkers(requests);
+    });
+  }
+  
+  void _updateMyRequestMarkers(List<HelpRequest> requests) {
+    myRequestMarkers.value = requests.map((req) {
+      // Color based on status
+      Color markerColor = Colors.orange; // pending
+      IconData markerIcon = Iconsax.warning_2;
+      
+      switch (req.status) {
+        case RequestStatus.pending:
+          markerColor = Colors.orange;
+          markerIcon = Iconsax.clock;
+          break;
+        case RequestStatus.inProgress:
+          markerColor = Colors.blue;
+          markerIcon = Iconsax.refresh;
+          break;
+        case RequestStatus.completed:
+          markerColor = Colors.green;
+          markerIcon = Iconsax.tick_circle;
+          break;
+        case RequestStatus.cancelled:
+          markerColor = Colors.grey;
+          markerIcon = Iconsax.close_circle;
+          break;
+      }
+      
+      return Marker(
+        point: LatLng(req.lat, req.lng),
+        width: 50,
+        height: 50,
+        child: GestureDetector(
+          onTap: () => _showRequestDetail(req),
+          child: Container(
+            decoration: BoxDecoration(
+              color: markerColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: markerColor.withOpacity(0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Icon(
+              markerIcon,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+  
+  void _showRequestDetail(HelpRequest request) {
+    selectedRequest.value = request;
+    
+    // Status colors
+    Color statusColor = Colors.orange;
+    String statusText = 'Chờ xử lý';
+    IconData statusIcon = Iconsax.clock;
+    
+    switch (request.status) {
+      case RequestStatus.pending:
+        statusColor = Colors.orange;
+        statusText = 'Chờ xử lý';
+        statusIcon = Iconsax.clock;
+        break;
+      case RequestStatus.inProgress:
+        statusColor = Colors.blue;
+        statusText = 'Đang xử lý';
+        statusIcon = Iconsax.refresh;
+        break;
+      case RequestStatus.completed:
+        statusColor = Colors.green;
+        statusText = 'Đã hỗ trợ';
+        statusIcon = Iconsax.tick_circle;
+        break;
+      case RequestStatus.cancelled:
+        statusColor = Colors.grey;
+        statusText = 'Đã hủy';
+        statusIcon = Iconsax.close_circle;
+        break;
+    }
+    
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(statusIcon, color: statusColor, size: 32),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        request.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _DetailRow(
+              icon: Iconsax.document_text,
+              label: 'Mô tả',
+              value: request.description,
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Iconsax.location,
+              label: 'Địa chỉ',
+              value: request.address,
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Iconsax.call,
+              label: 'Liên hệ',
+              value: request.contact,
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Iconsax.tag,
+              label: 'Loại',
+              value: request.type.viName,
+            ),
+            const SizedBox(height: 12),
+            _DetailRow(
+              icon: Iconsax.danger,
+              label: 'Mức độ',
+              value: request.severity.viName,
+            ),
+            const SizedBox(height: 16),
+            if (request.status == RequestStatus.pending)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Get.back();
+                    // TODO: Navigate to edit request
+                    Get.snackbar(
+                      'Thông báo',
+                      'Tính năng cập nhật yêu cầu đang phát triển',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                  icon: const Icon(Iconsax.edit),
+                  label: const Text('Cập nhật thông tin'),
+                ),
+              ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
   }
 
   void _initLocationService() {
@@ -420,6 +643,53 @@ class VictimMapController extends GetxController {
   void refreshMarkers() {
     loadDisasterMarkers();
     loadShelterMarkers();
+    // My requests will auto-update via stream
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

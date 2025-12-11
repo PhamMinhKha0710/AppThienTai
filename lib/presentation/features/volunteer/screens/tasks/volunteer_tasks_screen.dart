@@ -70,10 +70,10 @@ class VolunteerTasksScreen extends StatelessWidget {
                       const Text('Khoảng cách (km)'),
                       Obx(() {
                         return Slider(
-                          value: controller.distanceKm.value,
+                          value: controller.distanceKm.value.clamp(1, 150),
                           min: 1,
-                          max: 30,
-                          divisions: 29,
+                          max: 150,
+                          divisions: 149,
                           label: '${controller.distanceKm.value.round()} km',
                           onChanged: (v) => controller.distanceKm.value = v,
                         );
@@ -118,7 +118,6 @@ class VolunteerTasksScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final task = list[index];
                     final status = task['status'];
-                    final distance = (task['distance'] ?? 0).toString();
                     return Card(
                       margin: EdgeInsets.only(bottom: MinhSizes.spaceBtwItems),
                       child: Padding(

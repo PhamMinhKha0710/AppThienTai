@@ -18,6 +18,9 @@ class VictimSosController extends GetxController {
   
   final currentStep = 0.obs;
   final descriptionController = TextEditingController();
+  final phoneController = TextEditingController();
+  final addressController = TextEditingController();
+  final numberOfPeopleController = TextEditingController();
   final currentPosition = Rxn<Position>();
   final selectedImages = <File>[].obs;
   final isSubmitting = false.obs;
@@ -27,6 +30,21 @@ class VictimSosController extends GetxController {
     super.onInit();
     _initLocationService();
     getCurrentLocation();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Load phone number if available
+        if (user.phoneNumber != null) {
+          phoneController.text = user.phoneNumber!;
+        }
+      }
+    } catch (e) {
+      print('Error loading user info: $e');
+    }
   }
 
   void _initLocationService() {
@@ -40,6 +58,9 @@ class VictimSosController extends GetxController {
   @override
   void onClose() {
     descriptionController.dispose();
+    phoneController.dispose();
+    addressController.dispose();
+    numberOfPeopleController.dispose();
     super.onClose();
   }
 
@@ -52,13 +73,46 @@ class VictimSosController extends GetxController {
   }
 
   void nextStep() {
-    if (currentStep.value < 2) {
+    if (currentStep.value < 3) {
       if (currentStep.value == 0) {
         // Validate description
         if (descriptionController.text.trim().isEmpty) {
           MinhLoaders.errorSnackBar(
             title: "Lỗi",
             message: "Vui lòng nhập mô tả vấn đề",
+          );
+          return;
+        }
+        // Validate location
+        if (currentPosition.value == null) {
+          MinhLoaders.errorSnackBar(
+            title: "Lỗi",
+            message: "Vui lòng đợi hệ thống lấy vị trí",
+          );
+          return;
+        }
+      } else if (currentStep.value == 1) {
+        // Validate phone
+        if (phoneController.text.trim().isEmpty) {
+          MinhLoaders.errorSnackBar(
+            title: "Lỗi",
+            message: "Vui lòng nhập số điện thoại liên lạc",
+          );
+          return;
+        }
+        // Validate number of people
+        if (numberOfPeopleController.text.trim().isEmpty) {
+          MinhLoaders.errorSnackBar(
+            title: "Lỗi",
+            message: "Vui lòng nhập số người cần hỗ trợ",
+          );
+          return;
+        }
+        final numPeople = int.tryParse(numberOfPeopleController.text.trim());
+        if (numPeople == null || numPeople <= 0) {
+          MinhLoaders.errorSnackBar(
+            title: "Lỗi",
+            message: "Số người phải là số nguyên dương",
           );
           return;
         }
@@ -138,33 +192,39 @@ class VictimSosController extends GetxController {
         // imageUrl = await uploadImage(selectedImages.first);
       }
 
-      // Get address from position - ensure it's not empty
-      String address = _locationService?.currentAddress.value ?? "";
-      if (address.isEmpty || address.trim().isEmpty) {
-        // Try to get address from coordinates using LocationService
-        try {
-          final position = currentPosition.value!;
-          final fetchedAddress = await _locationService?.getAddressFromCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-          if (fetchedAddress != null && fetchedAddress.isNotEmpty) {
-            address = fetchedAddress;
-          } else {
+      // Get address - prioritize manual input, then location service, then coordinates
+      String address = addressController.text.trim();
+      if (address.isEmpty) {
+        address = _locationService?.currentAddress.value ?? "";
+        if (address.isEmpty) {
+          // Try to get address from coordinates using LocationService
+          try {
+            final position = currentPosition.value!;
+            final fetchedAddress = await _locationService?.getAddressFromCoordinates(
+              position.latitude,
+              position.longitude,
+            );
+            if (fetchedAddress != null && fetchedAddress.isNotEmpty) {
+              address = fetchedAddress;
+            } else {
+              // Fallback to coordinates
+              address = "Vị trí GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
+            }
+          } catch (e) {
             // Fallback to coordinates
+            final position = currentPosition.value!;
             address = "Vị trí GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
           }
-        } catch (e) {
-          // Fallback to coordinates
-          final position = currentPosition.value!;
-          address = "Vị trí GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
         }
       }
 
-      // Get contact - ensure it's not empty
-      String contact = user.phoneNumber ?? user.email ?? "";
-      if (contact.isEmpty || contact.trim().isEmpty) {
-        contact = user.uid; // Fallback to user ID if no phone/email
+      // Get contact - prioritize phone input, then user phone, then email
+      String contact = phoneController.text.trim();
+      if (contact.isEmpty) {
+        contact = user.phoneNumber ?? user.email ?? "";
+        if (contact.isEmpty) {
+          contact = user.uid; // Fallback to user ID if no phone/email
+        }
       }
 
       // Create help request

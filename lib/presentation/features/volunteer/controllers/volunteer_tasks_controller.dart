@@ -20,7 +20,8 @@ class VolunteerTasksController extends GetxController {
   RoutingService? _routingService;
 
   final filterType = 'all'.obs;
-  final distanceKm = 10.0.obs;
+  // Default to a wide radius so volunteers can see more tasks
+  final distanceKm = 150.0.obs;
   final searchQuery = ''.obs;
 
   final tabs = const ['pending', 'accepted', 'completed'];
