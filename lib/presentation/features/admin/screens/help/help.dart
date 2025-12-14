@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cuutrobaolu/core/widgets/appbar/MinhAppbar.dart';
 
 import 'package:cuutrobaolu/core/widgets/storms/storm_advanced_layer.dart';
@@ -13,44 +11,23 @@ import 'package:cuutrobaolu/presentation/features/admin/screens/help/widgets/Sup
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
 
 import 'package:latlong2/latlong.dart';
 
 
-class HelpAdminScreen extends StatefulWidget {
+class HelpAdminScreen extends StatelessWidget {
   const HelpAdminScreen({super.key});
 
   @override
-  State<HelpAdminScreen> createState() => _HelpAdminScreenState();
-}
-
-class _HelpAdminScreenState extends State<HelpAdminScreen> {
-  final _searchController = TextEditingController();
-  final _debounceTimer = Rx<Timer?>(null);
-
-  @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context) {
     final ctrl = Get.put(HelpController());
+
     // Đảm bảo stream được setup nếu controller đã tồn tại
     if (ctrl.requests.isEmpty) {
       print('HelpAdminScreen: requests list is empty, waiting for stream...');
     } else {
       print('HelpAdminScreen: requests list has ${ctrl.requests.length} items');
     }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _debounceTimer.value?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ctrl = Get.put(HelpController());
 
     return Scaffold(
       appBar: MinhAppbar(title: Text("Cứu Trợ"), showBackArrow: true,),
@@ -60,35 +37,26 @@ class _HelpAdminScreenState extends State<HelpAdminScreen> {
           // Search Bar
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
+            child: Obx(() => TextField(
+              controller: ctrl.searchController,
               decoration: InputDecoration(
                 hintText: 'Tìm kiếm địa điểm...',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                suffixIcon: _searchController.text.isNotEmpty
+                suffixIcon: ctrl.searchController.text.isNotEmpty
                     ? IconButton(
                         icon: Icon(Icons.clear),
                         onPressed: () {
-                          _searchController.clear();
+                          ctrl.searchController.clear();
                           ctrl.clearSearch();
                         },
                       )
                     : null,
               ),
-              onChanged: (value) {
-                _debounceTimer.value?.cancel();
-                _debounceTimer.value = Timer(Duration(milliseconds: 500), () {
-                  if (value.isNotEmpty) {
-                    ctrl.searchLocation(value);
-                  } else {
-                    ctrl.clearSearch();
-                  }
-                });
-              },
-            ),
+              onChanged: ctrl.handleSearchChanged,
+            )),
           ),
           // Search Results List
           Obx(() {
@@ -128,7 +96,7 @@ class _HelpAdminScreenState extends State<HelpAdminScreen> {
                       subtitle: Text('$formattedLat, $formattedLon'),
                       onTap: () {
                         ctrl.moveToLocation(LatLng(lat, lon));
-                        _searchController.text =
+                        ctrl.searchController.text =
                             result['display_name']?.toString() ?? '';
                         ctrl.searchResults.clear();
                       },

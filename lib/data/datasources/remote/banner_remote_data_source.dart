@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:flutter/services.dart';
+import '../../models/banner_dto.dart';
 
 /// Banner Remote Data Source
 abstract class BannerRemoteDataSource {
-  Future<List<Map<String, dynamic>>> getAllBanners();
+  Future<List<BannerDto>> getAllBanners();
   Future<void> uploadBannerToFirestore(Map<String, dynamic> bannerData);
 }
 
@@ -15,15 +16,12 @@ class BannerRemoteDataSourceImpl implements BannerRemoteDataSource {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
-  Future<List<Map<String, dynamic>>> getAllBanners() async {
+  Future<List<BannerDto>> getAllBanners() async {
     try {
       final snapshot = await _firestore.collection("Banners").get();
       final list = snapshot.docs
-          .map((doc) => {
-                'id': doc.id,
-                ...doc.data(),
-              })
-          .where((data) => data['Active'] == true)
+          .map((doc) => BannerDto.fromSnapshot(doc))
+          .where((dto) => dto.active == true)
           .toList();
       return list;
     } on FirebaseException catch (e) {

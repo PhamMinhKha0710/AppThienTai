@@ -1,10 +1,12 @@
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
-import 'package:cuutrobaolu/data/repositories/donations/donation_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/donation_repository.dart';
+import 'package:cuutrobaolu/domain/entities/donation_entity.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:flutter/material.dart';
 
 class VictimDonationController extends GetxController {
-  final DonationRepository _donationRepo = DonationRepository();
+  final DonationRepository _donationRepo = getIt<DonationRepository>();
 
   final selectedTab = 0.obs;
   final paymentMethod = 'wallet'.obs;
@@ -62,7 +64,7 @@ class VictimDonationController extends GetxController {
 
       // TODO: Process payment with VNPay/Momo
       // After payment success, update status to 'completed'
-      await _donationRepo.updateDonationStatus(donationId, 'completed');
+      await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       // Reload total
       await loadTotalDonation();
@@ -106,7 +108,7 @@ class VictimDonationController extends GetxController {
       );
 
       // Update status to completed
-      await _donationRepo.updateDonationStatus(donationId, 'completed');
+      await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       MinhLoaders.successSnackBar(
         title: "Thành công",

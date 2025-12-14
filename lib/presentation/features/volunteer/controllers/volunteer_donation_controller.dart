@@ -1,11 +1,13 @@
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
-import 'package:cuutrobaolu/data/repositories/donations/donation_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/donation_repository.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/domain/entities/donation_entity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class VolunteerDonationController extends GetxController {
-  final DonationRepository _donationRepo = DonationRepository();
+  final DonationRepository _donationRepo = getIt<DonationRepository>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final selectedTab = 0.obs; // 0: Money, 1: Supplies, 2: Time
@@ -95,7 +97,7 @@ class VolunteerDonationController extends GetxController {
 
       // TODO: Process payment with VNPay/Momo
       // After payment success, update status to 'completed'
-      await _donationRepo.updateDonationStatus(donationId, 'completed');
+      await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       // Reload totals
       await loadDonationData();
@@ -139,7 +141,7 @@ class VolunteerDonationController extends GetxController {
       );
 
       // Update status to completed
-      await _donationRepo.updateDonationStatus(donationId, 'completed');
+      await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       MinhLoaders.successSnackBar(
         title: "Thành công",
@@ -182,7 +184,7 @@ class VolunteerDonationController extends GetxController {
       );
 
       // Update status to completed
-      await _donationRepo.updateDonationStatus(donationId, 'completed');
+      await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       // Reload totals
       await loadDonationData();

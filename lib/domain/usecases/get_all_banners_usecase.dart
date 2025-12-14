@@ -1,5 +1,6 @@
 import '../failures/failures.dart';
 import '../repositories/banner_repository.dart';
+import '../entities/banner_entity.dart';
 
 /// Use case để lấy tất cả banners
 class GetAllBannersUseCase {
@@ -8,7 +9,7 @@ class GetAllBannersUseCase {
   GetAllBannersUseCase(this.repository);
 
   /// Execute get all banners
-  Future<List<Map<String, dynamic>>> call() async {
+  Future<List<BannerEntity>> call() async {
     try {
       return await repository.getAllBanners();
     } on Failure {
@@ -18,6 +19,8 @@ class GetAllBannersUseCase {
     }
   }
 }
+
+
 
 
 

@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/presentation/features/admin/NavigationAdminController.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AdminDashboardController extends GetxController {
-  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
-  final ShelterRepository _shelterRepo = ShelterRepository();
+  final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
+  final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Realtime stats
@@ -75,7 +76,7 @@ class AdminDashboardController extends GetxController {
     try {
       // Listen to pending SOS count
       _pendingSub = _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.pending.toJson())
+          .getRequestsByStatus(domain.RequestStatus.pending)
           .listen(
             (requests) {
               pendingSOS.value = requests.length;
@@ -87,7 +88,7 @@ class AdminDashboardController extends GetxController {
       
       // Listen to inProgress SOS count
       _inProgressSub = _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.inProgress.toJson())
+          .getRequestsByStatus(domain.RequestStatus.inProgress)
           .listen(
             (requests) {
               inProgressSOS.value = requests.length;
@@ -99,7 +100,7 @@ class AdminDashboardController extends GetxController {
       
       // Listen to completed SOS count
       _completedSub = _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.completed.toJson())
+          .getRequestsByStatus(domain.RequestStatus.completed)
           .listen(
             (requests) {
               completedSOS.value = requests.length;
@@ -145,7 +146,7 @@ class AdminDashboardController extends GetxController {
   Future<void> loadRecentSOS() async {
     try {
       final allSOS = await _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.pending.toJson())
+          .getRequestsByStatus(domain.RequestStatus.pending)
           .first
           .timeout(const Duration(seconds: 10));
       
@@ -176,16 +177,16 @@ class AdminDashboardController extends GetxController {
       
       final stats = <Map<String, dynamic>>[];
       for (var shelter in shelters) {
-        final capacity = (shelter['Capacity'] as num?)?.toInt() ?? 0;
-        final occupancy = (shelter['CurrentOccupancy'] as num?)?.toInt() ?? 0;
+        final capacity = shelter.capacity;
+        final occupancy = shelter.currentOccupancy;
         final available = capacity - occupancy;
         final percent = capacity > 0 ? (occupancy / capacity * 100).toInt() : 0;
         
         // Only show shelters that are nearly full (> 80%)
         if (percent > 80) {
           stats.add({
-            'id': shelter['id'],
-            'name': shelter['Name'] ?? 'Điểm trú ẩn',
+            'id': shelter.id,
+            'name': shelter.name,
             'capacity': capacity,
             'occupancy': occupancy,
             'available': available,
@@ -204,7 +205,7 @@ class AdminDashboardController extends GetxController {
   Future<void> loadMapSOS() async {
     try {
       final pending = await _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.pending.toJson())
+          .getRequestsByStatus(domain.RequestStatus.pending)
           .first
           .timeout(const Duration(seconds: 10));
 
@@ -212,8 +213,8 @@ class AdminDashboardController extends GetxController {
           .map((req) => {
                 'id': req.id,
                 'title': req.title,
-                'lat': (req.lat as num).toDouble(),
-                'lng': (req.lng as num).toDouble(),
+                'lat': req.lat,
+                'lng': req.lng,
                 'severity': req.severity.viName,
               })
           .toList();

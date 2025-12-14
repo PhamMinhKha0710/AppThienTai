@@ -413,98 +413,93 @@ class _SOSCard extends StatelessWidget {
       orElse: () => controller.allRequests.first,
     );
     
-    String? selectedVolunteerId;
+    // Use Rx variable for selected volunteer
+    final selectedVolunteerId = Rxn<String>();
     
     Get.dialog(
-      StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Phân công tình nguyện viên'),
-            content: FutureBuilder<List<Map<String, dynamic>>>(
-              future: controller.getAvailableVolunteers(request.lat, request.lng),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(
-                    height: 200,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                
-                if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
-                  return const SizedBox(
-                    height: 200,
-                    child: Center(
-                      child: Text('Không có tình nguyện viên nào'),
-                    ),
-                  );
-                }
-                
-                final volunteers = snapshot.data!;
-                
-                return SizedBox(
-                  width: double.maxFinite,
-                  height: 300,
-                  child: Column(
-                    children: [
-                      const Text('Chọn tình nguyện viên:'),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: volunteers.length,
-                          itemBuilder: (context, index) {
-                            final volunteer = volunteers[index];
-                            final distance = volunteer['distance'] as double?;
-                            
-                            return RadioListTile<String>(
-                              title: Text(volunteer['name'] as String),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (volunteer['email'] != null && (volunteer['email'] as String).isNotEmpty)
-                                    Text(
-                                      volunteer['email'] as String,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                    ),
-                                  if (distance != null)
-                                    Text(
-                                      'Khoảng cách: ${distance.toStringAsFixed(1)} km',
-                                      style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
-                                    ),
-                                ],
-                              ),
-                              value: volunteer['id'] as String,
-                              groupValue: selectedVolunteerId,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedVolunteerId = value;
-                                });
-                              },
-                            );
+      AlertDialog(
+        title: const Text('Phân công tình nguyện viên'),
+        content: FutureBuilder<List<Map<String, dynamic>>>(
+          future: controller.getAvailableVolunteers(request.lat, request.lng),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            
+            if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Text('Không có tình nguyện viên nào'),
+                ),
+              );
+            }
+            
+            final volunteers = snapshot.data!;
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child: Column(
+                children: [
+                  const Text('Chọn tình nguyện viên:'),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: Obx(() => ListView.builder(
+                      itemCount: volunteers.length,
+                      itemBuilder: (context, index) {
+                        final volunteer = volunteers[index];
+                        final distance = volunteer['distance'] as double?;
+                        
+                        return RadioListTile<String>(
+                          title: Text(volunteer['name'] as String),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (volunteer['email'] != null && (volunteer['email'] as String).isNotEmpty)
+                                Text(
+                                  volunteer['email'] as String,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                              if (distance != null)
+                                Text(
+                                  'Khoảng cách: ${distance.toStringAsFixed(1)} km',
+                                  style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                                ),
+                            ],
+                          ),
+                          value: volunteer['id'] as String,
+                          groupValue: selectedVolunteerId.value,
+                          onChanged: (value) {
+                            selectedVolunteerId.value = value;
                           },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: selectedVolunteerId == null
-                    ? null
-                    : () async {
-                        await controller.assignVolunteer(requestId, selectedVolunteerId!);
-                        Get.back();
+                        );
                       },
-                child: const Text('Phân công'),
+                    )),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Hủy'),
+          ),
+          Obx(() => ElevatedButton(
+            onPressed: selectedVolunteerId.value == null
+                ? null
+                : () async {
+                    await controller.assignVolunteer(requestId, selectedVolunteerId.value!);
+                    Get.back();
+                  },
+            child: const Text('Phân công'),
+          )),
+        ],
       ),
     );
   }

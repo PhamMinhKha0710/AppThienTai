@@ -1,7 +1,10 @@
 import 'package:cuutrobaolu/data/services/location_service.dart';
-import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart';
+import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/entities/shelter_entity.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/core/constants/enums.dart' as core;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
@@ -9,8 +12,8 @@ import 'package:latlong2/latlong.dart';
 
 class VolunteerMapController extends GetxController {
   LocationService? _locationService;
-  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
-  final ShelterRepository _shelterRepo = ShelterRepository();
+  final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
+  final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
 
   final currentPosition = Rxn<LatLng>();
   final disasterMarkers = <Marker>[].obs;
@@ -98,7 +101,7 @@ class VolunteerMapController extends GetxController {
     try {
       // Load high severity requests as disaster markers
       final highSeverityRequests = await _helpRequestRepo
-          .getRequestsBySeverity(RequestSeverity.high.toJson())
+          .getRequestsBySeverity(domain.RequestSeverity.high)
           .first;
 
       disasterMarkers.value = highSeverityRequests.map((req) {
@@ -119,10 +122,8 @@ class VolunteerMapController extends GetxController {
       final shelters = await _shelterRepo.getAllShelters().first;
 
       shelterMarkers.value = shelters.map((shelter) {
-        final lat = (shelter['Lat'] as num?)?.toDouble() ?? 0.0;
-        final lng = (shelter['Lng'] as num?)?.toDouble() ?? 0.0;
         return Marker(
-          point: LatLng(lat, lng),
+          point: LatLng(shelter.lat, shelter.lng),
           width: 36,
           height: 36,
           child: const Icon(Icons.home, color: Colors.green, size: 32),
@@ -137,7 +138,7 @@ class VolunteerMapController extends GetxController {
     try {
       // Load pending requests as task markers
       final pendingRequests = await _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.pending.toJson())
+          .getRequestsByStatus(domain.RequestStatus.pending)
           .first;
 
       taskMarkers.value = pendingRequests.map((req) {
@@ -301,15 +302,22 @@ class VolunteerMapController extends GetxController {
 
                               isLoading.value = true;
                               try {
-                                await _shelterRepo.createShelter({
-                                  'Lat': point.latitude,
-                                  'Lng': point.longitude,
-                                  'Name': nameController.text.trim(),
-                                  'Address': addressController.text.trim(),
-                                  'Capacity': capacity,
-                                  'CurrentOccupancy': 0,
-                                  'Description': descriptionController.text.trim(),
-                                });
+                                // Import ShelterEntity
+                                final shelter = ShelterEntity(
+                                  id: '', // Will be set by Firestore
+                                  name: nameController.text.trim(),
+                                  address: addressController.text.trim(),
+                                  lat: point.latitude,
+                                  lng: point.longitude,
+                                  capacity: capacity,
+                                  currentOccupancy: 0,
+                                  isActive: true,
+                                  createdAt: DateTime.now(),
+                                  description: descriptionController.text.trim().isEmpty 
+                                      ? null 
+                                      : descriptionController.text.trim(),
+                                );
+                                await _shelterRepo.createShelter(shelter);
                                 Get.back();
                                 Get.snackbar(
                                   'Thành công',

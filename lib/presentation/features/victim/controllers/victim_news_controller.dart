@@ -2,11 +2,13 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/widgets/chatbot/MinhChatbotSuggestion.dart';
-import 'package:cuutrobaolu/data/repositories/news/news_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/news_repository.dart';
+import 'package:cuutrobaolu/domain/entities/news_entity.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:iconsax/iconsax.dart';
 
 class VictimNewsController extends GetxController {
-  final NewsRepository _newsRepo = NewsRepository();
+  final NewsRepository _newsRepo = getIt<NewsRepository>();
 
   final selectedCategory = "Tất cả".obs;
   final searchQuery = "".obs;
@@ -40,15 +42,20 @@ class VictimNewsController extends GetxController {
     }
   }
 
-  Map<String, dynamic> _formatNews(Map<String, dynamic> news) {
+  Map<String, dynamic> _formatNews(NewsEntity news) {
+    // Get first 100 characters as summary
+    final summary = news.content.length > 100 
+        ? '${news.content.substring(0, 100)}...' 
+        : news.content;
+    
     return {
-      'id': news['id'],
-      'title': news['Title'] ?? news['title'] ?? '',
-      'summary': news['Summary'] ?? news['summary'] ?? news['Content'] ?? '',
-      'content': news['Content'] ?? news['content'] ?? '',
-      'category': news['Category'] ?? news['category'] ?? 'Khác',
-      'image': news['ImageUrl'] ?? news['image'] ?? news['Image'] ?? '',
-      'createdAt': news['CreatedAt'],
+      'id': news.id,
+      'title': news.title,
+      'summary': summary,
+      'content': news.content,
+      'category': news.category ?? 'Khác',
+      'image': news.imageUrl ?? '',
+      'createdAt': news.createdAt,
     };
   }
 

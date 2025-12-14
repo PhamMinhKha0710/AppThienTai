@@ -5,7 +5,7 @@ import 'package:cuutrobaolu/core/widgets/buttons/MinhShortcutButton.dart';
 import 'package:cuutrobaolu/core/widgets/cards/MinhAlertCard.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
 import 'package:cuutrobaolu/presentation/features/victim/screens/sos/victim_sos_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/receive/victim_receive_screen.dart';
@@ -112,19 +112,19 @@ class VictimHomeScreen extends StatelessWidget {
                                   IconData markerIcon = Iconsax.clock;
                                   
                                   switch (req.status) {
-                                    case RequestStatus.pending:
+                                    case domain.RequestStatus.pending:
                                       markerColor = Colors.orange;
                                       markerIcon = Iconsax.clock;
                                       break;
-                                    case RequestStatus.inProgress:
+                                    case domain.RequestStatus.inProgress:
                                       markerColor = Colors.blue;
                                       markerIcon = Iconsax.refresh;
                                       break;
-                                    case RequestStatus.completed:
+                                    case domain.RequestStatus.completed:
                                       markerColor = Colors.green;
                                       markerIcon = Iconsax.tick_circle;
                                       break;
-                                    case RequestStatus.cancelled:
+                                    case domain.RequestStatus.cancelled:
                                       markerColor = Colors.grey;
                                       markerIcon = Iconsax.close_circle;
                                       break;

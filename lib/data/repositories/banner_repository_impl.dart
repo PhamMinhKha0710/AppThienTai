@@ -1,6 +1,8 @@
 import '../../domain/repositories/banner_repository.dart';
+import '../../domain/entities/banner_entity.dart';
 import '../../domain/failures/failures.dart';
 import '../datasources/remote/banner_remote_data_source.dart';
+import '../models/banner_dto.dart';
 import '../../service/CloudinaryService.dart';
 
 /// Banner Repository Implementation
@@ -10,9 +12,10 @@ class BannerRepositoryImpl implements BannerRepository {
   BannerRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<List<Map<String, dynamic>>> getAllBanners() async {
+  Future<List<BannerEntity>> getAllBanners() async {
     try {
-      return await remoteDataSource.getAllBanners();
+      final dtos = await remoteDataSource.getAllBanners();
+      return dtos.map((dto) => dto.toEntity()).toList();
     } on Failure {
       rethrow;
     } catch (e) {
@@ -21,26 +24,25 @@ class BannerRepositoryImpl implements BannerRepository {
   }
 
   @override
-  Future<void> uploadBannersFromDummyData(
-      List<Map<String, dynamic>> banners) async {
+  Future<void> uploadBannersFromDummyData(List<BannerEntity> banners) async {
     try {
-      for (var bannerData in banners) {
+      for (var banner in banners) {
         // Upload image to Cloudinary
-        final imageUrl = bannerData['ImageUrl'] as String? ?? '';
-        if (imageUrl.isNotEmpty) {
+        if (banner.imageUrl.isNotEmpty) {
           final url = await CloudinaryService.uploadAssetImage(
-            imageUrl,
+            banner.imageUrl,
             preset: "banners",
             folder: "banners/test",
           );
 
           if (url != null) {
-            bannerData['ImageUrl'] = url;
+            banner = banner.copyWith(imageUrl: url);
           }
         }
 
-        // Upload to Firestore
-        await remoteDataSource.uploadBannerToFirestore(bannerData);
+        // Convert to DTO and upload to Firestore
+        final dto = BannerDto.fromEntity(banner);
+        await remoteDataSource.uploadBannerToFirestore(dto.toJson());
       }
     } on Failure {
       rethrow;
@@ -49,6 +51,8 @@ class BannerRepositoryImpl implements BannerRepository {
     }
   }
 }
+
+
 
 
 

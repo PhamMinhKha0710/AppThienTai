@@ -44,14 +44,13 @@ class BannerController extends GetxController
       // Fetch banners using Use Case
       final bannersData = await _getAllBannersUseCase();
 
-      // Convert to BannerModel
-      final banners = bannersData.map((data) {
-        // Create a fake DocumentSnapshot-like structure
+      // Convert BannerEntity to BannerModel
+      final banners = bannersData.map((entity) {
         return BannerModel(
-          name: data['Name'] ?? '',
-          imageUrl: data['ImageUrl'] ?? '',
-          active: data['Active'] ?? false,
-          targetScreen: data['TargetScreen'] ?? '',
+          name: entity.name,
+          imageUrl: entity.imageUrl,
+          active: entity.active,
+          targetScreen: entity.targetScreen,
         );
       }).toList();
 
@@ -87,11 +86,8 @@ class BannerController extends GetxController
         return;
       }
 
-      // Convert BannerModel to Map for Use Case
-      final data = MinhDummyData.banners.map((banner) => banner.toJson()).toList();
-
-      // Upload using Use Case
-      await _uploadBannersUseCase(data);
+      // Upload using Use Case (MinhDummyData.banners is already List<BannerEntity>)
+      await _uploadBannersUseCase(MinhDummyData.banners);
 
 
       // Stop loading

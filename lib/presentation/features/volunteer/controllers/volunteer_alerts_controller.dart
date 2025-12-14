@@ -1,10 +1,11 @@
-import 'package:cuutrobaolu/data/repositories/alerts/alert_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class VolunteerAlertsController extends GetxController {
-  final AlertRepository _alertRepo = AlertRepository();
+  final AlertRepository _alertRepo = getIt<AlertRepository>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final selectedTab = 0.obs; // 0: tất cả, 1: liên quan nhiệm vụ
@@ -42,17 +43,17 @@ class VolunteerAlertsController extends GetxController {
     }
   }
 
-  Map<String, dynamic> _formatAlert(Map<String, dynamic> alert) {
-    final createdAt = alert['CreatedAt'] as DateTime?;
+  Map<String, dynamic> _formatAlert(alert) {
+    final createdAt = alert.createdAt;
     final timeStr = createdAt != null
         ? DateFormat('HH:mm dd/MM').format(createdAt)
         : '';
 
     return {
-      'id': alert['id'],
-      'title': alert['Title'] ?? alert['title'] ?? '',
-      'description': alert['Description'] ?? alert['description'] ?? '',
-      'severity': alert['Severity'] ?? alert['severity'] ?? 'medium',
+      'id': alert.id,
+      'title': alert.title,
+      'description': alert.content,
+      'severity': alert.severity,
       'time': timeStr,
       'createdAt': createdAt,
     };
