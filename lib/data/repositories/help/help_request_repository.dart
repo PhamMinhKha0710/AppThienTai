@@ -7,13 +7,14 @@ class HelpRequestRepository {
   final FirebaseFirestore _firestore;
 
   HelpRequestRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// ============================
   /// COLLECTION REFERENCE
   /// ============================
-  CollectionReference<HelpRequest> get requestsCollection =>
-      _firestore.collection('help_requests').withConverter<HelpRequest>(
+  CollectionReference<HelpRequest> get requestsCollection => _firestore
+      .collection('help_requests')
+      .withConverter<HelpRequest>(
         fromFirestore: (snapshot, _) => HelpRequest.fromSnapshot(snapshot),
         toFirestore: (request, _) => request.toJson(),
       );
@@ -24,7 +25,9 @@ class HelpRequestRepository {
   Future<String> createHelpRequest(HelpRequest request) async {
     try {
       // Generate document ID if not provided
-      final docId = request.id.isNotEmpty ? request.id : _firestore.collection('help_requests').doc().id;
+      final docId = request.id.isNotEmpty
+          ? request.id
+          : _firestore.collection('help_requests').doc().id;
 
       // Create request with proper ID
       final requestWithId = request.copyWith(id: docId);
@@ -44,9 +47,7 @@ class HelpRequestRepository {
   /// ============================
   Future<void> updateHelpRequest(HelpRequest request) async {
     try {
-      final updatedRequest = request.copyWith(
-        updatedAt: DateTime.now(),
-      );
+      final updatedRequest = request.copyWith(updatedAt: DateTime.now());
       await requestsCollection.doc(request.id).update(updatedRequest.toJson());
     } catch (e) {
       throw Exception('Failed to update help request: $e');
@@ -72,20 +73,37 @@ class HelpRequestRepository {
     return requestsCollection
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   /// ============================
   /// GET REQUESTS BY STATUS
   /// ============================
+  // Stream<List<HelpRequest>> getRequestsByStatus(String status) {
+  //   return requestsCollection
+  //       .where('Status', isEqualTo: status)
+  //       .orderBy('CreatedAt', descending: true)
+  //       .snapshots()
+  //       .map((snapshot) =>
+  //       snapshot.docs.map((doc) => doc.data()).toList());
+  // }
+
+  /// ============================
+  /// GET REQUESTS BY STATUS (ĐÃ SỬA LỖI INDEX)
+  /// ============================
   Stream<List<HelpRequest>> getRequestsByStatus(String status) {
+    print('Getting requests by status: $status');
     return requestsCollection
         .where('Status', isEqualTo: status)
-        .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) {
+          final requests = snapshot.docs.map((doc) => doc.data()).toList();
+
+          // THÊM DÒNG NÀY: Sắp xếp ngay trên thiết bị
+          requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          return requests;
+        });
   }
 
   /// ============================
@@ -113,8 +131,7 @@ class HelpRequestRepository {
         .where('Province', isEqualTo: province)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   /// ============================
@@ -125,14 +142,17 @@ class HelpRequestRepository {
         .where('Severity', isEqualTo: severity)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   /// ============================
   /// GET NEARBY REQUESTS
   /// ============================
-  Stream<List<HelpRequest>> getNearbyRequests(double lat, double lng, double radiusKm) {
+  Stream<List<HelpRequest>> getNearbyRequests(
+    double lat,
+    double lng,
+    double radiusKm,
+  ) {
     // Lưu ý: Firestore không hỗ trợ truy vấn theo khoảng cách trực tiếp
     // Cần sử dụng Geohash hoặc giải pháp khác cho tính năng này
     return getAllRequests(); // Tạm thời trả về tất cả
@@ -152,18 +172,22 @@ class HelpRequestRepository {
   /// ============================
   /// UPDATE REQUEST STATUS
   /// ============================
-  Future<void> updateRequestStatus(String requestId, RequestStatus status, {String? volunteerId}) async {
+  Future<void> updateRequestStatus(
+    String requestId,
+    RequestStatus status, {
+    String? volunteerId,
+  }) async {
     try {
       final updateData = <String, dynamic>{
         'Status': status.toJson(),
         'UpdatedAt': FieldValue.serverTimestamp(),
       };
-      
+
       // If volunteerId is provided, add it to the update
       if (volunteerId != null) {
         updateData['VolunteerId'] = volunteerId;
       }
-      
+
       await requestsCollection.doc(requestId).update(updateData);
     } catch (e) {
       throw Exception('Failed to update request status: $e');
@@ -200,7 +224,6 @@ class HelpRequestRepository {
     return query
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-        snapshot.docs.map((doc) => doc.data()).toList());
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 }

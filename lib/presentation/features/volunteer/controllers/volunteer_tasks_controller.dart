@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/routing_service.dart';
@@ -30,23 +32,128 @@ class VolunteerTasksController extends GetxController {
   final tasks = <Map<String, dynamic>>[].obs;
   final isLoading = false.obs;
 
+  StreamSubscription<List<HelpRequest>>? _taskSub;
+
   @override
   void onInit() {
     super.onInit();
     _initServices();
-    loadTasks();
-    
-    // Listen to tab changes
-    ever(selectedTab, (_) => loadTasks());
+
+    // loadTasks();
+    // ever(selectedTab, (_) => loadTasks());
+
+    listenTasksRealtime();
+
+    ever(selectedTab, (_) => listenTasksRealtime());
   }
-  
+
+  @override
+  void onClose() {
+    _taskSub?.cancel();
+    super.onClose();
+  }
+
+
+  void listenTasksRealtime() {
+    _taskSub?.cancel(); // huỷ stream cũ khi đổi tab
+    isLoading.value = true;
+
+    final tabKey = tabs[selectedTab.value];
+    final userId = _auth.currentUser?.uid;
+
+    Stream<List<HelpRequest>> stream;
+
+    if (tabKey == 'pending') {
+      // stream = _helpRequestRepo.getRequestsByStatus(
+      //   RequestStatus.pending.toJson(),
+      // );
+
+      stream = FirebaseFirestore.instance
+          .collection('help_requests')
+          .where('Status', isEqualTo: 'pending')
+          .snapshots()
+          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+    } else if (tabKey == 'accepted') {
+      if (userId == null) {
+        tasks.clear();
+        isLoading.value = false;
+        return;
+      }
+
+      stream = FirebaseFirestore.instance
+          .collection('help_requests')
+          .where('Status', isEqualTo: 'inProgress')
+          .where('VolunteerId', isEqualTo: userId)
+          .snapshots()
+          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+    } else {
+      if (userId == null) {
+        tasks.clear();
+        isLoading.value = false;
+        return;
+      }
+
+      stream = FirebaseFirestore.instance
+          .collection('help_requests')
+          .where('Status', isEqualTo: 'completed')
+          .where('VolunteerId', isEqualTo: userId)
+          .snapshots()
+          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+    }
+
+    _taskSub = stream.listen(
+      (requests) async {
+        await _handleIncomingTasks(requests);
+        isLoading.value = false;
+      },
+      onError: (e) {
+        isLoading.value = false;
+        print('Realtime error: $e');
+      },
+    );
+  }
+
+  Future<void> _handleIncomingTasks(List<HelpRequest> requests) async {
+    // 1. Convert sang map trước
+    final list = requests.map((req) {
+      return {
+        'id': req.id,
+        'status': req.status.toJson(), // ⚠️ ĐÚNG status
+        'title': req.title,
+        'desc': req.description,
+        'severity': req.severity.toJson(),
+        'type': req.type.toJson(),
+        'lat': req.lat,
+        'lng': req.lng,
+        'address': req.address,
+        'createdAt': req.createdAt,
+        'distance': 0.0,
+        'distanceText': 'Đang tính...',
+      };
+    }).toList();
+
+    tasks.value = list; // update UI NGAY
+
+    // 2. Lấy vị trí
+    final currentPos = await _locationService?.getCurrentLocation();
+
+    if (currentPos != null && _routingService != null) {
+      _calculateDistancesInBackground(currentPos, list);
+    } else {
+      for (var t in list) {
+        t['distanceText'] = 'Chưa có vị trí';
+      }
+      tasks.value = list;
+    }
+  }
+
   void _initServices() {
     try {
       _locationService = Get.find<LocationService>();
     } catch (_) {
       _locationService = Get.put(LocationService(), permanent: true);
     }
-    
+
     try {
       _routingService = di.getIt<RoutingService>();
     } catch (_) {
@@ -60,10 +167,13 @@ class VolunteerTasksController extends GetxController {
       final tabKey = tabs[selectedTab.value];
       List<dynamic> requests;
 
+      print("tabKey: " + tabKey);
       if (tabKey == 'pending') {
         requests = await _helpRequestRepo
             .getRequestsByStatus(RequestStatus.pending.toJson())
             .first;
+
+        print("requests: " + requests.toString());
       } else if (tabKey == 'accepted') {
         // Get requests accepted by current volunteer (filter by VolunteerId)
         final userId = _auth.currentUser?.uid;
@@ -79,7 +189,7 @@ class VolunteerTasksController extends GetxController {
               .where('Status', isEqualTo: 'inProgress')
               .where('VolunteerId', isEqualTo: userId)
               .get();
-          
+
           // Convert Firestore docs to HelpRequest objects
           requests = snapshot.docs.map((doc) {
             return HelpRequest.fromSnapshot(doc);
@@ -107,7 +217,7 @@ class VolunteerTasksController extends GetxController {
               .where('Status', isEqualTo: 'completed')
               .where('VolunteerId', isEqualTo: userId)
               .get();
-          
+
           // Convert Firestore docs to HelpRequest objects
           requests = snapshot.docs.map((doc) {
             return HelpRequest.fromSnapshot(doc);
@@ -129,13 +239,14 @@ class VolunteerTasksController extends GetxController {
         if (_locationService == null) {
           _initServices();
         }
-        
+
         // Request location permission if needed
-        final hasPermission = await _locationService?.checkLocationPermission() ?? false;
+        final hasPermission =
+            await _locationService?.checkLocationPermission() ?? false;
         if (!hasPermission) {
           print('Location permission not granted');
         }
-        
+
         // Get current location with timeout
         currentPos = await _locationService?.getCurrentLocation().timeout(
           const Duration(seconds: 10),
@@ -144,9 +255,11 @@ class VolunteerTasksController extends GetxController {
             return null;
           },
         );
-        
+
         if (currentPos != null) {
-          print('Current location: ${currentPos.latitude}, ${currentPos.longitude}');
+          print(
+            'Current location: ${currentPos.latitude}, ${currentPos.longitude}',
+          );
         } else {
           print('Failed to get current location');
         }
@@ -158,7 +271,7 @@ class VolunteerTasksController extends GetxController {
       final tasksList = requests.map((req) {
         final severityStr = req.severity.toJson();
         final typeStr = req.type.toJson();
-        
+
         return {
           'id': req.id,
           'status': tabKey,
@@ -174,17 +287,21 @@ class VolunteerTasksController extends GetxController {
           'distanceText': 'Đang tính...',
         };
       }).toList();
-      
+
       // Update tasks immediately (with "Đang tính..." text)
       tasks.value = tasksList;
-      
+
       // Calculate routing distances in parallel (background)
       if (currentPos != null && _routingService != null) {
-        print('Starting distance calculation with current position: ${currentPos.latitude}, ${currentPos.longitude}');
+        print(
+          'Starting distance calculation with current position: ${currentPos.latitude}, ${currentPos.longitude}',
+        );
         _calculateDistancesInBackground(currentPos, tasksList);
       } else {
         // No location, update all to "Chưa có vị trí"
-        print('Cannot calculate distances: currentPos=${currentPos != null}, routingService=${_routingService != null}');
+        print(
+          'Cannot calculate distances: currentPos=${currentPos != null}, routingService=${_routingService != null}',
+        );
         for (var task in tasksList) {
           if (currentPos == null) {
             task['distanceText'] = 'Chưa có vị trí';
@@ -196,48 +313,109 @@ class VolunteerTasksController extends GetxController {
       }
     } catch (e) {
       print('Error loading tasks: $e');
-      MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Không thể tải nhiệm vụ: $e');
+      MinhLoaders.errorSnackBar(
+        title: 'Lỗi',
+        message: 'Không thể tải nhiệm vụ: $e',
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
+  // List<Map<String, dynamic>> get filteredTasks {
+  //   var filtered = List<Map<String, dynamic>>.from(tasks);
+  //
+  //   print('Total tasks: ${tasks.length}');
+  //   print('Filtered tasks: ${filtered.length}');
+  //   for (var t in filtered) {
+  //     print('Task ${t['id']} - distance=${t['distance']}');
+  //   }
+  //
+  //   // Filter by type/severity
+  //   if (filterType.value != 'all') {
+  //     filtered = filtered.where((t) {
+  //       final severity = (t['severity'] ?? '').toString().toLowerCase();
+  //       return severity == filterType.value.toLowerCase();
+  //     }).toList();
+  //   }
+  //
+  //   print("123456789");
+  //   // Filter by distance (using routing distance)
+  //   if (distanceKm.value > 0) {
+  //     filtered = filtered.where((t) {
+  //       final distance = (t['distance'] as num?)?.toDouble() ?? 0.0;
+  //       return distance <= distanceKm.value;
+  //     }).toList();
+  //   }
+  //
+  //   // Filter by search query
+  //   if (searchQuery.value.isNotEmpty) {
+  //     final query = searchQuery.value.toLowerCase();
+  //     filtered = filtered.where((t) {
+  //       final title = (t['title'] ?? '').toString().toLowerCase();
+  //       final desc = (t['desc'] ?? '').toString().toLowerCase();
+  //       return title.contains(query) || desc.contains(query);
+  //     }).toList();
+  //   }
+  //
+  //   // Sort by distance (closest first)
+  //   filtered.sort((a, b) {
+  //     final distA = (a['distance'] as num?)?.toDouble() ?? double.infinity;
+  //     final distB = (b['distance'] as num?)?.toDouble() ?? double.infinity;
+  //     return distA.compareTo(distB);
+  //   });
+  //
+  //   return filtered;
+  // }
+
   List<Map<String, dynamic>> get filteredTasks {
+    print('=== DEBUG FILTER START ===');
+    print('Total tasks in memory: ${tasks.length}');
+    print('filterType: ${filterType.value}');
+    print('distanceKm: ${distanceKm.value}');
+    print('searchQuery: "${searchQuery.value}"');
+
     var filtered = List<Map<String, dynamic>>.from(tasks);
+
+    // Debug từng task
+    for (var i = 0; i < filtered.length; i++) {
+      var t = filtered[i];
+      print('Task ${i+1}: id=${t['id']}, severity=${t['severity']}, distance=${t['distance']}');
+    }
 
     // Filter by type/severity
     if (filterType.value != 'all') {
+      print('⚠️ APPLYING severity filter: ${filterType.value}');
       filtered = filtered.where((t) {
         final severity = (t['severity'] ?? '').toString().toLowerCase();
         return severity == filterType.value.toLowerCase();
       }).toList();
+      print('After severity filter: ${filtered.length} tasks');
     }
 
-    // Filter by distance (using routing distance)
+    // Filter by distance
     if (distanceKm.value > 0) {
+      print('⚠️ APPLYING distance filter: <= ${distanceKm.value}km');
       filtered = filtered.where((t) {
         final distance = (t['distance'] as num?)?.toDouble() ?? 0.0;
         return distance <= distanceKm.value;
       }).toList();
+      print('After distance filter: ${filtered.length} tasks');
     }
 
     // Filter by search query
     if (searchQuery.value.isNotEmpty) {
-      final query = searchQuery.value.toLowerCase();
+      print('⚠️ APPLYING search filter: "${searchQuery.value}"');
       filtered = filtered.where((t) {
         final title = (t['title'] ?? '').toString().toLowerCase();
         final desc = (t['desc'] ?? '').toString().toLowerCase();
+        final query = searchQuery.value.toLowerCase();
         return title.contains(query) || desc.contains(query);
       }).toList();
+      print('After search filter: ${filtered.length} tasks');
     }
 
-    // Sort by distance (closest first)
-    filtered.sort((a, b) {
-      final distA = (a['distance'] as num?)?.toDouble() ?? double.infinity;
-      final distB = (b['distance'] as num?)?.toDouble() ?? double.infinity;
-      return distA.compareTo(distB);
-    });
-
+    print('=== DEBUG FILTER END: ${filtered.length} tasks ===');
     return filtered;
   }
 
@@ -245,7 +423,7 @@ class VolunteerTasksController extends GetxController {
     try {
       final taskId = task['id'] as String;
       final userId = _auth.currentUser?.uid;
-      
+
       if (userId == null) {
         MinhLoaders.errorSnackBar(
           title: 'Lỗi',
@@ -312,7 +490,7 @@ class VolunteerTasksController extends GetxController {
     selectedTab.value = index;
     loadTasks();
   }
-  
+
   /// Calculate routing distances in background (parallel processing)
   Future<void> _calculateDistancesInBackground(
     Position currentPos,
@@ -326,23 +504,25 @@ class VolunteerTasksController extends GetxController {
       tasks.value = tasksList;
       return;
     }
-    
-    print('Calculating routing distances for ${tasksList.length} tasks from position: ${currentPos.latitude}, ${currentPos.longitude}');
-    
+
+    print(
+      'Calculating routing distances for ${tasksList.length} tasks from position: ${currentPos.latitude}, ${currentPos.longitude}',
+    );
+
     // Calculate distances in parallel for better performance
     final futures = tasksList.map((task) async {
       final taskId = task['id'] as String;
       final lat = task['lat'] as double?;
       final lng = task['lng'] as double?;
-      
+
       if (lat == null || lng == null) {
         print('Task $taskId has invalid coordinates');
         task['distanceText'] = 'Không có vị trí';
         return task;
       }
-      
+
       print('Calculating distance to task $taskId at: $lat, $lng');
-      
+
       try {
         final routeDistance = await _routingService!.getRouteDistance(
           currentPos.latitude,
@@ -350,7 +530,7 @@ class VolunteerTasksController extends GetxController {
           lat,
           lng,
         );
-        
+
         String distanceText;
         if (routeDistance != null) {
           print('Task $taskId distance: $routeDistance km');
@@ -361,7 +541,7 @@ class VolunteerTasksController extends GetxController {
           } else {
             distanceText = '${routeDistance.round()} km';
           }
-          
+
           // Update task with distance
           task['distance'] = routeDistance;
           task['distanceText'] = distanceText;
@@ -373,15 +553,15 @@ class VolunteerTasksController extends GetxController {
         print('Error calculating route distance for task $taskId: $e');
         task['distanceText'] = 'Lỗi tính toán';
       }
-      
+
       return task;
     }).toList();
-    
+
     // Wait for all calculations to complete
     await Future.wait(futures);
-    
+
     print('All distance calculations completed');
-    
+
     // Update tasks list with calculated distances
     tasks.value = tasksList;
   }
@@ -390,7 +570,7 @@ class VolunteerTasksController extends GetxController {
   void viewTaskOnMap(Map<String, dynamic> task) {
     final lat = task['lat'] as double?;
     final lng = task['lng'] as double?;
-    
+
     if (lat == null || lng == null) {
       MinhLoaders.errorSnackBar(
         title: 'Lỗi',
@@ -401,7 +581,7 @@ class VolunteerTasksController extends GetxController {
 
     // Switch to Map tab (index 2 in volunteer navigation)
     NavigationVolunteerController.selectedIndex.value = 2;
-    
+
     // Wait a bit for map screen to load, then focus on location
     Future.delayed(const Duration(milliseconds: 300), () {
       try {

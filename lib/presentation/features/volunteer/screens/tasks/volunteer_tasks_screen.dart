@@ -113,6 +113,12 @@ class VolunteerTasksScreen extends StatelessWidget {
                 if (list.isEmpty) {
                   return const Center(child: Text('Không có nhiệm vụ.'));
                 }
+
+                if(controller.isLoading.value)
+                {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
                 return ListView.builder(
                   itemCount: list.length,
                   itemBuilder: (context, index) {

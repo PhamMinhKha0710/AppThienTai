@@ -339,7 +339,8 @@ class AdminDashboardScreen extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(MinhSizes.borderRadiusLg),
         child: Obx(() {
-          final pending = controller.mapSOS;
+          final pending = controller.mapSOS.value;
+
           
           return FlutterMap(
             options: const MapOptions(
@@ -409,7 +410,7 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: MinhSizes.spaceBtwItems),
             Obx(() {
-              final sosList = controller.recentSOS;
+              final sosList = controller.recentSOS.value;
               if (sosList.isEmpty) {
                 return const Center(
                   child: Padding(
@@ -418,6 +419,9 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 );
               }
+
+              print('recentSOS: ${sosList}');
+              print('lenght: ${sosList.length}');
               
               return Column(
                 children: sosList.map((sos) {
@@ -426,7 +430,8 @@ class AdminDashboardScreen extends StatelessWidget {
                   if (severity.contains('Khẩn cấp')) severityColor = Colors.red;
                   if (severity.contains('Cao')) severityColor = Colors.orange;
                   if (severity.contains('Thấp')) severityColor = Colors.green;
-                  
+                  if (severity.contains('Trung bình')) severityColor = Colors.black;
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
@@ -492,14 +497,17 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: MinhSizes.spaceBtwItems),
             Obx(() {
-              final shelters = controller.shelterStats;
+              final shelters = controller.shelterStats.value;
               if (shelters.isEmpty) {
                 return const Text(
                   'Tất cả điểm trú ẩn còn chỗ',
                   style: TextStyle(color: Colors.green),
                 );
               }
-              
+
+              print('shelterStats: ${shelters}');
+              print('lenght: ${shelters.length}');
+
               return Column(
                 children: shelters.map((shelter) {
                   final percent = shelter['percent'] as int;

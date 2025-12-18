@@ -136,6 +136,8 @@ class HelpRequest {
     });
   }
 
+
+
   HelpRequest copyWith({
     String? id,
     String? title,
@@ -179,5 +181,7 @@ class HelpRequest {
       detailedAddress: detailedAddress ?? this.detailedAddress,
     );
   }
+
+
 }
 
