@@ -3,7 +3,10 @@ import '../repositories/help_request_repository.dart';
 import '../entities/help_request_entity.dart';
 
 /// Use case để tạo help request mới
-class CreateHelpRequestUseCase {
+class CreateHelpRequestUseCase  {
+
+
+
   final HelpRequestRepository repository;
 
   CreateHelpRequestUseCase(this.repository);

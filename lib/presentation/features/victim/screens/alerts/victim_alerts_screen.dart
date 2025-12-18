@@ -69,6 +69,8 @@ class VictimAlertsScreen extends StatelessWidget {
                 );
               }
 
+
+
               return ListView.builder(
                 padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
                 itemCount: alerts.length,

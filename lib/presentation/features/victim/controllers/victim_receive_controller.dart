@@ -12,9 +12,9 @@ class VictimReceiveController extends GetxController {
   final ShelterRepository _shelterRepo = ShelterRepository();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
-  final currentPosition = Rxn<Position>();
-  final nearbyDistributionPoints = <Map<String, dynamic>>[].obs;
-  final myRegistrations = <Map<String, dynamic>>[].obs;
+  final currentPosition = Rxn<Position>(); // vị trí hiện tại
+  final nearbyDistributionPoints = <Map<String, dynamic>>[].obs; // điểm phân phối gần nhất
+  final myRegistrations = <Map<String, dynamic>>[].obs; // đăng ký của tôi
   final isLoading = false.obs;
   final searchQuery = ''.obs;
   

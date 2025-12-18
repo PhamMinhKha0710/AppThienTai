@@ -15,7 +15,12 @@ import 'package:flutter/material.dart';
 class VictimSosController extends GetxController {
   LocationService? _locationService;
   final CreateHelpRequestUseCase _createHelpRequestUseCase = Get.find<CreateHelpRequestUseCase>();
-  
+
+  static VictimSosController get to => Get.find();
+
+  // final CreateHelpRequestUseCase _createHelpRequestUseCase = Get.find<CreateHelpRequestUseCase>();
+
+
   final currentStep = 0.obs;
   final descriptionController = TextEditingController();
   final phoneController = TextEditingController();

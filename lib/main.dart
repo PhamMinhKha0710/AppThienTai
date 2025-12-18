@@ -40,5 +40,5 @@ Future<void> main() async {
   // VietnamProvinces sẽ được lazy load khi cần (không load ở đây)
   // Điều này giúp giảm thời gian khởi động đáng kể
 
-  runApp(const App());
+  runApp( App());
 }
