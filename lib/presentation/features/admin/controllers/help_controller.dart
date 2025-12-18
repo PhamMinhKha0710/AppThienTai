@@ -13,6 +13,7 @@ import 'package:cuutrobaolu/core/popups/exports.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
@@ -47,6 +48,10 @@ class HelpController extends GetxController {
 
   // Thêm biến để lưu marker vị trí tìm kiếm
   final Rxn<LatLng> searchLocationMarker = Rxn<LatLng>();
+  
+  // Search controller và debounce timer
+  final searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   StreamSubscription? _reqSub; // Generic type để tránh conflict
   StreamSubscription<List<SupporterModel>>? _supSub;
@@ -89,11 +94,24 @@ class HelpController extends GetxController {
     print('Help requests stream setup complete');
   }
 
+  void handleSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(Duration(milliseconds: 500), () {
+      if (value.isNotEmpty) {
+        searchLocation(value);
+      } else {
+        clearSearch();
+      }
+    });
+  }
+
   @override
   void onClose() {
     _reqSub?.cancel();
     _userReqSub?.cancel();
     _supSub?.cancel();
+    _debounceTimer?.cancel();
+    searchController.dispose();
     super.onClose();
   }
 

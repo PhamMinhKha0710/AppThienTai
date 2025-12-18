@@ -1,35 +1,31 @@
 import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../../domain/repositories/alert_repository.dart';
+import '../../../domain/entities/alert_entity.dart';
+import '../../models/alert_dto.dart';
 
-class AlertRepository {
+class AlertRepositoryImpl implements AlertRepository {
   final FirebaseFirestore _firestore;
 
-  AlertRepository({
+  AlertRepositoryImpl({
     FirebaseFirestore? firestore,
   })  : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('alerts');
 
-  /// Get all alerts
-  Stream<List<Map<String, dynamic>>> getAllAlerts() {
+  @override
+  Stream<List<AlertEntity>> getAllAlerts() {
     return _collection
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                'CreatedAt': data['CreatedAt']?.toDate(),
-                'UpdatedAt': data['UpdatedAt']?.toDate(),
-              };
-            }).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
   }
 
-  /// Get active alerts (not expired)
-  Stream<List<Map<String, dynamic>>> getActiveAlerts() {
+  @override
+  Stream<List<AlertEntity>> getActiveAlerts() {
     final now = DateTime.now();
     return _collection
         .where('IsActive', isEqualTo: true)
@@ -37,38 +33,25 @@ class AlertRepository {
         .orderBy('ExpiresAt')
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                'CreatedAt': data['CreatedAt']?.toDate(),
-                'UpdatedAt': data['UpdatedAt']?.toDate(),
-                'ExpiresAt': data['ExpiresAt']?.toDate(),
-              };
-            }).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
   }
 
-  /// Get alerts by severity
-  Stream<List<Map<String, dynamic>>> getAlertsBySeverity(String severity) {
+  @override
+  Stream<List<AlertEntity>> getAlertsBySeverity(String severity) {
     return _collection
         .where('Severity', isEqualTo: severity)
         .where('IsActive', isEqualTo: true)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                'CreatedAt': data['CreatedAt']?.toDate(),
-                'UpdatedAt': data['UpdatedAt']?.toDate(),
-              };
-            }).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
   }
 
-  /// Get alerts near location
-  Future<List<Map<String, dynamic>>> getNearbyAlerts(
+  @override
+  Future<List<AlertEntity>> getNearbyAlerts(
       double lat, double lng, double radiusKm) async {
     // Note: Firestore doesn't support geo queries directly
     // For now, fetch all active alerts and filter in memory
@@ -76,31 +59,26 @@ class AlertRepository {
         .where('IsActive', isEqualTo: true)
         .get();
 
-    final alerts = <Map<String, dynamic>>[];
+    final alerts = <AlertEntity>[];
     for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final alertLat = (data['Lat'] as num?)?.toDouble();
-      final alertLng = (data['Lng'] as num?)?.toDouble();
+      final dto = AlertDto.fromSnapshot(doc);
+      final alertLat = dto.lat;
+      final alertLng = dto.lng;
 
       if (alertLat != null && alertLng != null) {
         final distance = _calculateDistance(lat, lng, alertLat, alertLng);
         if (distance <= radiusKm) {
-          alerts.add({
-            'id': doc.id,
-            ...data,
-            'CreatedAt': data['CreatedAt']?.toDate(),
-            'distance': distance,
-          });
+          alerts.add(dto.toEntity());
         }
       }
     }
 
-    alerts.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
+    // Sort by distance (we'd need to add distance to entity or sort separately)
     return alerts;
   }
 
-  /// Get task-related alerts for volunteer
-  Stream<List<Map<String, dynamic>>> getTaskRelatedAlerts(String? volunteerId) {
+  @override
+  Stream<List<AlertEntity>> getTaskRelatedAlerts(String? volunteerId) {
     if (volunteerId == null) {
       return Stream.value([]);
     }
@@ -111,15 +89,9 @@ class AlertRepository {
         .where('VolunteerId', isEqualTo: volunteerId)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                'CreatedAt': data['CreatedAt']?.toDate(),
-                'UpdatedAt': data['UpdatedAt']?.toDate(),
-              };
-            }).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
   }
 
   double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {

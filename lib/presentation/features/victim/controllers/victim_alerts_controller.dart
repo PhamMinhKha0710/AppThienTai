@@ -1,8 +1,10 @@
-import 'package:cuutrobaolu/data/repositories/alerts/alert_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:get/get.dart';
 
 class VictimAlertsController extends GetxController {
-  final AlertRepository _alertRepo = AlertRepository();
+  final AlertRepository _alertRepo = getIt<AlertRepository>();
 
   final selectedTab = 0.obs; // 0: Active, 1: History
   final activeAlerts = <Map<String, dynamic>>[].obs;
@@ -18,20 +20,15 @@ class VictimAlertsController extends GetxController {
   Future<void> loadAlerts() async {
     isLoading.value = true;
     try {
-      // Load active alerts
-      _alertRepo.getActiveAlerts().listen((alerts) {
-        activeAlerts.value = alerts.map((alert) => _formatAlert(alert)).toList();
-      });
-
-      // Load all alerts for history (including expired)
+      // Load all alerts
       _alertRepo.getAllAlerts().listen((alerts) {
         final now = DateTime.now();
         final active = <Map<String, dynamic>>[];
         final history = <Map<String, dynamic>>[];
 
         for (var alert in alerts) {
-          final expiresAt = alert['ExpiresAt'] as DateTime?;
-          final isActive = alert['IsActive'] == true &&
+          final expiresAt = alert.expiresAt;
+          final isActive = alert.isActive &&
               (expiresAt == null || expiresAt.isAfter(now));
 
           final formatted = _formatAlert(alert);
@@ -52,24 +49,18 @@ class VictimAlertsController extends GetxController {
     }
   }
 
-  Map<String, dynamic> _formatAlert(Map<String, dynamic> alert) {
-    final createdAt = alert['CreatedAt'] as DateTime?;
-    final timeAgo = createdAt != null
-        ? _getTimeAgo(createdAt)
-        : '';
-
-    final location = alert['Location'] as Map<String, dynamic>?;
-    final lat = (location?['lat'] ?? alert['Lat']) as num?;
-    final lng = (location?['lng'] ?? alert['Lng']) as num?;
+  Map<String, dynamic> _formatAlert(AlertEntity alert) {
+    final createdAt = alert.createdAt;
+    final timeAgo = _getTimeAgo(createdAt);
 
     return {
-      'id': alert['id'],
-      'title': alert['Title'] ?? alert['title'] ?? '',
-      'description': alert['Description'] ?? alert['description'] ?? '',
-      'severity': alert['Severity'] ?? alert['severity'] ?? 'medium',
+      'id': alert.id,
+      'title': alert.title,
+      'description': alert.content,
+      'severity': alert.severity, // severity is already a String
       'time': timeAgo,
-      'location': lat != null && lng != null
-          ? {'lat': lat.toDouble(), 'lng': lng.toDouble()}
+      'location': alert.lat != null && alert.lng != null
+          ? {'lat': alert.lat!, 'lng': alert.lng!}
           : null,
       'createdAt': createdAt,
     };

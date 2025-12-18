@@ -68,6 +68,28 @@ class HelpRequestRepositoryImpl implements HelpRequestRepository {
   }
 
   @override
+  Stream<List<domain.HelpRequestEntity>> getRequestsByStatus(domain.RequestStatus status) {
+    try {
+      return remoteDataSource.getRequestsByStatus(status).map(
+          (dtos) => dtos.map((dto) => dto.toEntity()).toList());
+    } catch (e) {
+      throw UnknownFailure(
+          'Failed to stream help requests by status: ${e.toString()}');
+    }
+  }
+
+  @override
+  Stream<List<domain.HelpRequestEntity>> getRequestsBySeverity(domain.RequestSeverity severity) {
+    try {
+      return remoteDataSource.getRequestsBySeverity(severity).map(
+          (dtos) => dtos.map((dto) => dto.toEntity()).toList());
+    } catch (e) {
+      throw UnknownFailure(
+          'Failed to stream help requests by severity: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<void> updateRequestStatus(String requestId, domain.RequestStatus status) async {
     try {
       await remoteDataSource.updateRequestStatus(requestId, status);

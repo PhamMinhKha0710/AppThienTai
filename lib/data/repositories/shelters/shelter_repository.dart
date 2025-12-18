@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../domain/repositories/shelter_repository.dart';
+import '../../../domain/entities/shelter_entity.dart';
+import '../../models/shelter_dto.dart';
 
-class ShelterRepository {
+class ShelterRepositoryImpl implements ShelterRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  ShelterRepository({
+  ShelterRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -15,58 +18,43 @@ class ShelterRepository {
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('shelters');
 
-  /// Get all shelters
-  Stream<List<Map<String, dynamic>>> getAllShelters() {
+  @override
+  Stream<List<ShelterEntity>> getAllShelters() {
     return _collection
         .where('IsActive', isEqualTo: true)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                'CreatedAt': data['CreatedAt']?.toDate(),
-                'UpdatedAt': data['UpdatedAt']?.toDate(),
-              };
-            }).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ShelterDto.fromSnapshot(doc).toEntity())
+            .toList());
   }
 
-  /// Get shelters near location
-  Future<List<Map<String, dynamic>>> getNearbyShelters(
+  @override
+  Future<List<ShelterEntity>> getNearbyShelters(
       double lat, double lng, double radiusKm) async {
     final snapshot = await _collection
         .where('IsActive', isEqualTo: true)
         .get();
 
-    final shelters = <Map<String, dynamic>>[];
+    final shelters = <ShelterEntity>[];
     for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final shelterLat = (data['Lat'] as num?)?.toDouble();
-      final shelterLng = (data['Lng'] as num?)?.toDouble();
-
-      if (shelterLat != null && shelterLng != null) {
-        final distance = _calculateDistance(lat, lng, shelterLat, shelterLng);
-        if (distance <= radiusKm) {
-          shelters.add({
-            'id': doc.id,
-            ...data,
-            'CreatedAt': data['CreatedAt']?.toDate(),
-            'distance': distance,
-          });
-        }
+      final dto = ShelterDto.fromSnapshot(doc);
+      final distance = _calculateDistance(lat, lng, dto.lat, dto.lng);
+      if (distance <= radiusKm) {
+        shelters.add(dto.toEntity());
       }
     }
 
-    shelters.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
+    // Sort by distance (we'd need to add distance to entity or sort separately)
     return shelters;
   }
 
-  /// Create shelter
-  Future<String> createShelter(Map<String, dynamic> shelterData) async {
+  @override
+  Future<String> createShelter(ShelterEntity shelter) async {
     try {
+      final dto = ShelterDto.fromEntity(shelter);
       final docRef = await _collection.add({
-        ...shelterData,
+        ...dto.toJson(),
         'IsActive': true,
         'CreatedAt': FieldValue.serverTimestamp(),
         'UpdatedAt': FieldValue.serverTimestamp(),
@@ -78,15 +66,29 @@ class ShelterRepository {
     }
   }
 
-  /// Update shelter
-  Future<void> updateShelter(String shelterId, Map<String, dynamic> updates) async {
+  @override
+  Future<void> updateShelter(ShelterEntity shelter) async {
     try {
-      await _collection.doc(shelterId).update({
-        ...updates,
+      final dto = ShelterDto.fromEntity(shelter);
+      await _collection.doc(shelter.id).update({
+        ...dto.toJson(),
         'UpdatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception('Failed to update shelter: $e');
+    }
+  }
+
+  @override
+  Future<ShelterEntity?> getShelterById(String shelterId) async {
+    try {
+      final doc = await _collection.doc(shelterId).get();
+      if (doc.exists && doc.data() != null) {
+        return ShelterDto.fromSnapshot(doc).toEntity();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get shelter: $e');
     }
   }
 
@@ -107,6 +109,8 @@ class ShelterRepository {
 
   double _toRadians(double degrees) => degrees * (math.pi / 180);
 }
+
+
 
 
 

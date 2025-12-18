@@ -10,6 +10,8 @@ abstract class HelpRequestRemoteDataSource {
   Future<HelpRequestDto?> getRequestById(String requestId);
   Stream<List<HelpRequestDto>> getAllRequests();
   Stream<List<HelpRequestDto>> getRequestsByUserId(String userId);
+  Stream<List<HelpRequestDto>> getRequestsByStatus(domain.RequestStatus status);
+  Stream<List<HelpRequestDto>> getRequestsBySeverity(domain.RequestSeverity severity);
   Future<void> updateRequestStatus(String requestId, domain.RequestStatus status);
   Future<void> deleteRequest(String requestId);
 }
@@ -86,6 +88,38 @@ class HelpRequestRemoteDataSourceImpl implements HelpRequestRemoteDataSource {
     } catch (e) {
       throw ServerFailure(
           'Failed to stream user help requests: ${e.toString()}');
+    }
+  }
+
+  @override
+  Stream<List<HelpRequestDto>> getRequestsByStatus(domain.RequestStatus status) {
+    try {
+      return _collection
+          .where('Status', isEqualTo: status.name)
+          .orderBy('CreatedAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => HelpRequestDto.fromJson(doc.data(), doc.id))
+              .toList());
+    } catch (e) {
+      throw ServerFailure(
+          'Failed to stream help requests by status: ${e.toString()}');
+    }
+  }
+
+  @override
+  Stream<List<HelpRequestDto>> getRequestsBySeverity(domain.RequestSeverity severity) {
+    try {
+      return _collection
+          .where('Severity', isEqualTo: severity.name)
+          .orderBy('CreatedAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => HelpRequestDto.fromJson(doc.data(), doc.id))
+              .toList());
+    } catch (e) {
+      throw ServerFailure(
+          'Failed to stream help requests by severity: ${e.toString()}');
     }
   }
 

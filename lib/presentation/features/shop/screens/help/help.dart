@@ -95,24 +95,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 
-class HelpScreen extends StatefulWidget {
+class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
   @override
-  State<HelpScreen> createState() => _HelpScreenState();
-}
-
-class _HelpScreenState extends State<HelpScreen> {
-  final controller = Get.put(HelpController());
-
-  @override
-  void initState() {
-    controller.loadRequestHelpForUserCurrent();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(HelpController());
     final isDark = MinhHelperFunctions.isDarkMode(context);
+    
+    // Load requests when screen is built
+    controller.loadRequestHelpForUserCurrent();
 
     return Scaffold(
       appBar: MinhAppbar(title: Text("Cứu Trợ Báo Lũ")),

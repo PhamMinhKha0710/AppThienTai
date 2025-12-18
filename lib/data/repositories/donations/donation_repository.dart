@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../domain/repositories/donation_repository.dart';
+import '../../../domain/entities/donation_entity.dart';
+import '../../models/donation_dto.dart';
 
-class DonationRepository {
+class DonationRepositoryImpl implements DonationRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  DonationRepository({
+  DonationRepositoryImpl({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -14,7 +17,7 @@ class DonationRepository {
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('donations');
 
-  /// Get total money donations
+  @override
   Future<double> getTotalMoneyDonations() async {
     try {
       final snapshot = await _collection
@@ -24,8 +27,8 @@ class DonationRepository {
 
       double total = 0;
       for (var doc in snapshot.docs) {
-        final amount = (doc.data()['Amount'] as num?)?.toDouble() ?? 0;
-        total += amount;
+        final dto = DonationDto.fromSnapshot(doc);
+        total += dto.amount ?? 0;
       }
       return total;
     } catch (e) {
@@ -34,7 +37,7 @@ class DonationRepository {
     }
   }
 
-  /// Get total time donated by user
+  @override
   Future<double> getTotalTimeDonated(String userId) async {
     try {
       final snapshot = await _collection
@@ -45,8 +48,8 @@ class DonationRepository {
 
       double total = 0;
       for (var doc in snapshot.docs) {
-        final hours = (doc.data()['Hours'] as num?)?.toDouble() ?? 0;
-        total += hours;
+        final dto = DonationDto.fromSnapshot(doc);
+        total += dto.hours ?? 0;
       }
       return total;
     } catch (e) {
@@ -55,78 +58,84 @@ class DonationRepository {
     }
   }
 
-  /// Create money donation
+  @override
   Future<String> createMoneyDonation({
     required double amount,
     required String paymentMethod,
   }) async {
     try {
-      final docRef = await _collection.add({
-        'Type': 'money',
-        'Amount': amount,
-        'PaymentMethod': paymentMethod,
-        'Status': 'pending',
-        'UserId': _auth.currentUser?.uid,
-        'CreatedAt': FieldValue.serverTimestamp(),
-        'UpdatedAt': FieldValue.serverTimestamp(),
-      });
+      final entity = DonationEntity(
+        id: '', // Will be set by Firestore
+        type: DonationType.money,
+        status: DonationStatus.pending,
+        userId: _auth.currentUser?.uid,
+        createdAt: DateTime.now(),
+        amount: amount,
+        paymentMethod: paymentMethod,
+      );
+      final dto = DonationDto.fromEntity(entity);
+      final docRef = await _collection.add(dto.toJson());
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create donation: $e');
     }
   }
 
-  /// Create supplies donation
+  @override
   Future<String> createSuppliesDonation({
     required String itemName,
     required int quantity,
     String? description,
   }) async {
     try {
-      final docRef = await _collection.add({
-        'Type': 'supplies',
-        'ItemName': itemName,
-        'Quantity': quantity,
-        'Description': description,
-        'Status': 'pending',
-        'UserId': _auth.currentUser?.uid,
-        'CreatedAt': FieldValue.serverTimestamp(),
-        'UpdatedAt': FieldValue.serverTimestamp(),
-      });
+      final entity = DonationEntity(
+        id: '', // Will be set by Firestore
+        type: DonationType.supplies,
+        status: DonationStatus.pending,
+        userId: _auth.currentUser?.uid,
+        createdAt: DateTime.now(),
+        itemName: itemName,
+        quantity: quantity,
+        description: description,
+      );
+      final dto = DonationDto.fromEntity(entity);
+      final docRef = await _collection.add(dto.toJson());
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create donation: $e');
     }
   }
 
-  /// Create time donation
+  @override
   Future<String> createTimeDonation({
     required double hours,
     required DateTime date,
     String? description,
   }) async {
     try {
-      final docRef = await _collection.add({
-        'Type': 'time',
-        'Hours': hours,
-        'Date': Timestamp.fromDate(date),
-        'Description': description,
-        'Status': 'pending',
-        'UserId': _auth.currentUser?.uid,
-        'CreatedAt': FieldValue.serverTimestamp(),
-        'UpdatedAt': FieldValue.serverTimestamp(),
-      });
+      final entity = DonationEntity(
+        id: '', // Will be set by Firestore
+        type: DonationType.time,
+        status: DonationStatus.pending,
+        userId: _auth.currentUser?.uid,
+        createdAt: DateTime.now(),
+        hours: hours,
+        date: date,
+        description: description,
+      );
+      final dto = DonationDto.fromEntity(entity);
+      final docRef = await _collection.add(dto.toJson());
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create time donation: $e');
     }
   }
 
-  /// Update donation status
-  Future<void> updateDonationStatus(String donationId, String status) async {
+  @override
+  Future<void> updateDonationStatus(String donationId, DonationStatus status) async {
     try {
       await _collection.doc(donationId).update({
-        'Status': status,
+        'Status': status.name,
         'UpdatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -134,6 +143,8 @@ class DonationRepository {
     }
   }
 }
+
+
 
 
 

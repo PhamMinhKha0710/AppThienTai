@@ -1,20 +1,21 @@
 import 'dart:async';
 import 'package:cuutrobaolu/data/services/location_service.dart';
-import 'package:cuutrobaolu/data/repositories/alerts/alert_repository.dart';
-import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
 class VictimHomeController extends GetxController {
   LocationService? _locationService;
-  final AlertRepository _alertRepo = AlertRepository();
-  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
+  final AlertRepository _alertRepo = getIt<AlertRepository>();
+  final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   
   final currentPosition = Rxn<Position>();
   final recentAlerts = <Map<String, dynamic>>[].obs;
-  final myRequests = <HelpRequest>[].obs;
+  final myRequests = <HelpRequestEntity>[].obs;
   final forecast = Rxn<String>();
   final isLoading = false.obs;
   
@@ -94,16 +95,14 @@ class VictimHomeController extends GetxController {
         );
 
         recentAlerts.value = nearby.take(5).map((alert) {
-          final createdAt = alert['CreatedAt'] as DateTime?;
-          final timeAgo = createdAt != null
-              ? _getTimeAgo(createdAt)
-              : '';
+          final createdAt = alert.createdAt;
+          final timeAgo = _getTimeAgo(createdAt);
 
           return {
-            'id': alert['id'],
-            'title': alert['Title'] ?? alert['title'] ?? '',
-            'description': alert['Description'] ?? alert['description'] ?? '',
-            'severity': alert['Severity'] ?? alert['severity'] ?? 'medium',
+            'id': alert.id,
+            'title': alert.title,
+            'description': alert.content,
+            'severity': alert.severity,
             'time': timeAgo,
             'createdAt': createdAt,
           };
@@ -112,16 +111,14 @@ class VictimHomeController extends GetxController {
         // Fallback: load active alerts
         _alertRepo.getActiveAlerts().listen((alerts) {
           recentAlerts.value = alerts.take(5).map((alert) {
-            final createdAt = alert['CreatedAt'] as DateTime?;
-            final timeAgo = createdAt != null
-                ? _getTimeAgo(createdAt)
-                : '';
+            final createdAt = alert.createdAt;
+            final timeAgo = _getTimeAgo(createdAt);
 
             return {
-              'id': alert['id'],
-              'title': alert['Title'] ?? alert['title'] ?? '',
-              'description': alert['Description'] ?? alert['description'] ?? '',
-              'severity': alert['Severity'] ?? alert['severity'] ?? 'medium',
+              'id': alert.id,
+              'title': alert.title,
+              'description': alert.content,
+              'severity': alert.severity,
               'time': timeAgo,
               'createdAt': createdAt,
             };

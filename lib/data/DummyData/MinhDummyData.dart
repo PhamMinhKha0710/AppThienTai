@@ -1,4 +1,4 @@
-import 'package:cuutrobaolu/presentation/features/shop/models/banner_model.dart';
+import '../../domain/entities/banner_entity.dart';
 import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
 import 'package:cuutrobaolu/presentation/features/shop/models/supporter_modal.dart';
 
@@ -8,118 +8,121 @@ import 'package:cuutrobaolu/core/constants/image_strings.dart';
 
 class MinhDummyData {
 
-
-  // static final List<BannerModel> banners = [
-  //   BannerModel(name: MinhImages.promoBanner1, imageUrl: MinhImages.promoBanner1, active: true , targetScreen: MinhRoutes.welcome),
-  //   BannerModel(name: MinhImages.promoBanner2, imageUrl: MinhImages.promoBanner2, active: true, targetScreen: MinhRoutes.checkout),
-  //   BannerModel(name: MinhImages.promoBanner3, imageUrl: MinhImages.promoBanner3, active: true, targetScreen: MinhRoutes.eComDashboard),
-  //   BannerModel(name: MinhImages.banner2, imageUrl: MinhImages.banner2, active: true, targetScreen: MinhRoutes.cart ),
-  //   BannerModel(name: MinhImages.banner3, imageUrl: MinhImages.banner3, active: true, targetScreen: MinhRoutes.userProfile),
-  //   BannerModel(name: MinhImages.banner4, imageUrl: MinhImages.banner4, active: true, targetScreen: MinhRoutes.userProfile),
-  //
-  //
-  // ];
-
-
-  static final List<BannerModel> banners = [
-    BannerModel(
+  static final List<BannerEntity> banners = [
+    BannerEntity(
+      id: "promoBanner1",
       name: "promoBanner1",
       imageUrl: MinhImages.promoBanner1,
       active: false,
       targetScreen: MinhRoutes.welcome,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "promoBanner2",
       name: "promoBanner2",
       imageUrl: MinhImages.promoBanner2,
       active: false,
       targetScreen: MinhRoutes.checkout,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "promoBanner3",
       name: "promoBanner3",
       imageUrl: MinhImages.promoBanner3,
       active: false,
       targetScreen: MinhRoutes.eComDashboard,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "banner2",
       name: "banner2",
       imageUrl: MinhImages.banner2,
       active: false,
       targetScreen: MinhRoutes.cart,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "banner3",
       name: "banner3",
       imageUrl: MinhImages.banner3,
       active: false,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "banner4",
       name: "banner4",
       imageUrl: MinhImages.banner4,
       active: false,
       targetScreen: MinhRoutes.userProfile,
     ),
-
-    BannerModel(
+    BannerEntity(
+      id: "bannerCoby_1",
       name: "bannerCoby_1",
       imageUrl: MinhImages.bannerCoby_1,
       active: true,
       targetScreen: MinhRoutes.checkout,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerLuffy_1",
       name: "bannerLuffy_1",
       imageUrl: MinhImages.bannerLuffy_1,
       active: true,
       targetScreen: MinhRoutes.eComDashboard,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerLuffy_2",
       name: "bannerLuffy_2",
       imageUrl: MinhImages.bannerLuffy_2,
       active: true,
       targetScreen: MinhRoutes.cart,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerZoro_1",
       name: "bannerZoro_1",
       imageUrl: MinhImages.bannerZoro_1,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerZoro_2",
       name: "bannerZoro_2",
       imageUrl: MinhImages.bannerZoro_2,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerZoro_3",
       name: "bannerZoro_3",
       imageUrl: MinhImages.bannerZoro_3,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerSanji_1",
       name: "bannerSanji_1",
       imageUrl: MinhImages.bannerSanji_1,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerSanji_2",
       name: "bannerSanji_2",
       imageUrl: MinhImages.bannerSanji_2,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerLuffy_3",
       name: "bannerLuffy_3",
       imageUrl: MinhImages.bannerLuffy_3,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerLuffy_4",
       name: "bannerLuffy_4",
       imageUrl: MinhImages.bannerLuffy_4,
       active: true,
       targetScreen: MinhRoutes.userProfile,
     ),
-    BannerModel(
+    BannerEntity(
+      id: "bannerLuffy_5",
       name: "bannerLuffy_5",
       imageUrl: MinhImages.bannerLuffy_5,
       active: true,

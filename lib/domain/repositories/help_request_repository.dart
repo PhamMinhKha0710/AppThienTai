@@ -18,6 +18,12 @@ abstract class HelpRequestRepository {
   /// Lấy help requests theo user ID
   Stream<List<domain.HelpRequestEntity>> getRequestsByUserId(String userId);
 
+  /// Lấy help requests theo status
+  Stream<List<domain.HelpRequestEntity>> getRequestsByStatus(domain.RequestStatus status);
+
+  /// Lấy help requests theo severity
+  Stream<List<domain.HelpRequestEntity>> getRequestsBySeverity(domain.RequestSeverity severity);
+
   /// Cập nhật status của help request
   Future<void> updateRequestStatus(String requestId, domain.RequestStatus status);
 

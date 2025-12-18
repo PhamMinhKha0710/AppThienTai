@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/routing_service.dart';
-import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart';
-import 'package:cuutrobaolu/core/injection/injection_container.dart' as di;
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -19,16 +18,16 @@ import 'package:http/http.dart' as http;
 class VictimMapController extends GetxController {
   LocationService? _locationService;
   RoutingService? _routingService;
-  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
-  final ShelterRepository _shelterRepo = ShelterRepository();
+  final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
+  final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
   
   final currentPosition = Rxn<Position>();
   final disasterMarkers = <Marker>[].obs;
   final shelterMarkers = <Marker>[].obs;
   final myRequestMarkers = <Marker>[].obs;
-  final myRequests = <HelpRequest>[].obs;
+  final myRequests = <domain.HelpRequestEntity>[].obs;
   final selectedShelter = Rxn<Map<String, dynamic>>();
-  final selectedRequest = Rxn<HelpRequest>();
+  final selectedRequest = Rxn<domain.HelpRequestEntity>();
   final isLoading = false.obs;
   final routePolylines = <Polyline>[].obs;
   
@@ -62,26 +61,26 @@ class VictimMapController extends GetxController {
     });
   }
   
-  void _updateMyRequestMarkers(List<HelpRequest> requests) {
+  void _updateMyRequestMarkers(List<domain.HelpRequestEntity> requests) {
     myRequestMarkers.value = requests.map((req) {
       // Color based on status
       Color markerColor = Colors.orange; // pending
       IconData markerIcon = Iconsax.warning_2;
       
       switch (req.status) {
-        case RequestStatus.pending:
+        case domain.RequestStatus.pending:
           markerColor = Colors.orange;
           markerIcon = Iconsax.clock;
           break;
-        case RequestStatus.inProgress:
+        case domain.RequestStatus.inProgress:
           markerColor = Colors.blue;
           markerIcon = Iconsax.refresh;
           break;
-        case RequestStatus.completed:
+        case domain.RequestStatus.completed:
           markerColor = Colors.green;
           markerIcon = Iconsax.tick_circle;
           break;
-        case RequestStatus.cancelled:
+        case domain.RequestStatus.cancelled:
           markerColor = Colors.grey;
           markerIcon = Iconsax.close_circle;
           break;
@@ -117,7 +116,7 @@ class VictimMapController extends GetxController {
     }).toList();
   }
   
-  void _showRequestDetail(HelpRequest request) {
+  void _showRequestDetail(domain.HelpRequestEntity request) {
     selectedRequest.value = request;
     
     // Status colors
@@ -126,22 +125,22 @@ class VictimMapController extends GetxController {
     IconData statusIcon = Iconsax.clock;
     
     switch (request.status) {
-      case RequestStatus.pending:
+      case domain.RequestStatus.pending:
         statusColor = Colors.orange;
         statusText = 'Chờ xử lý';
         statusIcon = Iconsax.clock;
         break;
-      case RequestStatus.inProgress:
+      case domain.RequestStatus.inProgress:
         statusColor = Colors.blue;
         statusText = 'Đang xử lý';
         statusIcon = Iconsax.refresh;
         break;
-      case RequestStatus.completed:
+      case domain.RequestStatus.completed:
         statusColor = Colors.green;
         statusText = 'Đã hỗ trợ';
         statusIcon = Iconsax.tick_circle;
         break;
-      case RequestStatus.cancelled:
+      case domain.RequestStatus.cancelled:
         statusColor = Colors.grey;
         statusText = 'Đã hủy';
         statusIcon = Iconsax.close_circle;
@@ -224,16 +223,16 @@ class VictimMapController extends GetxController {
             _DetailRow(
               icon: Iconsax.tag,
               label: 'Loại',
-              value: request.type.viName,
+              value: _getRequestTypeName(request.type),
             ),
             const SizedBox(height: 12),
             _DetailRow(
               icon: Iconsax.danger,
               label: 'Mức độ',
-              value: request.severity.viName,
+              value: _getRequestSeverityName(request.severity),
             ),
             const SizedBox(height: 16),
-            if (request.status == RequestStatus.pending)
+            if (request.status == domain.RequestStatus.pending)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -265,10 +264,18 @@ class VictimMapController extends GetxController {
     }
     
     try {
-      _routingService = di.getIt<RoutingService>();
+      _routingService = getIt<RoutingService>();
     } catch (e) {
       _routingService = Get.put(RoutingService(), permanent: true);
     }
+  }
+  
+  String _getRequestTypeName(domain.RequestType type) {
+    return type.viName;
+  }
+  
+  String _getRequestSeverityName(domain.RequestSeverity severity) {
+    return severity.viName;
   }
 
   Future<void> getCurrentLocation() async {
@@ -288,7 +295,7 @@ class VictimMapController extends GetxController {
     try {
       // Load high severity requests as disaster markers
       final highSeverityRequests = await _helpRequestRepo
-          .getRequestsBySeverity(RequestSeverity.high.toJson())
+          .getRequestsBySeverity(domain.RequestSeverity.high)
           .first;
 
       disasterMarkers.value = highSeverityRequests.map((req) {
@@ -311,29 +318,23 @@ class VictimMapController extends GetxController {
       final shelters = await _shelterRepo.getAllShelters().first;
 
       shelterMarkers.value = shelters.map((shelter) {
-        final lat = (shelter['Lat'] as num?)?.toDouble() ?? 0.0;
-        final lng = (shelter['Lng'] as num?)?.toDouble() ?? 0.0;
-        final name = shelter['Name'] ?? shelter['name'] ?? 'Điểm trú ẩn';
-        final address = shelter['Address'] ?? shelter['address'] ?? '';
-        final capacity = (shelter['Capacity'] ?? shelter['capacity'] ?? 0) as num;
-        final occupancy = (shelter['CurrentOccupancy'] ?? shelter['currentOccupancy'] ?? 0) as num;
-        final available = capacity.toInt() - occupancy.toInt();
+        final available = shelter.availableSlots;
 
         return Marker(
-          point: LatLng(lat, lng),
+          point: LatLng(shelter.lat, shelter.lng),
           width: 40,
           height: 40,
           child: GestureDetector(
             onTap: () {
               final shelterData = {
-                'id': shelter['id'],
-                'name': name,
-                'address': address,
+                'id': shelter.id,
+                'name': shelter.name,
+                'address': shelter.address,
                 'available': available,
-                'capacity': capacity.toInt(),
-                'occupancy': occupancy.toInt(),
-                'lat': lat,
-                'lng': lng,
+                'capacity': shelter.capacity,
+                'occupancy': shelter.currentOccupancy,
+                'lat': shelter.lat,
+                'lng': shelter.lng,
               };
               selectedShelter.value = shelterData;
               _showShelterInfo(shelterData);
@@ -353,17 +354,15 @@ class VictimMapController extends GetxController {
       final queryLower = query.toLowerCase();
 
       final filtered = allShelters.where((shelter) {
-        final name = (shelter['Name'] ?? shelter['name'] ?? '').toString().toLowerCase();
-        final address = (shelter['Address'] ?? shelter['address'] ?? '').toString().toLowerCase();
+        final name = shelter.name.toLowerCase();
+        final address = shelter.address.toLowerCase();
         return name.contains(queryLower) || address.contains(queryLower);
       }).toList();
 
       // Update markers with filtered results
       shelterMarkers.value = filtered.map((shelter) {
-        final lat = (shelter['Lat'] as num?)?.toDouble() ?? 0.0;
-        final lng = (shelter['Lng'] as num?)?.toDouble() ?? 0.0;
         return Marker(
-          point: LatLng(lat, lng),
+          point: LatLng(shelter.lat, shelter.lng),
           width: 40,
           height: 40,
           child: Icon(Icons.home, color: Colors.green, size: 40),

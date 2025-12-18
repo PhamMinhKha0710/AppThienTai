@@ -8,10 +8,18 @@ import '../../data/repositories/user_repository_impl.dart';
 import '../../data/repositories/authentication_repository_impl.dart';
 import '../../data/repositories/banner_repository_impl.dart';
 import '../../data/repositories/help_request_repository_impl.dart';
+import '../../data/repositories/alerts/alert_repository.dart' as alert_impl;
+import '../../data/repositories/shelters/shelter_repository.dart' as shelter_impl;
+import '../../data/repositories/donations/donation_repository.dart' as donation_impl;
+import '../../data/repositories/news/news_repository.dart' as news_impl;
 import '../../domain/repositories/user_repository.dart';
 import '../../domain/repositories/authentication_repository.dart';
 import '../../domain/repositories/banner_repository.dart';
 import '../../domain/repositories/help_request_repository.dart';
+import '../../domain/repositories/alert_repository.dart';
+import '../../domain/repositories/shelter_repository.dart';
+import '../../domain/repositories/donation_repository.dart';
+import '../../domain/repositories/news_repository.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/routing_service.dart';
 import '../../core/utils/network_manager.dart';
@@ -64,6 +72,18 @@ Future<void> init() async {
   );
   getIt.registerLazySingleton<HelpRequestRepository>(
     () => HelpRequestRepositoryImpl(getIt<HelpRequestRemoteDataSource>()),
+  );
+  getIt.registerLazySingleton<AlertRepository>(
+    () => alert_impl.AlertRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<ShelterRepository>(
+    () => shelter_impl.ShelterRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<DonationRepository>(
+    () => donation_impl.DonationRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<NewsRepository>(
+    () => news_impl.NewsRepositoryImpl(),
   );
 }
 

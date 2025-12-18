@@ -1,5 +1,5 @@
-import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
-import 'package:cuutrobaolu/data/repositories/donations/donation_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/donation_repository.dart';
 import 'package:cuutrobaolu/data/repositories/user/user_repository_adapter.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,8 +8,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class VolunteerProfileController extends GetxController {
-  final ShelterRepository _shelterRepo = ShelterRepository();
-  final DonationRepository _donationRepo = DonationRepository();
+  final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
+  final DonationRepository _donationRepo = getIt<DonationRepository>();
   final UserRepositoryAdapter _userRepo = getIt<UserRepositoryAdapter>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -146,19 +146,16 @@ class VolunteerProfileController extends GetxController {
       // Get all shelters and filter by CreatedBy
       final allShelters = await _shelterRepo.getAllShelters().first;
       final myShelters = allShelters
-          .where((shelter) => shelter['CreatedBy'] == userId)
+          .where((shelter) => shelter.createdBy == userId)
           .toList();
 
       contributions.value = myShelters.map((shelter) {
-        final createdAt = shelter['CreatedAt'] as DateTime?;
         return {
-          'id': shelter['id'],
+          'id': shelter.id,
           'type': 'Shelter',
-          'title': shelter['Name'] ?? 'Điểm trú ẩn',
-          'date': createdAt != null
-              ? DateFormat('yyyy-MM-dd').format(createdAt)
-              : '',
-          'location': shelter['Address'] ?? '',
+          'title': shelter.name,
+          'date': DateFormat('yyyy-MM-dd').format(shelter.createdAt),
+          'location': shelter.address,
         };
       }).toList();
 

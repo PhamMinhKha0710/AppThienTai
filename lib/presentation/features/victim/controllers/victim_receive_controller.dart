@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cuutrobaolu/data/services/location_service.dart';
-import 'package:cuutrobaolu/data/repositories/shelters/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,7 +10,7 @@ import 'package:get/get.dart';
 
 class VictimReceiveController extends GetxController {
   LocationService? _locationService;
-  final ShelterRepository _shelterRepo = ShelterRepository();
+  final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   final currentPosition = Rxn<Position>(); // vị trí hiện tại
@@ -82,49 +83,44 @@ class VictimReceiveController extends GetxController {
         );
 
         nearbyDistributionPoints.value = nearby.map((shelter) {
-          final distance = shelter['distance'] as double? ?? 0.0;
-          final capacity = (shelter['Capacity'] as num?)?.toInt() ?? 0;
-          final occupancy = (shelter['CurrentOccupancy'] as num?)?.toInt() ?? 0;
-          final available = capacity - occupancy;
-          final percent = capacity > 0 ? (occupancy / capacity * 100).toInt() : 0;
+          final available = shelter.availableSlots;
+          final percent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
 
           return {
-            'id': shelter['id'],
-            'name': shelter['Name'] ?? shelter['name'] ?? 'Điểm phân phối',
-            'address': shelter['Address'] ?? shelter['address'] ?? '',
-            'lat': shelter['Lat'] ?? shelter['lat'],
-            'lng': shelter['Lng'] ?? shelter['lng'],
-            'distance': distance,
-            'capacity': capacity,
-            'occupancy': occupancy,
+            'id': shelter.id,
+            'name': shelter.name,
+            'address': shelter.address,
+            'lat': shelter.lat,
+            'lng': shelter.lng,
+            'distance': 0.0, // TODO: Calculate distance if needed
+            'capacity': shelter.capacity,
+            'occupancy': shelter.currentOccupancy,
             'available': available,
             'percent': percent,
-            'distributionTime': shelter['DistributionTime'] ?? shelter['distributionTime'] ?? '08:00 - 17:00',
-            'items': shelter['Items'] ?? shelter['items'] ?? <String>[],
+            'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
+            'items': shelter.amenities ?? <String>[],
           };
         }).toList();
       } else {
         // Fallback: load all active shelters
         final allShelters = await _shelterRepo.getAllShelters().first;
         nearbyDistributionPoints.value = allShelters.take(10).map((shelter) {
-          final capacity = (shelter['Capacity'] as num?)?.toInt() ?? 0;
-          final occupancy = (shelter['CurrentOccupancy'] as num?)?.toInt() ?? 0;
-          final available = capacity - occupancy;
-          final percent = capacity > 0 ? (occupancy / capacity * 100).toInt() : 0;
+          final available = shelter.availableSlots;
+          final percent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
 
           return {
-            'id': shelter['id'],
-            'name': shelter['Name'] ?? shelter['name'] ?? 'Điểm phân phối',
-            'address': shelter['Address'] ?? shelter['address'] ?? '',
-            'lat': shelter['Lat'] ?? shelter['lat'],
-            'lng': shelter['Lng'] ?? shelter['lng'],
+            'id': shelter.id,
+            'name': shelter.name,
+            'address': shelter.address,
+            'lat': shelter.lat,
+            'lng': shelter.lng,
             'distance': 0.0,
-            'capacity': capacity,
-            'occupancy': occupancy,
+            'capacity': shelter.capacity,
+            'occupancy': shelter.currentOccupancy,
             'available': available,
             'percent': percent,
-            'distributionTime': shelter['DistributionTime'] ?? shelter['distributionTime'] ?? '08:00 - 17:00',
-            'items': shelter['Items'] ?? shelter['items'] ?? <String>[],
+            'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
+            'items': shelter.amenities ?? <String>[],
           };
         }).toList();
       }
@@ -201,9 +197,13 @@ class VictimReceiveController extends GetxController {
       });
 
       // Update shelter occupancy
-      await _shelterRepo.updateShelter(pointId, {
-        'CurrentOccupancy': FieldValue.increment(1),
-      });
+      final shelter = await _shelterRepo.getShelterById(pointId);
+      if (shelter != null) {
+        final updatedShelter = shelter.copyWith(
+          currentOccupancy: shelter.currentOccupancy + 1,
+        );
+        await _shelterRepo.updateShelter(updatedShelter);
+      }
 
       MinhLoaders.successSnackBar(
         title: 'Thành công',
@@ -226,9 +226,13 @@ class VictimReceiveController extends GetxController {
       });
 
       // Decrease shelter occupancy
-      await _shelterRepo.updateShelter(pointId, {
-        'CurrentOccupancy': FieldValue.increment(-1),
-      });
+      final shelter = await _shelterRepo.getShelterById(pointId);
+      if (shelter != null) {
+        final updatedShelter = shelter.copyWith(
+          currentOccupancy: shelter.currentOccupancy - 1,
+        );
+        await _shelterRepo.updateShelter(updatedShelter);
+      }
 
       MinhLoaders.successSnackBar(
         title: 'Thành công',
@@ -262,5 +266,8 @@ class VictimReceiveController extends GetxController {
     await loadData();
   }
 }
+
+
+
 
 
