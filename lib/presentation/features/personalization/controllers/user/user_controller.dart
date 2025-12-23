@@ -21,6 +21,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cuutrobaolu/service/CloudinaryService.dart';
 
 class  UserController extends GetxController
 {
@@ -262,35 +263,36 @@ class  UserController extends GetxController
         maxWidth: 512,
       );
 
-      if(image != null)
-      {
+      if (image != null) {
         imageLoading.value = true;
 
-        // upload images
-        // C1: Firebase storage
-        // final imageUrl = await userRepository.upLoadImage("Users/images/Profile/", images);
+        // Upload via CloudinaryService (uses unsigned preset configured)
+        try {
+          final uploadedUrl = await CloudinaryService.uploadImage(image);
+          if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+            // Update user entity
+            final currentUserEntity = await _getCurrentUserUseCase();
+            if (currentUserEntity != null) {
+              final updatedEntity = currentUserEntity.copyWith(profilePicture: uploadedUrl);
+              await _updateUserUseCase(updatedEntity);
 
-        // Upload using Use Case
-        final imageUrl = await _uploadImageUseCase("/profileUsers", image.path);
+              // Update local model
+              user.value.profilePicture = uploadedUrl;
+              user.refresh();
 
-        if (imageUrl != null) {
-          // Update user entity
-          final currentUserEntity = await _getCurrentUserUseCase();
-          if (currentUserEntity != null) {
-            final updatedEntity = currentUserEntity.copyWith(profilePicture: imageUrl);
-            await _updateUserUseCase(updatedEntity);
-            
-            // Update local model
-            user.value.profilePicture = imageUrl;
+              MinhLoaders.successSnackBar(
+                title: "Thành công",
+                message: "Ảnh đại diện đã được cập nhật",
+              );
+            }
+          } else {
+            MinhLoaders.errorSnackBar(title: "Lỗi", message: "Không thể tải ảnh lên");
           }
+        } catch (e) {
+          MinhLoaders.errorSnackBar(title: "Lỗi", message: "Upload thất bại: $e");
+        } finally {
+          imageLoading.value = false;
         }
-
-        user.refresh();
-
-        MinhLoaders.successSnackBar(
-            title: "Congratulations",
-            message: "Your Profile Image has been updated!"
-        );
       }
     }
     on Failure catch (failure) {

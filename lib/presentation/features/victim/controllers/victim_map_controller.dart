@@ -9,11 +9,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:cuutrobaolu/core/widgets/storms/storm_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class VictimMapController extends GetxController {
   LocationService? _locationService;
@@ -30,8 +32,87 @@ class VictimMapController extends GetxController {
   final selectedRequest = Rxn<domain.HelpRequestEntity>();
   final isLoading = false.obs;
   final routePolylines = <Polyline>[].obs;
+  // Hazard polygons (e.g., flood, storm, landslide areas)
+  final hazardPolygons = <Polygon>[].obs;
+  final showHazards = true.obs;
+  // Radar overlay support
+  final radarImageUrl = Rxn<String>();
+  final radarBounds = Rxn<LatLngBounds>();
+  // OpenWeatherMap tiles integration
+  final owmApiKey = Rxn<String>();
+  final availableOwmLayers = <String>[
+    'precipitation_new',
+    'clouds_new',
+    'pressure_new',
+    'wind_new',
+    'temp_new'
+  ];
+  final selectedOwmLayer = 'precipitation_new'.obs;
+  final showOwmTiles = false.obs;
+  final owmTileOpacity = 0.6.obs;
+  // secure storage
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  static const String _owmStorageKey = 'owm_api_key';
+  // UI: show distribution list panel
+  final showDistributionPanel = false.obs;
+
+  void toggleDistributionPanel() {
+    showDistributionPanel.value = !showDistributionPanel.value;
+  }
+  // Hazard alert infor
+  final showHazardBanner = false.obs;
+  final hazardSummary = Rxn<String>();
+  final hazardDistanceKm = Rxn<double>();
+
+  /// Evaluate nearby hazards based on disasterMarkers and current position
+  void evaluateNearbyHazards() {
+    try {
+      final pos = currentPosition.value;
+      if (pos == null || disasterMarkers.isEmpty) {
+        showHazardBanner.value = false;
+        hazardSummary.value = null;
+        hazardDistanceKm.value = null;
+        return;
+      }
+
+      double closestKm = double.infinity;
+      for (final m in disasterMarkers) {
+        final dkm = _distanceKm(pos.latitude, pos.longitude, m.point.latitude, m.point.longitude);
+        if (dkm < closestKm) closestKm = dkm;
+      }
+
+      // Show banner if within 20 km, severity message varies by distance
+      if (closestKm <= 20.0) {
+        showHazardBanner.value = true;
+        hazardDistanceKm.value = double.parse(closestKm.toStringAsFixed(2));
+        if (closestKm <= 2.0) {
+          hazardSummary.value = 'Nguy hiểm cao: Vùng ảnh hưởng rất gần (${hazardDistanceKm.value} km)';
+        } else if (closestKm <= 8.0) {
+          hazardSummary.value = 'Nguy hiểm: Vùng ảnh hưởng gần (${hazardDistanceKm.value} km)';
+        } else {
+          hazardSummary.value = 'Cảnh báo: Vùng nguy hiểm trong bán kính ${hazardDistanceKm.value} km';
+        }
+      } else {
+        showHazardBanner.value = false;
+        hazardSummary.value = null;
+        hazardDistanceKm.value = null;
+      }
+    } catch (e) {
+      print('[VICTIM_MAP] evaluateNearbyHazards error: $e');
+    }
+  }
+
+  double _distanceKm(double lat1, double lng1, double lat2, double lng2) {
+    try {
+      return _locationService?.getDistanceInKm(lat1, lng1, lat2, lng2) ?? 0.0;
+    } catch (_) {
+      return 0.0;
+    }
+  }
   
   StreamSubscription? _myRequestsSub;
+  // Map controller
+  final mapController = Rxn<MapController>();
 
   @override
   void onInit() {
@@ -39,8 +120,11 @@ class VictimMapController extends GetxController {
     _initLocationService();
     getCurrentLocation();
     loadDisasterMarkers();
+    // Load hazard polygons for victim map
+    loadDisasterPolygons();
     loadShelterMarkers();
     _setupMyRequestsListener();
+    mapController.value = MapController();
   }
   
   @override
@@ -59,6 +143,13 @@ class VictimMapController extends GetxController {
       myRequests.value = requests;
       _updateMyRequestMarkers(requests);
     });
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    // Load stored OWM key (if any)
+    _loadOwmKeyFromStorage();
   }
   
   void _updateMyRequestMarkers(List<domain.HelpRequestEntity> requests) {
@@ -313,6 +404,84 @@ class VictimMapController extends GetxController {
     }
   }
 
+  /// Load hazard polygons based on high severity requests.
+  /// For now we create circular polygons around each high-severity point.
+  Future<void> loadDisasterPolygons() async {
+    try {
+      final highSeverityRequests = await _helpRequestRepo
+          .getRequestsBySeverity(domain.RequestSeverity.high)
+          .first;
+
+      final polygons = <Polygon>[];
+
+      for (final req in highSeverityRequests) {
+        final center = LatLng(req.lat, req.lng);
+
+        // Decide radius and color by request type
+        double radiusKm = 3.0;
+        Color fillColor = Colors.red.withOpacity(0.12);
+        Color borderColor = Colors.red.withOpacity(0.7);
+
+        // Determine radius and colors by request type or text hints.
+        // Explicit defaults (can be tuned):
+        // flood -> 8 km, storm -> 150 km, landslide -> 2 km, others -> 3 km
+        try {
+          final type = req.type;
+          switch (type) {
+            case domain.RequestType.water:
+            case domain.RequestType.food:
+            case domain.RequestType.medicine:
+            case domain.RequestType.clothes:
+              radiusKm = 3.0;
+              fillColor = Colors.orange.withOpacity(0.10);
+              borderColor = Colors.orange.withOpacity(0.6);
+              break;
+            case domain.RequestType.shelter:
+            case domain.RequestType.rescue:
+              radiusKm = 3.0;
+              fillColor = Colors.orange.withOpacity(0.10);
+              borderColor = Colors.orange.withOpacity(0.6);
+              break;
+            default:
+              // Infer from title/description for hazard-like types
+              final text = '${req.title} ${req.description}'.toLowerCase();
+              if (text.contains('flood') || text.contains('lũ') || text.contains('ngập')) {
+                radiusKm = 8.0;
+                fillColor = Colors.blue.withOpacity(0.12);
+                borderColor = Colors.blue.withOpacity(0.6);
+              } else if (text.contains('storm') || text.contains('bão') || text.contains('gió')) {
+                radiusKm = 150.0;
+                fillColor = Colors.purple.withOpacity(0.08);
+                borderColor = Colors.purple.withOpacity(0.5);
+              } else if (text.contains('landslide') || text.contains('sạt lở') || text.contains('sạt')) {
+                radiusKm = 2.0;
+                fillColor = Colors.brown.withOpacity(0.12);
+                borderColor = Colors.brown.withOpacity(0.6);
+              } else {
+                radiusKm = 3.0;
+                fillColor = Colors.orange.withOpacity(0.10);
+                borderColor = Colors.orange.withOpacity(0.6);
+              }
+          }
+        } catch (_) {
+          // fallback defaults already set
+        }
+
+        final points = circlePolygon(center, radiusKm, points: 80);
+        polygons.add(Polygon(
+          points: points,
+          color: fillColor,
+          borderColor: borderColor,
+          borderStrokeWidth: 2,
+        ));
+      }
+
+      hazardPolygons.value = polygons;
+    } catch (e) {
+      print('Error loading disaster polygons: $e');
+    }
+  }
+
   Future<void> loadShelterMarkers() async {
     try {
       final shelters = await _shelterRepo.getAllShelters().first;
@@ -345,6 +514,57 @@ class VictimMapController extends GetxController {
       }).toList();
     } catch (e) {
       print('Error loading shelter markers: $e');
+    }
+  }
+
+  /// Focus map on a specific location
+  void focusOnLocation(LatLng location, {double zoom = 15.0}) {
+    try {
+      mapController.value?.move(location, zoom);
+    } catch (e) {
+      print('[VICTIM_MAP] Error focusing map: $e');
+    }
+  }
+
+  /// Find route from current position to arbitrary destination and draw polyline
+  Future<void> findRouteTo(LatLng destination) async {
+    try {
+      if (currentPosition.value == null) {
+        await getCurrentLocation();
+      }
+      final pos = currentPosition.value;
+      if (pos == null) {
+        Get.snackbar('Lỗi', 'Không thể lấy vị trí hiện tại để chỉ đường');
+        return;
+      }
+      final start = LatLng(pos.latitude, pos.longitude);
+      isLoading.value = true;
+      final routePoints = await _getRoutePoints(start, destination);
+      if (routePoints != null && routePoints.isNotEmpty) {
+        routePolylines.value = [
+          Polyline(points: routePoints, strokeWidth: 4, color: Colors.blue),
+        ];
+        final distance = await _routingService?.getFormattedRouteDistance(
+          start.latitude,
+          start.longitude,
+          destination.latitude,
+          destination.longitude,
+        );
+        if (distance != null) {
+          Get.snackbar('Chỉ đường', 'Khoảng cách: $distance', duration: const Duration(seconds: 3));
+        }
+      } else {
+        // fallback straight line
+        routePolylines.value = [
+          Polyline(points: [start, destination], strokeWidth: 3, color: Colors.blue.withOpacity(0.6)),
+        ];
+        Get.snackbar('Thông báo', 'Không tìm thấy đường, hiển thị đường thẳng');
+      }
+    } catch (e) {
+      print('[VICTIM_MAP] Error findRouteTo: $e');
+      Get.snackbar('Lỗi', 'Không thể chỉ đường: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -642,7 +862,69 @@ class VictimMapController extends GetxController {
   void refreshMarkers() {
     loadDisasterMarkers();
     loadShelterMarkers();
+    // Refresh hazard polygons as well
+    loadDisasterPolygons();
     // My requests will auto-update via stream
+  }
+
+  /// Set OpenWeatherMap API key (keep it runtime only)
+  void setOwmApiKey(String? key) {
+    if (key == null || key.trim().isEmpty) {
+      owmApiKey.value = null;
+      _secureStorage.delete(key: _owmStorageKey);
+    } else {
+      final val = key.trim();
+      owmApiKey.value = val;
+      // persist securely
+      _secureStorage.write(key: _owmStorageKey, value: val);
+    }
+  }
+
+  void setSelectedOwmLayer(String layer) {
+    if (availableOwmLayers.contains(layer)) {
+      selectedOwmLayer.value = layer;
+    }
+  }
+
+  void setOwmOpacity(double opacity) {
+    owmTileOpacity.value = opacity.clamp(0.0, 1.0);
+  }
+
+  void toggleShowOwmTiles(bool show) {
+    showOwmTiles.value = show;
+  }
+
+  /// Return the tile URL template for the selected OWM layer (includes API key)
+  String? getOwmTileUrlTemplate() {
+    final key = owmApiKey.value;
+    if (key == null || key.isEmpty) return null;
+    final layer = selectedOwmLayer.value;
+    // Example: https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=APIKEY
+    return 'https://tile.openweathermap.org/map/$layer/{z}/{x}/{y}.png?appid=$key';
+  }
+
+  /// Load stored OWM key from secure storage (if exists)
+  Future<void> _loadOwmKeyFromStorage() async {
+    try {
+      final stored = await _secureStorage.read(key: _owmStorageKey);
+      if (stored != null && stored.isNotEmpty) {
+        owmApiKey.value = stored;
+      }
+    } catch (e) {
+      print('Error loading OWM key from storage: $e');
+    }
+  }
+
+  /// Set radar overlay image (network URL) and its bounds on the map.
+  void setRadarOverlay(String imageUrl, LatLngBounds bounds) {
+    radarImageUrl.value = imageUrl;
+    radarBounds.value = bounds;
+  }
+
+  /// Clear any radar overlay
+  void clearRadarOverlay() {
+    radarImageUrl.value = null;
+    radarBounds.value = null;
   }
 }
 
