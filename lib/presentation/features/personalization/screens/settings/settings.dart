@@ -8,6 +8,7 @@ import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
 import 'package:cuutrobaolu/domain/repositories/authentication_repository.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_profile_controller.dart';
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
@@ -27,7 +28,7 @@ class SettingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Initialize controller once
     final victimProfileController = Get.put(VictimProfileController(), permanent: false);
-
+    // final userController = Get.put(UserController(), permanent: true); // Thêm dòng này
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(

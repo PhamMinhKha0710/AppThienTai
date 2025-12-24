@@ -4,6 +4,8 @@ import 'package:cuutrobaolu/core/widgets/images/MinhCircularImage.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeName.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePhone.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeUserName.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/MinhProfileMenu.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
@@ -42,7 +44,8 @@ class ProfileScreen extends StatelessWidget {
                           final image = networdImage.isEmpty ? MinhImages.user : networdImage;
                           if(controller.imageLoading.value)
                           {
-                            return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
+                            // return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
+                            return CircularProgressIndicator();
                           }
                           else {
                             return MinhCircularImage(
@@ -74,9 +77,12 @@ class ProfileScreen extends StatelessWidget {
                 SizedBox(height: MinhSizes.spaceBtwItems,),
 
                 MinhProfileMenu(title: "Name", value: user.fullName, onTap: (){
+                  print("gsvahbd jnmg");
                   Get.to(() => ChangeName());
                 }),
-                MinhProfileMenu(title: "UserName", value: user.username, onTap: (){}),
+                MinhProfileMenu(title: "UserName", value: user.username, onTap: (){
+                  Get.to(() => ChangeUserName());
+                }),
 
                 SizedBox(height: MinhSizes.spaceBtwItems,),
 
@@ -87,10 +93,14 @@ class ProfileScreen extends StatelessWidget {
                 SizedBox(height: MinhSizes.spaceBtwItems,),
 
                 MinhProfileMenu(title: "UserId", value: user.id, icon: Iconsax.copy, onTap: (){}),
-                MinhProfileMenu(title: "Email", value: user.email, onTap: (){}),
-                MinhProfileMenu(title: "Phone Number", value: "+84 ${user.phoneNumber}", onTap: (){}),
-                MinhProfileMenu(title: "Gender", value: "Male", onTap: (){}),
-                MinhProfileMenu(title: "Date of Birth", value: "4 Aril, 2004 ", onTap: (){}),
+                MinhProfileMenu(title: "Email", value: user.email, onTap: (){
+
+                }),
+                MinhProfileMenu(title: "Phone Number", value: "+84 ${user.phoneNumber}", onTap: (){
+                  Get.to(() => ChangePhone());
+                }),
+                // MinhProfileMenu(title: "Gender", value: "Male", onTap: (){}),
+                // MinhProfileMenu(title: "Date of Birth", value: "4 Aril, 2004 ", onTap: (){}),
 
                 Divider(color: MinhColors.darkerGrey,),
                 SizedBox(height: MinhSizes.spaceBtwItems,),

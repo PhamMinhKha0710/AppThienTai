@@ -171,12 +171,17 @@ class AuthenticationRepositoryAdapter extends GetxController {
 
   Future<void> deleteAccount() async {
     try {
+
+      print("Xoá User");
       // Xóa user record trước
       final userId = _auth.currentUser?.uid;
+      print('Xoá User ID $userId');
       if (userId != null) {
+
         await FirebaseFirestore.instance.collection("Users").doc(userId).delete();
       }
       await _repository.deleteAccount();
+      print("tHÀNH CÔNG xoá User");
     } catch (e) {
       throw e.toString();
     }

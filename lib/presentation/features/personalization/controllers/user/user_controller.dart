@@ -16,36 +16,41 @@ import 'package:cuutrobaolu/core/utils/exports.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/core/popups/full_screen_loader.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
+import 'package:cuutrobaolu/service/CloudinaryService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
-class  UserController extends GetxController
-{
+import '../../../../../data/repositories/user/user_repository_NOLAZY.dart';
 
+class UserController extends GetxController {
   static UserController get instance => Get.find();
+
+  final userRepository = Get.put(UserRepositoryNOLAZY());
 
   final profileLoading = false.obs;
   final imageLoading = false.obs;
 
-  // Use Cases - Clean Architecture (lazy getters để tránh LateInitializationError)
-  GetCurrentUserUseCase get _getCurrentUserUseCase => Get.find<GetCurrentUserUseCase>();
-  SaveUserUseCase get _saveUserUseCase => Get.find<SaveUserUseCase>();
-  UpdateUserUseCase get _updateUserUseCase => Get.find<UpdateUserUseCase>();
-  UploadImageUseCase get _uploadImageUseCase => Get.find<UploadImageUseCase>();
-  ReAuthenticateUseCase get _reAuthenticateUseCase => Get.find<ReAuthenticateUseCase>();
-  DeleteAccountUseCase get _deleteAccountUseCase => Get.find<DeleteAccountUseCase>();
-  SignInWithGoogleUseCase get _signInWithGoogleUseCase => Get.find<SignInWithGoogleUseCase>();
+  // GetCurrentUserUseCase get _getCurrentUserUseCase =>
+  //     Get.find<GetCurrentUserUseCase>();
+  // SaveUserUseCase get _saveUserUseCase => Get.find<SaveUserUseCase>();
+  // UpdateUserUseCase get _updateUserUseCase => Get.find<UpdateUserUseCase>();
+  // UploadImageUseCase get _uploadImageUseCase => Get.find<UploadImageUseCase>();
+  // ReAuthenticateUseCase get _reAuthenticateUseCase =>
+  //     Get.find<ReAuthenticateUseCase>();
+  DeleteAccountUseCase get _deleteAccountUseCase =>
+      Get.find<DeleteAccountUseCase>();
+  SignInWithGoogleUseCase get _signInWithGoogleUseCase =>
+      Get.find<SignInWithGoogleUseCase>();
 
-  Rx<UserModel> user = UserModel.empty().obs ;
+  Rx<UserModel> user = UserModel.empty().obs;
 
   final hiddenPassword = false.obs;
   final verifyEmail = TextEditingController();
   final verifyPassword = TextEditingController();
   GlobalKey<FormState> reAuthFormKey = GlobalKey<FormState>();
-
 
   @override
   void onInit() {
@@ -55,11 +60,13 @@ class  UserController extends GetxController
 
   // Load user using Use Case
   Future<void> fetchUser() async {
-    try{
+    try {
+      print("lalalalalalala - lalalalalalalala");
       profileLoading.value = true;
+      print("lalalalalalala - lalalalalalalala ====== 1");
+      // final currentUserEntity = await ();
+      final currentUserEntity = await userRepository.getCurrentUser();
 
-      final currentUserEntity = await _getCurrentUserUseCase();
-      
       if (currentUserEntity != null) {
         // Convert Entity to Model
         this.user(UserMapper.toModel(currentUserEntity));
@@ -67,59 +74,64 @@ class  UserController extends GetxController
         this.user(UserModel.empty());
       }
 
-      profileLoading.value = false;
-    }
-    catch (e)
-    {
-      this.user(UserModel.empty());
-    }
-    finally
-    {
-      profileLoading.value = false;
-    }
+      print("lalalalalalala - lalalalalalalala ====== 3");
 
+      profileLoading.value = false;
+    } catch (e) {
+      print("===== bị lỗi á =====");
+
+      this.user(UserModel.empty());
+    } finally {
+      profileLoading.value = false;
+    }
   }
 
   /// Save user Record from any Registration provider
-  Future<void> saveUserRecord(UserCredential? userCredential) async
-  {
+  Future<void> saveUserRecord(UserCredential? userCredential) async {
     try {
       // Refresh user
       await fetchUser();
-      if(user.value.id.isEmpty)
-      {
-        if(userCredential != null)
-        {
-          final nameParts = UserModel.nameParts(userCredential.user!.displayName ?? "");
-          final userName = UserModel.generateUsername(userCredential.user!.displayName ?? "");
+      if (user.value.id.isEmpty) {
+        if (userCredential != null) {
+          final nameParts = UserModel.nameParts(
+            userCredential.user!.displayName ?? "",
+          );
+          final userName = UserModel.generateUsername(
+            userCredential.user!.displayName ?? "",
+          );
 
           // Create UserEntity from Firebase user
           final userEntity = domain.UserEntity(
-              id: userCredential.user!.uid,
-              username: userName,
-              email: userCredential.user!.email ?? "",
-              firstName: nameParts.isNotEmpty ? nameParts[0] : "",
-              lastName: nameParts.length > 1 ? nameParts.sublist(1).join(" ") : "" ,
-              phoneNumber: userCredential.user!.phoneNumber ?? "",
-              profilePicture: userCredential.user!.photoURL ?? "",
-              userType: domain.UserType.victim, // Default
-              volunteerStatus: domain.VolunteerStatus.available,
-              active: true,
-              isVerified: userCredential.user!.emailVerified
+            id: userCredential.user!.uid,
+            username: userName,
+            email: userCredential.user!.email ?? "",
+            firstName: nameParts.isNotEmpty ? nameParts[0] : "",
+            lastName: nameParts.length > 1
+                ? nameParts.sublist(1).join(" ")
+                : "",
+            phoneNumber: userCredential.user!.phoneNumber ?? "",
+            profilePicture: userCredential.user!.photoURL ?? "",
+            userType: domain.UserType.victim, // Default
+            volunteerStatus: domain.VolunteerStatus.available,
+            active: true,
+            isVerified: userCredential.user!.emailVerified,
           );
 
           // Save using Use Case
-          await _saveUserUseCase(userEntity);
+          // await _saveUserUseCase(userEntity);
+
+          await userRepository.saveUserFireRecord(userEntity);
+
+
+
         }
       }
-    }
-    on Failure catch (failure) {
+    } on Failure catch (failure) {
       MinhLoaders.warningSnackBar(
         title: "Data Not Saved",
         message: failure.message,
       );
-    }
-    catch (e){
+    } catch (e) {
       MinhLoaders.warningSnackBar(
         title: "Data Not Saved",
         message: e.toString(),
@@ -127,22 +139,19 @@ class  UserController extends GetxController
     }
   }
 
-
   // Delete
-  void deleteAccountWarningPopup()
-  {
+  void deleteAccountWarningPopup() {
     Get.defaultDialog(
       contentPadding: EdgeInsets.all(MinhSizes.md),
       title: "DeleteAccount",
-      middleText: "Bạn có chắc bạn muốn xóa tài khoản vĩnh viễn, hành động này không thể đảo ngược và tất cả dữ liệu sẽ đợc xóa vĩnh viễn",
+      middleText:
+          "Bạn có chắc bạn muốn xóa tài khoản vĩnh viễn, hành động này không thể đảo ngược và tất cả dữ liệu sẽ đợc xóa vĩnh viễn",
       confirm: ElevatedButton(
-          onPressed: () async => deleteUserAccount(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: MinhSizes.lg,
-            ),
-            child: Text("Delete"),
-          ),
+        onPressed: () async => deleteUserAccount(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: MinhSizes.lg),
+          child: Text("Delete"),
+        ),
       ),
       cancel: OutlinedButton(
         onPressed: () {
@@ -153,13 +162,11 @@ class  UserController extends GetxController
     );
   }
 
-  void deleteUserAccount() async
-  {
-    try
-    {
+  void deleteUserAccount() async {
+    try {
       MinhFullScreenLoader.openLoadingDialog(
-          "Processing",
-          MinhImages.docerAnimation,
+        "Processing",
+        MinhImages.docerAnimation,
       );
 
       final authUser = FirebaseAuth.instance.currentUser;
@@ -170,44 +177,32 @@ class  UserController extends GetxController
 
       final provider = authUser.providerData.map((e) => e.providerId).first;
 
-      if(provider.isNotEmpty)
-      {
-        if(provider == "google.com")
-        {
+      if (provider.isNotEmpty) {
+        if (provider == "google.com") {
           // Re-authenticate with Google
+
+          print("Re-authenticate with Google ===============");
+
           await _signInWithGoogleUseCase();
           // Delete account using Use Case
           await _deleteAccountUseCase();
           MinhFullScreenLoader.stopLoading();
           Get.offAll(() => LoginScreen());
-        }
-        else if(provider == "password")
-        {
+        } else if (provider == "password") {
           MinhFullScreenLoader.stopLoading();
           Get.to(() => ReAuthLoginForm());
         }
       }
-
-    }
-    on Failure catch (failure) {
+    } on Failure catch (failure) {
       MinhFullScreenLoader.stopLoading();
-      MinhLoaders.warningSnackBar(
-          title: "Lỗi",
-          message: failure.message,
-      );
-    }
-    catch(e)
-    {
+      MinhLoaders.warningSnackBar(title: "Lỗi", message: failure.message);
+    } catch (e) {
       MinhFullScreenLoader.stopLoading();
-      MinhLoaders.warningSnackBar(
-          title: "Lỗi",
-          message: e.toString(),
-      );
+      MinhLoaders.warningSnackBar(title: "Lỗi", message: e.toString());
     }
   }
 
-  Future<void> reAuthenticateEmailAndPasswordUser() async
-  {
+  Future<void> reAuthenticateEmailAndPasswordUser() async {
     try {
       // Show Loading
       MinhFullScreenLoader.openLoadingDialog(
@@ -217,23 +212,28 @@ class  UserController extends GetxController
 
       // Check Internet
       final isConnected = await NetworkManager.instance.isConnected();
-      if(!isConnected)
-      {
+      if (!isConnected) {
         MinhFullScreenLoader.stopLoading();
         return;
       }
 
-      if(!reAuthFormKey.currentState!.validate())
-      {
+      if (!reAuthFormKey.currentState!.validate()) {
         MinhFullScreenLoader.stopLoading();
         return;
       }
 
       // Re-authenticate using Use Case
-      await _reAuthenticateUseCase(verifyEmail.text.trim(), verifyPassword.text.trim());
+      // await _reAuthenticateUseCase(
+      //   verifyEmail.text.trim(),
+      //   verifyPassword.text.trim(),
+      // );
+
+
 
       // Delete account using Use Case
-      await _deleteAccountUseCase();
+      // await _deleteAccountUseCase();
+
+      await userRepository.deleteAccount(user.value.id);
 
       // Close loading
       MinhFullScreenLoader.stopLoading();
@@ -241,10 +241,7 @@ class  UserController extends GetxController
       // Chuyển trang
 
       Get.offAll(() => LoginScreen());
-
-
-    }
-    catch (e){
+    } catch (e) {
       MinhLoaders.warningSnackBar(
         title: "Data Not Saved",
         message: e.toString(),
@@ -254,7 +251,7 @@ class  UserController extends GetxController
 
   // Upload images profile
   void uploadUserProfilePicture() async {
-    try{
+    try {
       final image = await ImagePicker().pickImage(
         source: ImageSource.gallery,
         imageQuality: 70,
@@ -262,60 +259,61 @@ class  UserController extends GetxController
         maxWidth: 512,
       );
 
-      if(image != null)
-      {
+      if (image != null) {
         imageLoading.value = true;
 
         // upload images
         // C1: Firebase storage
         // final imageUrl = await userRepository.upLoadImage("Users/images/Profile/", images);
 
+        print("123456789");
         // Upload using Use Case
-        final imageUrl = await _uploadImageUseCase("/profileUsers", image.path);
+        // final imageUrl = await _uploadImageUseCase("/profileUsers", image.path);
+        final imageUrl = await CloudinaryService.uploadImage(
+          image,
+        );
 
+        print('$imageUrl');
+
+        print("12345678910111213141516171819");
         if (imageUrl != null) {
           // Update user entity
-          final currentUserEntity = await _getCurrentUserUseCase();
+          // final currentUserEntity = await _getCurrentUserUseCase();
+
+          final currentUserEntity = await userRepository.getCurrentUser();
+
           if (currentUserEntity != null) {
-            final updatedEntity = currentUserEntity.copyWith(profilePicture: imageUrl);
-            await _updateUserUseCase(updatedEntity);
-            
+            final updatedEntity = currentUserEntity.copyWith(
+              profilePicture: imageUrl,
+            );
+            // await _updateUserUseCase(updatedEntity);
+
+            await userRepository.updateUserDetails(updatedEntity);
+
             // Update local model
             user.value.profilePicture = imageUrl;
           }
         }
+        else
+          {
+            print("Ko có hình");
+          }
 
         user.refresh();
 
         MinhLoaders.successSnackBar(
-            title: "Congratulations",
-            message: "Your Profile Image has been updated!"
+          title: "Congratulations",
+          message: "Your Profile Image has been updated!",
         );
       }
-    }
-    on Failure catch (failure) {
-      MinhLoaders.errorSnackBar(
-          title: "Lỗi",
-          message: failure.message,
-      );
-    }
-    catch (e){
-      MinhLoaders.errorSnackBar(
-          title: "Lỗi",
-          message: e.toString(),
-      );
-    }
-    finally{
+    } on Failure catch (failure) {
+      print('2. ${failure.message}');
+      MinhLoaders.errorSnackBar(title: "Lỗi", message: failure.message);
+    } catch (e) {
+      print('1. ${e.toString()}');
+      MinhLoaders.errorSnackBar(title: "Lỗi", message: e.toString());
+    } finally {
       imageLoading.value = false;
     }
-
   }
-
-
-
-
-
-
-
-
 }

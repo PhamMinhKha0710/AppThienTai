@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -16,7 +17,10 @@ class CloudinaryService
 
   static Future<String?> uploadImage(XFile image, { String folder = "users"}) async {
     try {
-      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/images/upload");
+
+      final result = await InternetAddress.lookup('api.cloudinary.com');
+
+      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
 
       final request = http.MultipartRequest("POST", url)
         ..fields['upload_preset'] =   uploadPreset
@@ -45,7 +49,7 @@ class CloudinaryService
 
   static Future<String?> uploadImageInAsset(XFile image, {String preset = "", String folder = "users"}) async {
     try {
-      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/images/upload");
+      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
 
       final request = http.MultipartRequest("POST", url)
         ..fields['upload_preset'] = preset.isEmpty ? uploadPreset : preset
@@ -75,7 +79,7 @@ class CloudinaryService
   /// Upload ảnh trong assets (ví dụ dummy data)
   static Future<String?> uploadAssetImage(String assetPath, {String preset = "",String folder = "users"}) async {
     try {
-      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/images/upload");
+      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
 
       // Đọc file từ assets
       final byteData = await rootBundle.load(assetPath);
