@@ -586,7 +586,11 @@ class VolunteerTasksController extends GetxController {
     Future.delayed(const Duration(milliseconds: 300), () {
       try {
         final mapController = Get.find<VolunteerMapController>();
-        mapController.focusOnLocation(LatLng(lat, lng));
+        final target = LatLng(lat, lng);
+        // Di chuyển camera
+        mapController.focusOnLocation(target);
+        // Vẽ đường đi từ vị trí hiện tại của tình nguyện viên tới nhiệm vụ
+        mapController.findRouteTo(target);
       } catch (e) {
         print('Error focusing map: $e');
         // If controller not found, just show snackbar

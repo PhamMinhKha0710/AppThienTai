@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 class VolunteerProfileController extends GetxController {
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
@@ -242,8 +243,65 @@ class VolunteerProfileController extends GetxController {
   }
 
   void addSkill() {
-    // TODO: Show dialog to add custom skill
-    Get.snackbar('Thông báo', 'Tính năng thêm kỹ năng tùy chỉnh sẽ sớm có mặt');
+    final nameController = TextEditingController();
+
+    Get.dialog(Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Thêm kỹ năng', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Tên kỹ năng',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: () => Get.back(), child: const Text('Hủy')),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      Get.snackbar('Lỗi', 'Tên kỹ năng không được để trống');
+                      return;
+                    }
+                    // Add to available skills and select it
+                    if (!availableSkills.contains(name)) {
+                      availableSkills.add(name);
+                    }
+                    if (!skills.contains(name)) {
+                      skills.add(name);
+                    }
+                    // Persist to user profile
+                    try {
+                      final userId = FirebaseAuth.instance.currentUser?.uid;
+                      if (userId != null) {
+                        await _userRepo.updateSingField({
+                          'Skills': skills.toList(),
+                        });
+                      }
+                    } catch (e) {
+                      print('Error saving new skill: $e');
+                    }
+
+                    Get.back();
+                  },
+                  child: const Text('Thêm'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ));
   }
 }
 

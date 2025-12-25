@@ -1,17 +1,21 @@
+import 'dart:convert';
+
 import 'package:cuutrobaolu/data/services/location_service.dart';
+import 'package:cuutrobaolu/data/services/routing_service.dart';
 import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
 import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
 import 'package:cuutrobaolu/domain/entities/shelter_entity.dart';
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart' as core;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 class VolunteerMapController extends GetxController {
   LocationService? _locationService;
+  RoutingService? _routingService;
   final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
 
@@ -26,6 +30,9 @@ class VolunteerMapController extends GetxController {
   
   // Focus location (for navigating to specific task)
   final focusLocation = Rxn<LatLng>();
+  
+  // Route polylines from rescuer to target (task/shelter)
+  final routePolylines = <Polyline>[].obs;
   
   // Filter state
   final activeFilter = 'all'.obs;
@@ -51,6 +58,12 @@ class VolunteerMapController extends GetxController {
     } catch (_) {
       _locationService = Get.put(LocationService(), permanent: true);
     }
+
+    try {
+      _routingService = getIt<RoutingService>();
+    } catch (_) {
+      _routingService = Get.put(RoutingService(), permanent: true);
+    }
   }
 
   Future<void> _loadLocation() async {
@@ -62,6 +75,115 @@ class VolunteerMapController extends GetxController {
     } catch (e) {
       print('Error loading location: $e');
     }
+  }
+
+  /// Vẽ đường đi từ vị trí hiện tại của tình nguyện viên tới điểm [destination]
+  Future<void> findRouteTo(LatLng destination) async {
+    try {
+      // Đảm bảo đã có vị trí hiện tại
+      if (currentPosition.value == null) {
+        await _loadLocation();
+      }
+
+      final start = currentPosition.value;
+      if (start == null) {
+        Get.snackbar('Lỗi', 'Không thể lấy vị trí hiện tại để tìm đường');
+        return;
+      }
+
+      isLoading.value = true;
+      print('[VOLUNTEER_MAP] Finding route from $start to $destination');
+
+      // Nếu có RoutingService thì cố gắng lấy đường đi theo OSRM như bên Victim
+      final routePoints = await _getRoutePoints(start, destination);
+
+      if (routePoints != null && routePoints.isNotEmpty) {
+        routePolylines.value = [
+          Polyline(
+            points: routePoints,
+            strokeWidth: 4,
+            color: Colors.blue,
+          ),
+        ];
+
+        if (_routingService != null) {
+          final distanceText =
+              await _routingService!.getFormattedRouteDistance(
+            start.latitude,
+            start.longitude,
+            destination.latitude,
+            destination.longitude,
+          );
+
+          Get.snackbar(
+            'Đường đi đã sẵn sàng',
+            'Khoảng cách: $distanceText',
+            duration: const Duration(seconds: 3),
+          );
+        }
+      } else {
+        // Fallback: vẽ đường thẳng
+        routePolylines.value = [
+          Polyline(
+            points: [start, destination],
+            strokeWidth: 3,
+            color: Colors.blue.withOpacity(0.5),
+          ),
+        ];
+        Get.snackbar(
+          'Thông báo',
+          'Không tìm thấy đường đi, hiển thị đường thẳng',
+        );
+      }
+    } catch (e) {
+      print('[VOLUNTEER_MAP] Error finding route: $e');
+      Get.snackbar('Lỗi', 'Không thể tìm đường: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Lấy danh sách điểm trên đường đi từ OSRM (giống bên VictimMapController)
+  Future<List<LatLng>?> _getRoutePoints(
+    LatLng start,
+    LatLng end,
+  ) async {
+    try {
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${start.longitude},${start.latitude};'
+        '${end.longitude},${end.latitude}?overview=full&geometries=geojson',
+      );
+
+      print('[VOLUNTEER_MAP] Fetching route geometry from OSRM...');
+
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('Route request timeout'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['code'] == 'Ok' &&
+            data['routes'] != null &&
+            data['routes'].isNotEmpty) {
+          final geometry = data['routes'][0]['geometry'];
+          if (geometry != null && geometry['coordinates'] != null) {
+            final coordinates = geometry['coordinates'] as List;
+            final points = coordinates.map((coord) {
+              return LatLng(coord[1] as double, coord[0] as double);
+            }).toList();
+            print('[VOLUNTEER_MAP] Got ${points.length} route points');
+            return points;
+          }
+        }
+      }
+
+      print('[VOLUNTEER_MAP] Failed to get route geometry');
+    } catch (e) {
+      print('[VOLUNTEER_MAP] Error getting route points: $e');
+    }
+    return null;
   }
 
   Future<void> loadMarkers() async {

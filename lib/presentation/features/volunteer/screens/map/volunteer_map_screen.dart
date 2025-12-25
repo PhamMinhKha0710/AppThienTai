@@ -71,6 +71,15 @@ class VolunteerMapScreen extends StatelessWidget {
                   ...controller.taskMarkers,
                   ...controller.shelterMarkers,
                 ]),
+                // Tuyến đường từ vị trí hiện tại tới điểm cần cứu trợ / trú ẩn
+                Obx(() {
+                  if (controller.routePolylines.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return PolylineLayer(
+                    polylines: controller.routePolylines,
+                  );
+                }),
               ],
             );
           }),

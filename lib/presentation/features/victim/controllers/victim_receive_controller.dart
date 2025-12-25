@@ -82,9 +82,28 @@ class VictimReceiveController extends GetxController {
           20.0,
         );
 
-        nearbyDistributionPoints.value = nearby.map((shelter) {
+        nearbyDistributionPoints.value = await Future.wait(nearby.map((shelter) async {
           final available = shelter.availableSlots;
-          final percent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
+          final occupancyPercent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
+          final availPercent = shelter.capacity > 0 ? ((available / shelter.capacity) * 100).toInt() : 0;
+
+          double distanceKm = 0.0;
+          int etaMinutes = -1;
+          try {
+            distanceKm = _locationService?.getDistanceInKm(
+                  position.latitude,
+                  position.longitude,
+                  shelter.lat,
+                  shelter.lng,
+                ) ??
+                0.0;
+            // Estimate ETA: walking if very close, else driving
+            final speedKmh = distanceKm < 2.0 ? 5.0 : 40.0;
+            etaMinutes = (distanceKm / speedKmh * 60).round();
+          } catch (_) {
+            distanceKm = 0.0;
+            etaMinutes = -1;
+          }
 
           return {
             'id': shelter.id,
@@ -92,21 +111,31 @@ class VictimReceiveController extends GetxController {
             'address': shelter.address,
             'lat': shelter.lat,
             'lng': shelter.lng,
-            'distance': 0.0, // TODO: Calculate distance if needed
+            'distanceKm': double.parse(distanceKm.toStringAsFixed(2)),
+            'etaMinutes': etaMinutes,
             'capacity': shelter.capacity,
             'occupancy': shelter.currentOccupancy,
             'available': available,
-            'percent': percent,
+            'availPercent': availPercent,
+            'occupancyPercent': occupancyPercent,
             'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
             'items': shelter.amenities ?? <String>[],
           };
-        }).toList();
+        }).toList());
+
+        // sort by distance
+        nearbyDistributionPoints.sort((a, b) {
+          final da = (a['distanceKm'] as num?)?.toDouble() ?? double.infinity;
+          final db = (b['distanceKm'] as num?)?.toDouble() ?? double.infinity;
+          return da.compareTo(db);
+        });
       } else {
         // Fallback: load all active shelters
         final allShelters = await _shelterRepo.getAllShelters().first;
         nearbyDistributionPoints.value = allShelters.take(10).map((shelter) {
           final available = shelter.availableSlots;
-          final percent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
+          final occupancyPercent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
+          final availPercent = shelter.capacity > 0 ? ((available / shelter.capacity) * 100).toInt() : 0;
 
           return {
             'id': shelter.id,
@@ -114,11 +143,13 @@ class VictimReceiveController extends GetxController {
             'address': shelter.address,
             'lat': shelter.lat,
             'lng': shelter.lng,
-            'distance': 0.0,
+            'distanceKm': 0.0,
+            'etaMinutes': -1,
             'capacity': shelter.capacity,
             'occupancy': shelter.currentOccupancy,
             'available': available,
-            'percent': percent,
+            'availPercent': availPercent,
+            'occupancyPercent': occupancyPercent,
             'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
             'items': shelter.amenities ?? <String>[],
           };

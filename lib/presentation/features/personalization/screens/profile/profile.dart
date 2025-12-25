@@ -4,6 +4,8 @@ import 'package:cuutrobaolu/core/widgets/images/MinhCircularImage.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeName.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeContact.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/MinhProfileMenu.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
@@ -88,9 +90,14 @@ class ProfileScreen extends StatelessWidget {
 
                 MinhProfileMenu(title: "UserId", value: user.id, icon: Iconsax.copy, onTap: (){}),
                 MinhProfileMenu(title: "Email", value: user.email, onTap: (){}),
-                MinhProfileMenu(title: "Phone Number", value: "+84 ${user.phoneNumber}", onTap: (){}),
+                MinhProfileMenu(title: "Phone Number", value: "+84 ${user.phoneNumber}", onTap: (){
+                  Get.to(() => ChangeContact());
+                }),
                 MinhProfileMenu(title: "Gender", value: "Male", onTap: (){}),
                 MinhProfileMenu(title: "Date of Birth", value: "4 Aril, 2004 ", onTap: (){}),
+                MinhProfileMenu(title: "Đổi mật khẩu", value: "", onTap: (){
+                  Get.to(() => ChangePassword());
+                }),
 
                 Divider(color: MinhColors.darkerGrey,),
                 SizedBox(height: MinhSizes.spaceBtwItems,),
