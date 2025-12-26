@@ -9,6 +9,8 @@ class VictimProfileController extends GetxController {
   final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  final user = {}.obs;
+
   final myRequests = <Map<String, dynamic>>[].obs;
   final isLoading = false.obs;
   StreamSubscription? _requestsSubscription;

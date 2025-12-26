@@ -35,6 +35,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Cho phép HTTP trong debug
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

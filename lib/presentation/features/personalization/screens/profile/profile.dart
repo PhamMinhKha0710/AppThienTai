@@ -6,6 +6,7 @@ import 'package:cuutrobaolu/presentation/features/personalization/controllers/us
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeName.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeContact.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangeUserName.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/MinhProfileMenu.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
@@ -44,7 +45,8 @@ class ProfileScreen extends StatelessWidget {
                           final image = networdImage.isEmpty ? MinhImages.user : networdImage;
                           if(controller.imageLoading.value)
                           {
-                            return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
+                            // return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
+                            return CircularProgressIndicator();
                           }
                           else {
                             return MinhCircularImage(
@@ -76,9 +78,12 @@ class ProfileScreen extends StatelessWidget {
                 SizedBox(height: MinhSizes.spaceBtwItems,),
 
                 MinhProfileMenu(title: "Name", value: user.fullName, onTap: (){
+                  print("gsvahbd jnmg");
                   Get.to(() => ChangeName());
                 }),
-                MinhProfileMenu(title: "UserName", value: user.username, onTap: (){}),
+                MinhProfileMenu(title: "UserName", value: user.username, onTap: (){
+                  Get.to(() => ChangeUserName());
+                }),
 
                 SizedBox(height: MinhSizes.spaceBtwItems,),
 

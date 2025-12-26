@@ -4,6 +4,7 @@ import 'package:cuutrobaolu/core/widgets/images/MinhCircularImage.dart';
 import 'package:cuutrobaolu/core/widgets/list_titles/MinhSettingsMenuTitle.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_profile_controller.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/donation/volunteer_donation_screen.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
@@ -48,11 +49,14 @@ class VolunteerProfileScreen extends StatelessWidget {
                     final image = networkImage.isEmpty ? MinhImages.user : networkImage;
                     return Column(
                       children: [
-                        MinhCircularImage(
-                          image: image,
-                          width: 80,
-                          height: 80,
-                          isNetworkImage: networkImage.isNotEmpty,
+                        GestureDetector(
+                          child: MinhCircularImage(
+                            image: image,
+                            width: 80,
+                            height: 80,
+                            isNetworkImage: networkImage.isNotEmpty,
+                          ),
+                          onTap: () {Get.to(() => ProfileScreen());},
                         ),
                         SizedBox(height: MinhSizes.spaceBtwItems / 2),
                         Text(

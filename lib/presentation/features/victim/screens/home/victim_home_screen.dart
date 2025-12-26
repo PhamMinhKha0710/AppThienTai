@@ -6,6 +6,7 @@ import 'package:cuutrobaolu/core/widgets/cards/MinhAlertCard.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/presentation/features/chat/screens/chat_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/sos/victim_sos_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/receive/victim_receive_screen.dart';
@@ -413,6 +414,13 @@ class VictimHomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Get.to(() => ChatScreen());
+        },
+        backgroundColor: Colors.deepOrange,
+        child: Icon(Icons.chat, color: Colors.yellowAccent),
       ),
       // FAB đã được thay thế bằng nút nổi bật ở trên
     );

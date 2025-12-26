@@ -4,17 +4,17 @@ import 'package:cuutrobaolu/core/utils/formatter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
-  final String id;
-  final String username;
-  final String email;
+  String id;
+  String username;
+  String email;
   String firstName;
   String lastName;
   String phoneNumber;
   String profilePicture;
-  final UserType userType;
-  final VolunteerStatus volunteerStatus;
-  final bool active;
-  final bool isVerified;
+  UserType userType;
+  VolunteerStatus volunteerStatus;
+  bool active;
+  bool isVerified;
 
   UserModel({
     required this.id,
@@ -99,18 +99,21 @@ class UserModel {
       isVerified: data['IsVerified'] ?? false,
       userType: data['UserType'] != null
           ? UserType.values.firstWhere(
-              (type) => type.name.toLowerCase() == data['UserType'].toString().toLowerCase()
-      )
+              (type) =>
+                  type.name.toLowerCase() ==
+                  data['UserType'].toString().toLowerCase(),
+            )
           : UserType.victim,
 
       volunteerStatus: data['VolunteerStatus'] != null
           ? VolunteerStatus.values.firstWhere(
               // (status) => status.name == data['VolunteerStatus'],
-              (status) => status.name.toLowerCase() == data['VolunteerStatus'].toString().toLowerCase()
-          )
+              (status) =>
+                  status.name.toLowerCase() ==
+                  data['VolunteerStatus'].toString().toLowerCase(),
+            )
           : VolunteerStatus.available,
       active: data['Active'] ?? true,
     );
   }
 }
-

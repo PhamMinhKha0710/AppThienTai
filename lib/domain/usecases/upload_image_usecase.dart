@@ -11,6 +11,9 @@ class UploadImageUseCase {
   /// Trả về URL của ảnh đã upload
   Future<String?> call(String folder, String imagePath) async {
     try {
+
+      print("Testvbndsjfgjnbmfk,wdefrgm");
+
       // Validation
       if (folder.isEmpty) {
         throw ValidationFailure('Folder cannot be empty');

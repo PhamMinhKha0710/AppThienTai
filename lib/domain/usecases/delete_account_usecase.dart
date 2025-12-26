@@ -14,6 +14,7 @@ class DeleteAccountUseCase {
         throw AuthenticationFailure('User is not authenticated');
       }
 
+
       await repository.deleteAccount();
     } on Failure {
       rethrow;

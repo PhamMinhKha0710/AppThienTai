@@ -1,7 +1,6 @@
 import 'package:cuutrobaolu/core/widgets/shimmers/MinhShimmerEffect.dart';
 import 'package:cuutrobaolu/core/widgets/images/MinhCircularImage.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
-import 'package:cuutrobaolu/presentation/features/personalization/models/user_model.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:flutter/material.dart';
@@ -20,11 +19,12 @@ class MinhUserProfileTitle extends StatelessWidget {
 
   final VoidCallback? onPressed;
 
+
   @override
   Widget build(BuildContext context) {
 
     final userController = Get.put(UserController());
-
+    // final userController = Get.find<UserController>();
     return Obx(
       () {
 

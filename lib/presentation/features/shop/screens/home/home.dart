@@ -19,7 +19,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userController = Get.find<UserController>();
+    // Sử dụng Get.put để đảm bảo UserController được khởi tạo nếu chưa có
+    final userController = Get.put(UserController());
 
 
     return Scaffold(
@@ -124,4 +125,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-

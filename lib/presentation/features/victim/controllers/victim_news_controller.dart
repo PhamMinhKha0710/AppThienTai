@@ -126,6 +126,12 @@ class VictimNewsController extends GetxController {
                       // TODO: Handle chatbot query
                     },
                   ),
+                  MinhChatbotSuggestion(
+                    text: "Thông báo cứu trợ",
+                    onTap: () {
+                      // TODO: Handle chatbot query
+                    },
+                  ),
                 ],
               ),
             ),

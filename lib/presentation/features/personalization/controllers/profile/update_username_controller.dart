@@ -9,14 +9,13 @@ import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
-class UpdateNameController extends GetxController
+class UpdateUserNameController extends GetxController
 {
-  static UpdateNameController get instance => Get.find();
+  static UpdateUserNameController get instance => Get.find();
 
-  final firstName = TextEditingController();
-  final lastName = TextEditingController();
 
-  final phoneName = TextEditingController();
+
+  final userName = TextEditingController();
 
   final userController = UserController.instance;
 
@@ -33,18 +32,16 @@ class UpdateNameController extends GetxController
   }
 
   Future<void> initializeNames() async {
-    firstName.text = userController.user.value.firstName;
-    lastName.text = userController.user.value.lastName;
-    phoneName.text = userController.user.value.phoneNumber;
+    userName.text = userController.user.value.username;
   }
 
   Future<void> updateUserName() async {
     try{
-      
+
       //Show load
       MinhFullScreenLoader.openLoadingDialog(
-          "We are updating your information .....",
-          MinhImages.docerAnimation,
+        "We are updating your information .....",
+        MinhImages.docerAnimation,
       );
 
       // Check Connect Internet
@@ -76,18 +73,13 @@ class UpdateNameController extends GetxController
 
       // Update user entity using Use Case
       final updatedEntity = currentUserEntity.copyWith(
-        firstName: firstName.text.trim(),
-        lastName: lastName.text.trim(),
-        phoneNumber: phoneName.text.trim(),
+        username: userName.text.trim(),
       );
 
       await _updateUserUseCase(updatedEntity);
 
       // Update local model
-      userController.user.value.firstName = firstName.text.trim();
-      userController.user.value.lastName = lastName.text.trim();
-      userController.user.value.phoneNumber = phoneName.text.trim();
-
+      userController.user.value.username = userName.text.trim();
 
       // Stop loading
       MinhFullScreenLoader.stopLoading();
