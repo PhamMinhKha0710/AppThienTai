@@ -270,17 +270,17 @@ class  UserController extends GetxController
         try {
           final uploadedUrl = await CloudinaryService.uploadImage(image);
           if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-            // Update user entity
-            final currentUserEntity = await _getCurrentUserUseCase();
-            if (currentUserEntity != null) {
+          // Update user entity
+          final currentUserEntity = await _getCurrentUserUseCase();
+          if (currentUserEntity != null) {
               final updatedEntity = currentUserEntity.copyWith(profilePicture: uploadedUrl);
-              await _updateUserUseCase(updatedEntity);
-
-              // Update local model
+            await _updateUserUseCase(updatedEntity);
+            
+            // Update local model
               user.value.profilePicture = uploadedUrl;
-              user.refresh();
+        user.refresh();
 
-              MinhLoaders.successSnackBar(
+        MinhLoaders.successSnackBar(
                 title: "Thành công",
                 message: "Ảnh đại diện đã được cập nhật",
               );

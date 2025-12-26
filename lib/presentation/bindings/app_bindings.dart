@@ -28,6 +28,7 @@ import '../../domain/usecases/get_help_requests_by_user_usecase.dart';
 import '../../domain/usecases/update_help_request_status_usecase.dart';
 import '../../core/utils/network_manager.dart';
 import '../../data/services/location_service.dart';
+import '../../data/services/sos_queue_service.dart';
 
 /// App Bindings - Dependency Injection cho Clean Architecture
 class AppBindings extends Bindings {
@@ -77,6 +78,9 @@ class AppBindings extends Bindings {
     Get.lazyPut(() => GetHelpRequestsUseCase(di.getIt<HelpRequestRepository>()));
     Get.lazyPut(() => GetHelpRequestsByUserUseCase(di.getIt<HelpRequestRepository>()));
     Get.lazyPut(() => UpdateHelpRequestStatusUseCase(di.getIt<HelpRequestRepository>()));
+    
+    // SOS queue service (offline queue + retry)
+    Get.put(SosQueueService(), permanent: true);
   }
 }
 
