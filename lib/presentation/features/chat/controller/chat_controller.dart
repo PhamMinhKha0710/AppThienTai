@@ -35,6 +35,12 @@ class ChatController extends GetxController {
     'contact': '',
   }.obs;
 
+  // Biến để kiểm soát việc hiển thị confirm dialog
+  final showConfirmDialog = false.obs;
+
+  // Flag để tránh hỏi nhiều lần
+  bool _hasAskedForConfirmation = false;
+
   @override
   void onInit() {
     super.onInit();
@@ -126,7 +132,7 @@ class ChatController extends GetxController {
         'isLoading': true,
       });
 
-      // Gửi đến n8n - CHỈ gửi userId và message
+      // Gửi đến n8n
       final response = await _chatRepo.sendMessage(
         userId: user.uid,
         message: message,
@@ -135,7 +141,7 @@ class ChatController extends GetxController {
       // Xóa tin nhắn loading
       messages.removeWhere((msg) => msg['id'] == loadingId);
 
-      // Parse response từ n8n (có JavaScript)
+      // Parse response từ n8n
       final parsedResponse = _parseN8nResponse(response);
 
       // Thêm phản hồi từ AI
@@ -146,8 +152,8 @@ class ChatController extends GetxController {
         'timestamp': DateTime.now(),
       });
 
-      // Cập nhật trạng thái
-      isComplete.value = parsedResponse['isComplete'] ?? false;
+      // Cập nhật trạng thái từ AI
+      isComplete.value = (parsedResponse['isComplete'] ?? false);
 
       if (parsedResponse['dto'] != null) {
         extractedData.value = Map<String, dynamic>.from(parsedResponse['dto']);
@@ -155,24 +161,26 @@ class ChatController extends GetxController {
         // Cập nhật collectedInfo
         _updateCollectedInfo(extractedData);
 
-        // Kiểm tra xem đã đủ thông tin chưa
-        if (_checkIfInfoComplete()) {
-          // Nếu đã đủ thông tin, hỏi người dùng có muốn gửi không
+        // QUAN TRỌNG: Chỉ hỏi khi AI nói đã hoàn thành VÀ đủ thông tin
+        if (isComplete.value && _checkIfInfoComplete() && !_hasAskedForConfirmation) {
+          // Nếu đã đủ thông tin VÀ AI nói hoàn thành, hỏi người dùng
           _askToSubmitRequest();
+        } else if (!isComplete.value && _checkIfInfoComplete()) {
+          // // Nếu chưa hoàn thành nhưng đủ thông tin, thông báo cho AI biết
+          // messages.add({
+          //   'id': 'missing_info',
+          //   'text': 'Tôi đã thu thập được: ${collectedInfo['type']}, ${collectedInfo['title']}, ${collectedInfo['description']}. '
+          //       'Nhưng vẫn thiếu thông tin liên hệ.',
+          //   'isUser': false,
+          //   'timestamp': DateTime.now(),
+          // });
         }
 
-        // Nếu đã hoàn thành từ phía AI
-        if (isComplete.value) {
-          MinhLoaders.successSnackBar(
-              title: 'Thành công',
-              message: 'Đã thu thập đủ thông tin.'
-          );
+        // Debug log
+        print('Debug - isComplete: ${isComplete.value}');
+        print('Debug - Check info: ${_checkIfInfoComplete()}');
+        print('Debug - Has asked: $_hasAskedForConfirmation');
 
-          // Tự động tạo request nếu đã có đủ thông tin
-          if (_checkIfInfoComplete()) {
-            await _createHelpRequest();
-          }
-        }
       }
 
     } catch (e) {
@@ -196,33 +204,44 @@ class ChatController extends GetxController {
     }
   }
 
-  // Parse response từ n8n (có chứa JavaScript trong output)
+  // Parse response từ n8n
   Map<String, dynamic> _parseN8nResponse(Map<String, dynamic> response) {
     try {
+      print('Raw response: $response');
+
       // Nếu response đã được parse sẵn từ repository
       if (response.containsKey('reply') && response.containsKey('isComplete')) {
+        print('Already parsed: isComplete = ${response['isComplete']}');
         return response;
       }
 
       // Nếu là raw output từ AI Agent
       final output = response['output']?.toString() ?? '';
+      print('Raw output: $output');
 
-      // Tìm JSON trong chuỗi output (theo format của n8n)
+      // Tìm JSON trong chuỗi output
       final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(output);
 
       if (jsonMatch != null) {
         try {
           final jsonStr = jsonMatch.group(0)!;
+          print('Found JSON: $jsonStr');
+
           final jsonData = json.decode(jsonStr);
+          print('Parsed JSON: $jsonData');
+
+          // KIỂM TRA KỸ: isComplete phải là boolean true
+          final bool isCompleteFromAI = jsonData['isComplete'] == true;
+          print('isComplete from AI: $isCompleteFromAI');
 
           return {
             'reply': output.replaceAll(jsonStr, '').trim(),
-            'isComplete': jsonData['isComplete'] ?? false,
+            'isComplete': isCompleteFromAI, // Đảm bảo là boolean
             'dto': {
-              'Type': jsonData['Type'] ?? 'other',
-              'Title': jsonData['Title'] ?? '',
-              'Description': jsonData['Description'] ?? '',
-              'Contact': jsonData['Contact'] ?? '',
+              'Type': jsonData['Type']?.toString() ?? '',
+              'Title': jsonData['Title']?.toString() ?? '',
+              'Description': jsonData['Description']?.toString() ?? '',
+              'Contact': jsonData['Contact']?.toString() ?? '',
             }
           };
         } catch (e) {
@@ -231,6 +250,7 @@ class ChatController extends GetxController {
       }
 
       // Fallback
+      print('Fallback response');
       return {
         'reply': output,
         'isComplete': false,
@@ -249,33 +269,58 @@ class ChatController extends GetxController {
 
   // Cập nhật thông tin đã thu thập
   void _updateCollectedInfo(Map<String, dynamic> newData) {
+    bool updated = false;
+
     if (newData['Type'] != null && newData['Type'].toString().isNotEmpty) {
       collectedInfo['type'] = newData['Type'];
+      updated = true;
     }
     if (newData['Title'] != null && newData['Title'].toString().isNotEmpty) {
       collectedInfo['title'] = newData['Title'];
+      updated = true;
     }
     if (newData['Description'] != null && newData['Description'].toString().isNotEmpty) {
       collectedInfo['description'] = newData['Description'];
+      updated = true;
     }
     if (newData['Contact'] != null && newData['Contact'].toString().isNotEmpty) {
       collectedInfo['contact'] = newData['Contact'];
+      updated = true;
     }
 
-    collectedInfo.refresh();
-    print('Thông tin đã thu thập: $collectedInfo');
+    if (updated) {
+      collectedInfo.refresh();
+      print('Thông tin đã thu thập: $collectedInfo');
+    }
   }
 
   // Kiểm tra xem đã đủ thông tin chưa
   bool _checkIfInfoComplete() {
-    return collectedInfo['type'].toString().isNotEmpty &&
-        collectedInfo['title'].toString().isNotEmpty &&
-        collectedInfo['description'].toString().isNotEmpty &&
-        collectedInfo['contact'].toString().isNotEmpty;
+    final contact = collectedInfo['contact'].toString();
+    final hasValidContact = contact.isNotEmpty &&
+        !contact.toLowerCase().contains('chưa') &&
+        !contact.toLowerCase().contains('none') &&
+        !contact.toLowerCase().contains('missing') &&
+        !contact.toLowerCase().contains('chua') &&
+        !contact.toLowerCase().contains('null');
+
+    final hasType = collectedInfo['type'].toString().isNotEmpty;
+    final hasTitle = collectedInfo['title'].toString().isNotEmpty;
+    final hasDescription = collectedInfo['description'].toString().isNotEmpty;
+
+    print('Check info - Type: $hasType, Title: $hasTitle, Desc: $hasDescription, Contact: $contact (valid: $hasValidContact)');
+
+    return hasType && hasTitle && hasDescription && hasValidContact;
   }
 
   // Hỏi người dùng có muốn gửi yêu cầu không
   void _askToSubmitRequest() {
+    // Chỉ hỏi 1 lần
+    if (_hasAskedForConfirmation) return;
+
+    _hasAskedForConfirmation = true;
+    showConfirmDialog.value = true;
+
     // Thêm tin nhắn hỏi người dùng
     messages.add({
       'id': 'ask_submit',
@@ -284,44 +329,74 @@ class ChatController extends GetxController {
           '• Tiêu đề: ${collectedInfo['title']}\n'
           '• Mô tả: ${collectedInfo['description']}\n'
           '• Liên hệ: ${collectedInfo['contact']}\n\n'
-          'Bạn có muốn gửi yêu cầu cứu trợ ngay bây giờ không?',
+          'Bạn có muốn gửi yêu cầu cứu trợ ngay bây giờ không?\n'
+          '(Nhấn "Gửi yêu cầu" hoặc tiếp tục chat để chỉnh sửa)',
       'isUser': false,
       'timestamp': DateTime.now(),
       'hasActions': true,
     });
   }
 
-  // Xử lý khi người dùng đồng ý gửi
-  Future<void> handleUserConfirmation(bool confirmed) async {
+  // Xác nhận gửi yêu cầu từ người dùng
+  Future<void> confirmAndSendRequest() async {
     // Xóa tin nhắn hỏi
     messages.removeWhere((msg) => msg['id'] == 'ask_submit');
+    showConfirmDialog.value = false;
 
-    if (confirmed) {
+    // Thêm tin nhắn đang xử lý
+    messages.add({
+      'id': 'processing_request',
+      'text': '⏳ Đang gửi yêu cầu cứu trợ...',
+      'isUser': false,
+      'timestamp': DateTime.now(),
+      'isSystem': true,
+    });
+
+    try {
       await _createHelpRequest();
-    } else {
-      messages.add({
-        'id': 'continue_chat',
-        'text': 'Được rồi, hãy tiếp tục mô tả thêm nếu cần.',
-        'isUser': false,
-        'timestamp': DateTime.now(),
-      });
+
+      // Xóa tin nhắn đang xử lý
+      messages.removeWhere((msg) => msg['id'] == 'processing_request');
+
+      // Reset flag sau khi gửi thành công
+      _hasAskedForConfirmation = false;
+
+    } catch (e) {
+      // Xóa tin nhắn đang xử lý
+      messages.removeWhere((msg) => msg['id'] == 'processing_request');
+
+      // Reset flag nếu lỗi để có thể hỏi lại
+      _hasAskedForConfirmation = false;
+      showConfirmDialog.value = true;
+
+      rethrow;
     }
   }
 
-  // Tạo help request từ thông tin đã thu thập
+  // Hủy gửi yêu cầu
+  void cancelRequest() {
+    // Xóa tin nhắn hỏi
+    messages.removeWhere((msg) => msg['id'] == 'ask_submit');
+    showConfirmDialog.value = false;
+    _hasAskedForConfirmation = false; // Reset để có thể hỏi lại sau
+
+    messages.add({
+      'id': 'continue_chat',
+      'text': 'Được rồi, bạn có thể tiếp tục mô tả thêm hoặc chỉnh sửa thông tin.',
+      'isUser': false,
+      'timestamp': DateTime.now(),
+    });
+  }
+
+  // Tạo help request
   Future<void> _createHelpRequest() async {
     try {
-      // Kiểm tra vị trí
       if (currentPosition.value == null) {
-        MinhLoaders.warningSnackBar(
-          title: 'Đang lấy vị trí',
-          message: 'Vui lòng đợi hệ thống xác định vị trí',
-        );
         await getCurrentLocation();
-      }
 
-      if (currentPosition.value == null) {
-        throw Exception('Không thể xác định vị trí');
+        if (currentPosition.value == null) {
+          throw Exception('Không thể xác định vị trí');
+        }
       }
 
       final user = FirebaseAuth.instance.currentUser;
@@ -329,12 +404,10 @@ class ChatController extends GetxController {
         throw Exception('Người dùng chưa đăng nhập');
       }
 
-      // Map type từ chat sang enum
       final requestType = _mapTypeToEnum(collectedInfo['type']);
 
-      // Tạo help request
       final helpRequest = HelpRequest(
-        id: "",
+        id: "${DateTime.now().millisecondsSinceEpoch}_${user.uid.substring(0, 8)}",
         title: collectedInfo['title'] ?? "Yêu cầu cứu trợ",
         description: collectedInfo['description'] ?? "",
         lat: currentPosition.value!.latitude,
@@ -351,26 +424,20 @@ class ChatController extends GetxController {
         createdAt: DateTime.now(),
       );
 
-      // Convert to Entity và gửi
       final helpRequestEntity = HelpRequestMapper.toEntity(helpRequest);
       await _createHelpRequestUseCase(helpRequestEntity);
 
-      // Thông báo thành công
       messages.add({
         'id': 'request_success',
-        'text': '✅ Yêu cầu cứu trợ đã được gửi thành công! Đội cứu trợ sẽ liên hệ với bạn sớm nhất.',
+        'text': '✅ Yêu cầu cứu trợ đã được gửi thành công!\n'
+            'Mã yêu cầu: ${helpRequest.id}\n'
+            'Đội cứu trợ sẽ liên hệ với bạn qua: ${collectedInfo['contact']}',
         'isUser': false,
         'timestamp': DateTime.now(),
       });
 
-      // Đóng màn hình sau 3 giây
-      // Future.delayed(const Duration(seconds: 3), () {
-      //   Get.back();
-      //   MinhLoaders.successSnackBar(
-      //     title: 'Thành công',
-      //     message: 'Yêu cầu SOS đã được gửi thành công',
-      //   );
-      // });
+      // Reset sau khi gửi thành công
+      _resetCollectedInfo();
 
     } catch (e) {
       messages.add({
@@ -380,28 +447,41 @@ class ChatController extends GetxController {
         'timestamp': DateTime.now(),
       });
 
-      MinhLoaders.errorSnackBar(
-        title: 'Lỗi',
-        message: 'Không thể gửi yêu cầu: $e',
-      );
+      showConfirmDialog.value = true;
+      throw e;
     }
+  }
+
+  // Reset thông tin đã thu thập
+  void _resetCollectedInfo() {
+    collectedInfo.value = {
+      'type': '',
+      'title': '',
+      'description': '',
+      'contact': '',
+    };
+    extractedData.value = {};
+    isComplete.value = false;
+    showConfirmDialog.value = false;
+    _hasAskedForConfirmation = false;
   }
 
   // Map type string sang enum
   RequestType _mapTypeToEnum(String type) {
-    switch (type.toLowerCase()) {
-      case 'rescue':
-        return RequestType.rescue;
-      case 'medical':
-        return RequestType.medicine;
-      case 'food':
-        return RequestType.food;
-      default:
-        return RequestType.other;
+    final typeStr = type.toLowerCase();
+
+    if (typeStr.contains('rescue') || typeStr.contains('cứu hộ')) {
+      return RequestType.rescue;
+    } else if (typeStr.contains('medical') || typeStr.contains('y tế') || typeStr.contains('medicine')) {
+      return RequestType.medicine;
+    } else if (typeStr.contains('food') || typeStr.contains('lương thực') || typeStr.contains('thực phẩm')) {
+      return RequestType.food;
+    } else {
+      return RequestType.other;
     }
   }
 
-  // Hàm refresh vị trí
+  // Refresh vị trí
   Future<void> refreshLocation() async {
     messages.add({
       'id': 'refreshing_location',
@@ -413,34 +493,172 @@ class ChatController extends GetxController {
 
     await getCurrentLocation();
 
-    // Xóa thông báo refreshing
     messages.removeWhere((msg) => msg['id'] == 'refreshing_location');
   }
 
-  // Hiển thị thông tin đã thu thập
+  // HIỂN THỊ THÔNG TIN ĐÃ THU THẬP
   void showCollectedInfo() {
     Get.defaultDialog(
-      title: 'Thông tin đã thu thập',
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Loại: ${collectedInfo["type"]}'),
-          Text('Tiêu đề: ${collectedInfo["title"]}'),
-          Text('Mô tả: ${collectedInfo["description"]}'),
-          Text('Liên hệ: ${collectedInfo["contact"]}'),
-          const SizedBox(height: 10),
-          Text('Vị trí: ${currentAddress.value}'),
-          if (currentPosition.value != null)
-            Text('Tọa độ: ${currentPosition.value!.latitude.toStringAsFixed(6)}, ${currentPosition.value!.longitude.toStringAsFixed(6)}'),
-        ],
+      title: '📊 Thông tin đã thu thập',
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Thông tin cơ bản
+            _buildInfoItem('📋 Loại yêu cầu', collectedInfo['type'].toString()),
+            _buildInfoItem('🏷️ Tiêu đề', collectedInfo['title'].toString()),
+            _buildInfoItem('📝 Mô tả', collectedInfo['description'].toString()),
+            _buildInfoItem('📞 Liên hệ', collectedInfo['contact'].toString()),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Thông tin vị trí
+            Text(
+              '📍 Thông tin vị trí',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            if (currentAddress.value.isNotEmpty)
+              _buildInfoItem('Địa chỉ', currentAddress.value),
+
+            if (currentPosition.value != null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoItem(
+                    'Vĩ độ',
+                    currentPosition.value!.latitude.toStringAsFixed(6),
+                  ),
+                  _buildInfoItem(
+                    'Kinh độ',
+                    currentPosition.value!.longitude.toStringAsFixed(6),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Trạng thái
+            Text(
+              '📊 Trạng thái',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              children: [
+                Icon(
+                  isComplete.value ? Icons.check_circle : Icons.hourglass_empty,
+                  color: isComplete.value ? Colors.green : Colors.orange,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isComplete.value ? 'Đã hoàn thành thu thập' : 'Đang thu thập thông tin',
+                  style: TextStyle(
+                    color: isComplete.value ? Colors.green : Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            Row(
+              children: [
+                Icon(
+                  _checkIfInfoComplete() ? Icons.check_circle : Icons.warning,
+                  color: _checkIfInfoComplete() ? Colors.green : Colors.red,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _checkIfInfoComplete()
+                      ? 'Đã đủ thông tin cần thiết'
+                      : 'Thiếu thông tin bắt buộc',
+                  style: TextStyle(
+                    color: _checkIfInfoComplete() ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Get.back(),
           child: const Text('Đóng'),
         ),
+        if (_checkIfInfoComplete() && !showConfirmDialog.value)
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _askToSubmitRequest();
+            },
+            child: const Text('Gửi yêu cầu'),
+          ),
       ],
+    );
+  }
+
+  // Helper method để tạo item thông tin
+  Widget _buildInfoItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value.isNotEmpty ? value : '(Chưa có)',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: value.isNotEmpty ? FontWeight.w400 : FontWeight.w300,
+              color: value.isNotEmpty ? Colors.black : Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  // THÊM PHƯƠNG THỨC ĐỂ XEM NHANH THÔNG TIN
+  void quickViewInfo() {
+    Get.snackbar(
+      'Thông tin đã thu thập',
+      '''
+Loại: ${collectedInfo['type']}
+Tiêu đề: ${collectedInfo['title']}
+Mô tả: ${collectedInfo['description']}
+Liên hệ: ${collectedInfo['contact']}
+Vị trí: ${currentAddress.value.isNotEmpty ? currentAddress.value : 'Đang xác định'}
+      ''',
+      duration: const Duration(seconds: 5),
+      snackPosition: SnackPosition.BOTTOM,
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:cuutrobaolu/presentation/features/chat/screens/chat_shelter_nearest.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
@@ -117,7 +118,8 @@ class VictimNewsController extends GetxController {
                   MinhChatbotSuggestion(
                     text: "Nơi trú ẩn gần nhất",
                     onTap: () {
-                      // TODO: Handle chatbot query
+                     Get.to(() => ChatShelterNearest());
+
                     },
                   ),
                   MinhChatbotSuggestion(
