@@ -2,6 +2,7 @@ import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/widgets/tabs/MinhTabButton.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_tasks_controller.dart';
+import 'package:cuutrobaolu/presentation/features/volunteer/screens/tasks/widgets/ItemTask.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -124,79 +125,7 @@ class VolunteerTasksScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final task = list[index];
                     final status = task['status'];
-                    return Card(
-                      margin: EdgeInsets.only(bottom: MinhSizes.spaceBtwItems),
-                      child: Padding(
-                        padding: EdgeInsets.all(MinhSizes.defaultSpace),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(task['title'] ?? '', style: Theme.of(context).textTheme.titleMedium),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: MinhSizes.sm, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: status == 'completed'
-                                        ? Colors.green.withOpacity(0.15)
-                                        : status == 'accepted'
-                                            ? Colors.orange.withOpacity(0.15)
-                                            : MinhColors.primary.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    status == 'completed'
-                                        ? 'Hoàn thành'
-                                        : status == 'accepted'
-                                            ? 'Đang làm'
-                                            : 'Chờ nhận',
-                                    style: TextStyle(
-                                      color: status == 'completed'
-                                          ? Colors.green
-                                          : status == 'accepted'
-                                              ? Colors.orange
-                                              : MinhColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                            Text(task['desc'] ?? ''),
-                            SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                            Row(
-                              children: [
-                                const Icon(Iconsax.location, size: 16),
-                                SizedBox(width: 6),
-                                Text(task['distanceText'] ?? 'Đang tính...'),
-                              ],
-                            ),
-                            SizedBox(height: MinhSizes.spaceBtwItems),
-                            Row(
-                              children: [
-                                if (status == 'pending')
-                                  ElevatedButton(
-                                    onPressed: () => controller.onAccept(task),
-                                    child: const Text('Nhận nhiệm vụ'),
-                                  ),
-                                if (status == 'accepted')
-                                  ElevatedButton(
-                                    onPressed: () => controller.onComplete(task),
-                                    child: const Text('Hoàn thành'),
-                                  ),
-                                const Spacer(),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Iconsax.map),
-                                  label: const Text('Xem bản đồ'),
-                                  onPressed: () => controller.viewTaskOnMap(task),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                    return ItemTask(task: task, status: status, controller: controller);
                   },
                 );
               }),

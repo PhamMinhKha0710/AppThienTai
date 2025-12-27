@@ -46,7 +46,8 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           // Thông tin thu thập được (nếu có)
-          _buildInfoHeader(),
+
+          // _buildInfoHeader(),
 
           // Danh sách tin nhắn
           Expanded(
@@ -62,17 +63,17 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
 
       // Floating Action Button cho location
-      floatingActionButton: Obx(() {
-        if (_controller.currentPosition.value != null) {
-          return FloatingActionButton.small(
-            onPressed: _controller.showCollectedInfo,
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.info_outline, color: Colors.white),
-            tooltip: 'Xem thông tin đã thu thập',
-          );
-        }
-        return const SizedBox.shrink();
-      }),
+      // floatingActionButton: Obx(() {
+      //   if (_controller.currentPosition.value != null) {
+      //     return FloatingActionButton.small(
+      //       onPressed: _controller.showCollectedInfo,
+      //       backgroundColor: Colors.green,
+      //       child: const Icon(Icons.info_outline, color: Colors.white),
+      //       tooltip: 'Xem thông tin đã thu thập',
+      //     );
+      //   }
+      //   return const SizedBox.shrink();
+      // }),
     );
   }
 
@@ -378,7 +379,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 ElevatedButton(
-                  onPressed: () => _controller.handleUserConfirmation(true),
+                  onPressed: () => _controller.confirmAndSendRequest(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -398,7 +399,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () => _controller.handleUserConfirmation(false),
+                  onPressed: () => _controller.cancelRequest()     ,
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey[700],
                     shape: RoundedRectangleBorder(
