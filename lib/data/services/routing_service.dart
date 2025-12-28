@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Service để tính khoảng cách routing (theo đường đi thực tế)
 /// Sử dụng OSRM (Open Source Routing Machine) - miễn phí, không cần API key
@@ -155,6 +156,72 @@ class RoutingService extends GetxService {
     }
     
     return distances;
+  }
+  
+  /// Lấy danh sách điểm tọa độ trên tuyến đường để vẽ polyline
+  /// Trả về List<LatLng> hoặc null nếu có lỗi
+  Future<List<LatLng>?> getRoutePoints(LatLng start, LatLng end) async {
+    print('[ROUTING] Getting route points:');
+    print('[ROUTING] Start: ${start.latitude}, ${start.longitude}');
+    print('[ROUTING] End: ${end.latitude}, ${end.longitude}');
+    
+    try {
+      // OSRM API với geometry=geojson để lấy toàn bộ điểm
+      final url = Uri.parse(
+        '$_osrmBaseUrl/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson',
+      );
+      
+      print('[ROUTING] Request URL: $url');
+      
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('[ROUTING] Request timeout');
+          throw Exception('Routing request timeout');
+        },
+      );
+      
+      print('[ROUTING] Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('[ROUTING] Response code: ${data['code']}');
+        
+        if (data['code'] == 'Ok' && data['routes'] != null && data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final geometry = route['geometry'];
+          
+          if (geometry != null && geometry['coordinates'] != null) {
+            final coordinates = geometry['coordinates'] as List;
+            print('[ROUTING] Found ${coordinates.length} points in route');
+            
+            // Convert từ [lng, lat] sang LatLng(lat, lng)
+            final points = coordinates.map((coord) {
+              final lng = (coord[0] as num).toDouble();
+              final lat = (coord[1] as num).toDouble();
+              return LatLng(lat, lng);
+            }).toList();
+            
+            return points;
+          } else {
+            print('[ROUTING] No geometry in response');
+          }
+        } else if (data['code'] == 'NoRoute') {
+          print('[ROUTING] No route found');
+          return null;
+        } else {
+          print('[ROUTING] Unexpected response code: ${data['code']}');
+        }
+      } else {
+        print('[ROUTING] HTTP error: ${response.statusCode}');
+      }
+      
+      return null;
+    } catch (e, stackTrace) {
+      print('[ROUTING] Error getting route points: $e');
+      print('[ROUTING] Stack trace: $stackTrace');
+      return null;
+    }
   }
 }
 
