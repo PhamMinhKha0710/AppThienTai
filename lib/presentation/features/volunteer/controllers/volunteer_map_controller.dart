@@ -1,4 +1,5 @@
 import 'package:cuutrobaolu/data/services/location_service.dart';
+import 'package:cuutrobaolu/data/services/routing_service.dart';
 import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
 import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
 import 'package:cuutrobaolu/domain/entities/shelter_entity.dart';
@@ -12,6 +13,7 @@ import 'package:latlong2/latlong.dart';
 
 class VolunteerMapController extends GetxController {
   LocationService? _locationService;
+  final RoutingService _routingService = getIt<RoutingService>();
   final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
 
@@ -26,6 +28,9 @@ class VolunteerMapController extends GetxController {
   
   // Focus location (for navigating to specific task)
   final focusLocation = Rxn<LatLng>();
+  
+  // Route polylines for navigation
+  final routePolylines = <Polyline>[].obs;
   
   // Filter state
   final activeFilter = 'all'.obs;
@@ -43,6 +48,34 @@ class VolunteerMapController extends GetxController {
   void focusOnLocation(LatLng location, {double zoom = 15.0}) {
     focusLocation.value = location;
     mapController.value?.move(location, zoom);
+  }
+  
+  /// Find and display route from current position to target
+  Future<void> findRouteTo(LatLng target) async {
+    try {
+      final current = currentPosition.value;
+      if (current == null) {
+        print('Current position not available for routing');
+        return;
+      }
+
+      final routePoints = await _routingService.getRoutePoints(current, target);
+      if (routePoints != null && routePoints.isNotEmpty) {
+        routePolylines.value = [
+          Polyline(
+            points: routePoints,
+            color: Colors.blue,
+            strokeWidth: 4.0,
+          ),
+        ];
+      } else {
+        print('No route found');
+        routePolylines.clear();
+      }
+    } catch (e) {
+      print('Error finding route: $e');
+      routePolylines.clear();
+    }
   }
 
   void _initLocationService() {
