@@ -10,6 +10,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
+import 'package:cuutrobaolu/core/utils/network_manager.dart';
+import 'package:cuutrobaolu/data/services/sos_queue_service.dart';
 import 'package:flutter/material.dart';
 
 class VictimSosController extends GetxController {
@@ -190,19 +192,11 @@ class VictimSosController extends GetxController {
         throw Exception("Người dùng chưa đăng nhập");
       }
 
-      // TODO: Upload images to Firebase Storage
-      String? imageUrl;
-      if (selectedImages.isNotEmpty) {
-        // Upload first image as example
-        // imageUrl = await uploadImage(selectedImages.first);
-      }
-
       // Get address - prioritize manual input, then location service, then coordinates
       String address = addressController.text.trim();
       if (address.isEmpty) {
         address = _locationService?.currentAddress.value ?? "";
         if (address.isEmpty) {
-          // Try to get address from coordinates using LocationService
           try {
             final position = currentPosition.value!;
             final fetchedAddress = await _locationService?.getAddressFromCoordinates(
@@ -212,16 +206,45 @@ class VictimSosController extends GetxController {
             if (fetchedAddress != null && fetchedAddress.isNotEmpty) {
               address = fetchedAddress;
             } else {
-              // Fallback to coordinates
               address = "Vị trí GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
             }
           } catch (e) {
-            // Fallback to coordinates
             final position = currentPosition.value!;
             address = "Vị trí GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}";
           }
         }
       }
+
+      // If offline, enqueue SOS and return immediately
+      final connected = await NetworkManager.instance.isConnected();
+      if (!connected) {
+        final sosEntry = {
+          'title': "SOS Khẩn cấp",
+          'description': description,
+          'lat': currentPosition.value!.latitude,
+          'lng': currentPosition.value!.longitude,
+          'contact': phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : (user.phoneNumber ?? user.email ?? user.uid),
+          'address': address,
+          'userId': user.uid,
+          'severity': RequestSeverity.urgent,
+          'type': RequestType.rescue,
+          'imagePath': selectedImages.isNotEmpty ? selectedImages.first.path : null,
+        };
+        await Get.put(SosQueueService()).enqueue(sosEntry);
+        isSubmitting.value = false;
+        Get.back();
+        MinhLoaders.successSnackBar(title: "Đã lưu ngoại tuyến", message: "Yêu cầu SOS đã được lưu và sẽ được gửi khi có mạng.");
+        return;
+      }
+
+      // TODO: Upload images to Firebase Storage
+      String? imageUrl;
+      if (selectedImages.isNotEmpty) {
+        // Upload first image as example
+        // imageUrl = await uploadImage(selectedImages.first);
+      }
+
+      
 
       // Get contact - prioritize phone input, then user phone, then email
       String contact = phoneController.text.trim();
