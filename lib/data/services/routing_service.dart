@@ -224,4 +224,3 @@ class RoutingService extends GetxService {
     }
   }
 }
-
