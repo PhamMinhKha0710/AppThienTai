@@ -29,6 +29,7 @@ import '../../domain/usecases/update_help_request_status_usecase.dart';
 import '../../core/utils/network_manager.dart';
 import '../../data/services/location_service.dart';
 import '../features/personalization/controllers/user/user_controller.dart';
+import '../../data/services/sos_queue_service.dart';
 
 /// App Bindings - Dependency Injection cho Clean Architecture
 class AppBindings extends Bindings {
@@ -81,5 +82,8 @@ class AppBindings extends Bindings {
 
     // Controllers
     Get.lazyPut(() => UserController());
+    
+    // SOS queue service (offline queue + retry)
+    Get.put(SosQueueService(), permanent: true);
   }
 }

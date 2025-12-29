@@ -1009,3 +1009,285 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Gửi SOS'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showShelterInfo(Map<String, dynamic> shelter) {
+    final available = shelter['available'] as int;
+    final capacity = shelter['capacity'] as int;
+    final occupancy = shelter['occupancy'] as int;
+    final availabilityPercent = capacity > 0 ? (available / capacity * 100).toInt() : 0;
+    
+    Color statusColor = Colors.green;
+    String statusText = 'Còn chỗ';
+    if (availabilityPercent < 20) {
+      statusColor = Colors.red;
+      statusText = 'Gần đầy';
+    } else if (availabilityPercent < 50) {
+      statusColor = Colors.orange;
+      statusText = 'Còn ít chỗ';
+    }
+    
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.home, color: statusColor, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        shelter['name'],
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (shelter['address'] != null && shelter['address'].toString().isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 20, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      shelter['address'],
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _InfoChip(
+                  icon: Icons.people,
+                  label: 'Sức chứa',
+                  value: '$capacity',
+                ),
+                _InfoChip(
+                  icon: Icons.person,
+                  label: 'Đang ở',
+                  value: '$occupancy',
+                ),
+                _InfoChip(
+                  icon: Icons.check_circle,
+                  label: 'Còn trống',
+                  value: '$available',
+                  color: statusColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: findRoute,
+                icon: const Icon(Icons.directions),
+                label: const Text('Chỉ đường đến đây'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+  
+  void refreshMarkers() {
+    loadDisasterMarkers();
+    loadShelterMarkers();
+    // Refresh hazard polygons as well
+    loadDisasterPolygons();
+    // My requests will auto-update via stream
+  }
+
+  /// Set OpenWeatherMap API key (keep it runtime only)
+  void setOwmApiKey(String? key) {
+    if (key == null || key.trim().isEmpty) {
+      owmApiKey.value = null;
+      _secureStorage.delete(key: _owmStorageKey);
+    } else {
+      final val = key.trim();
+      owmApiKey.value = val;
+      // persist securely
+      _secureStorage.write(key: _owmStorageKey, value: val);
+    }
+  }
+
+  void setSelectedOwmLayer(String layer) {
+    if (availableOwmLayers.contains(layer)) {
+      selectedOwmLayer.value = layer;
+    }
+  }
+
+  void setOwmOpacity(double opacity) {
+    owmTileOpacity.value = opacity.clamp(0.0, 1.0);
+  }
+
+  void toggleShowOwmTiles(bool show) {
+    showOwmTiles.value = show;
+  }
+
+  /// Return the tile URL template for the selected OWM layer (includes API key)
+  String? getOwmTileUrlTemplate() {
+    final key = owmApiKey.value;
+    if (key == null || key.isEmpty) return null;
+    final layer = selectedOwmLayer.value;
+    // Example: https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=APIKEY
+    return 'https://tile.openweathermap.org/map/$layer/{z}/{x}/{y}.png?appid=$key';
+  }
+
+  /// Load stored OWM key from secure storage (if exists)
+  Future<void> _loadOwmKeyFromStorage() async {
+    try {
+      final stored = await _secureStorage.read(key: _owmStorageKey);
+      if (stored != null && stored.isNotEmpty) {
+        owmApiKey.value = stored;
+      }
+    } catch (e) {
+      print('Error loading OWM key from storage: $e');
+    }
+  }
+
+  /// Set radar overlay image (network URL) and its bounds on the map.
+  void setRadarOverlay(String imageUrl, LatLngBounds bounds) {
+    radarImageUrl.value = imageUrl;
+    radarBounds.value = bounds;
+  }
+
+  /// Clear any radar overlay
+  void clearRadarOverlay() {
+    radarImageUrl.value = null;
+    radarBounds.value = null;
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? color;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 24, color: color ?? Colors.blue),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color ?? Colors.black,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+}

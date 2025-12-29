@@ -2,7 +2,7 @@ import 'package:cuutrobaolu/presentation/features/victim/screens/home/victim_hom
 import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/alerts/victim_alerts_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/news/victim_news_screen.dart';
-import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/settings.dart';
+import 'package:cuutrobaolu/presentation/features/victim/screens/profile/victim_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -14,7 +14,7 @@ class NavigationVictimController extends GetxController {
     const VictimMapScreen(),
     const VictimAlertsScreen(),
     const VictimNewsScreen(),
-    const SettingScreen(),
+    const VictimProfileScreen(),
   ];
 }
 
