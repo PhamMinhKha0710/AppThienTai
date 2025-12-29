@@ -138,13 +138,24 @@ class VolunteerMapScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    MinhMapLegendItem(icon: Iconsax.location, color: Colors.blue, label: "Bạn"),
+                    Text(
+                      "Chú thích",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    MinhMapLegendItem(icon: Iconsax.location, color: Colors.blue, label: "Vị trí bạn"),
                     SizedBox(height: 4),
-                    MinhMapLegendItem(icon: Icons.warning, color: Colors.red, label: "Thiên tai"),
+                    MinhMapLegendItem(icon: Icons.warning, color: Colors.red, label: "Yêu cầu (Khẩn cấp cao)"),
                     SizedBox(height: 4),
-                    MinhMapLegendItem(icon: Icons.location_on, color: Colors.orange, label: "Nhiệm vụ"),
+                    MinhMapLegendItem(icon: Icons.info_outline, color: Colors.orange, label: "Yêu cầu (Khẩn cấp TB)"),
                     SizedBox(height: 4),
-                    MinhMapLegendItem(icon: Iconsax.home_2, color: Colors.green, label: "Trú ẩn"),
+                    MinhMapLegendItem(icon: Icons.circle_notifications, color: Colors.yellow, label: "Yêu cầu (Khẩn cấp thấp)"),
+                    SizedBox(height: 4),
+                    MinhMapLegendItem(icon: Iconsax.home_2, color: Colors.green, label: "Điểm trú ẩn"),
                   ],
                 ),
               ),
@@ -167,14 +178,3 @@ class VolunteerMapScreen extends StatelessWidget {
     );
   }
 }
-
-
-
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-

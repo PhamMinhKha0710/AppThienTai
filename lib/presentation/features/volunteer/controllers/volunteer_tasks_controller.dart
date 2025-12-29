@@ -603,7 +603,3 @@ class VolunteerTasksController extends GetxController {
     });
   }
 }
-
-    });
-  }
-}

@@ -39,9 +39,33 @@ class AlertRepositoryImpl implements AlertRepository {
   }
 
   @override
-  Stream<List<AlertEntity>> getAlertsBySeverity(String severity) {
+  Stream<List<AlertEntity>> getAlertsBySeverity(AlertSeverity severity) {
     return _collection
-        .where('Severity', isEqualTo: severity)
+        .where('Severity', isEqualTo: severity.name)
+        .where('IsActive', isEqualTo: true)
+        .orderBy('CreatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
+  }
+
+  @override
+  Stream<List<AlertEntity>> getAlertsByType(AlertType type) {
+    return _collection
+        .where('AlertType', isEqualTo: type.name)
+        .where('IsActive', isEqualTo: true)
+        .orderBy('CreatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+            .toList());
+  }
+
+  @override
+  Stream<List<AlertEntity>> getAlertsByTargetAudience(TargetAudience audience) {
+    return _collection
+        .where('TargetAudience', isEqualTo: audience.name)
         .where('IsActive', isEqualTo: true)
         .orderBy('CreatedAt', descending: true)
         .snapshots()
@@ -92,6 +116,70 @@ class AlertRepositoryImpl implements AlertRepository {
         .map((snapshot) => snapshot.docs
             .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
             .toList());
+  }
+
+  @override
+  Future<void> createAlert(AlertEntity alert) async {
+    try {
+      final dto = AlertDto.fromEntity(alert);
+      final docRef = _collection.doc();
+      await docRef.set(dto.toJson());
+      print('[ALERT_REPO] Created alert with ID: ${docRef.id}');
+    } catch (e) {
+      print('[ALERT_REPO] Error creating alert: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateAlert(AlertEntity alert) async {
+    try {
+      final dto = AlertDto.fromEntity(alert);
+      await _collection.doc(alert.id).update(dto.toJson());
+      print('[ALERT_REPO] Updated alert: ${alert.id}');
+    } catch (e) {
+      print('[ALERT_REPO] Error updating alert: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteAlert(String alertId) async {
+    try {
+      await _collection.doc(alertId).delete();
+      print('[ALERT_REPO] Deleted alert: $alertId');
+    } catch (e) {
+      print('[ALERT_REPO] Error deleting alert: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deactivateAlert(String alertId) async {
+    try {
+      await _collection.doc(alertId).update({
+        'IsActive': false,
+        'UpdatedAt': Timestamp.now(),
+      });
+      print('[ALERT_REPO] Deactivated alert: $alertId');
+    } catch (e) {
+      print('[ALERT_REPO] Error deactivating alert: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<AlertEntity?> getAlertById(String alertId) async {
+    try {
+      final doc = await _collection.doc(alertId).get();
+      if (doc.exists && doc.data() != null) {
+        return AlertDto.fromSnapshot(doc).toEntity();
+      }
+      return null;
+    } catch (e) {
+      print('[ALERT_REPO] Error getting alert by ID: $e');
+      return null;
+    }
   }
 
   double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {

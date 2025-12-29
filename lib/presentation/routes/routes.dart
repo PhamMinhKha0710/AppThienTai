@@ -39,8 +39,13 @@ class MinhRoutes {
   static const userProfile = '/user-profile';
   static const userAddress = '/user-address';
 
+  // Admin Alerts
+  static const adminAlerts = '/admin/alerts';
+  static const adminAlertsCreate = '/admin/alerts/create';
+  static const adminAlertsEdit = '/admin/alerts/edit';
 
-
+  // Common Alert Detail
+  static const alertDetail = '/alert/detail';
 
   //Notification
 

@@ -129,23 +129,356 @@ class VolunteerMapController extends GetxController {
     }
   }
 
+  // Store help requests for later access
+  final helpRequests = <domain.HelpRequestEntity>[].obs;
+
   Future<void> loadDisasterMarkers() async {
     try {
-      // Load high severity requests as disaster markers
-      final highSeverityRequests = await _helpRequestRepo
-          .getRequestsBySeverity(domain.RequestSeverity.high)
+      print('[VOLUNTEER_MAP] Loading ALL help requests for volunteer/admin view...');
+      
+      // Load TẤT CẢ pending requests (chờ xử lý) - Volunteer/Admin xem tất cả
+      final pendingRequests = await _helpRequestRepo
+          .getRequestsByStatus(domain.RequestStatus.pending)
           .first;
+      
+      print('[VOLUNTEER_MAP] Found ${pendingRequests.length} pending requests');
+      
+      // Store requests for later access
+      helpRequests.value = pendingRequests;
 
-      disasterMarkers.value = highSeverityRequests.map((req) {
+      disasterMarkers.value = pendingRequests.map((req) {
+        // Màu sắc theo mức độ nghiêm trọng
+        Color markerColor = Colors.orange;
+        IconData markerIcon = Icons.warning;
+        
+        switch (req.severity) {
+          case domain.RequestSeverity.urgent:
+          case domain.RequestSeverity.high:
+            markerColor = Colors.red;
+            markerIcon = Icons.warning;
+            break;
+          case domain.RequestSeverity.medium:
+            markerColor = Colors.orange;
+            markerIcon = Icons.info_outline;
+            break;
+          case domain.RequestSeverity.low:
+            markerColor = Colors.yellow;
+            markerIcon = Icons.circle_notifications;
+            break;
+        }
+        
         return Marker(
+          key: Key(req.id),
           point: LatLng(req.lat, req.lng),
-          width: 36,
-          height: 36,
-          child: const Icon(Icons.warning, color: Colors.red, size: 32),
+          width: 50,
+          height: 50,
+          child: InkWell(
+            onTap: () {
+              print('[VOLUNTEER_MAP] Marker tapped for request: ${req.id}');
+              _showRequestDetail(req);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: markerColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: markerColor.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(markerIcon, color: Colors.white, size: 28),
+            ),
+          ),
         );
       }).toList();
+      
+      print('[VOLUNTEER_MAP] Created ${disasterMarkers.length} markers');
     } catch (e) {
-      print('Error loading disaster markers: $e');
+      print('[VOLUNTEER_MAP] Error loading disaster markers: $e');
+    }
+  }
+  
+  /// Hiển thị chi tiết yêu cầu và cho phép tìm đường
+  void _showRequestDetail(domain.HelpRequestEntity request) {
+    print('[VOLUNTEER_MAP] Showing detail for request: ${request.id}');
+    
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with icon and title
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getSeverityColor(request.severity).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: _getSeverityColor(request.severity),
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          request.title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getSeverityColor(request.severity),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _getSeverityText(request.severity),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(request.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _getStatusColor(request.status),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _getStatusIcon(request.status),
+                      size: 16,
+                      color: _getStatusColor(request.status),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _getStatusText(request.status),
+                      style: TextStyle(
+                        color: _getStatusColor(request.status),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Details
+              _buildDetailRow('Mô tả', request.description),
+              const Divider(height: 24),
+              
+              _buildDetailRow('Địa chỉ', request.address),
+              const Divider(height: 24),
+              
+              _buildDetailRow('Liên hệ', request.contact),
+              const Divider(height: 24),
+              
+              _buildDetailRow(
+                'Tọa độ',
+                '${request.lat.toStringAsFixed(6)}, ${request.lng.toStringAsFixed(6)}',
+              ),
+              const Divider(height: 24),
+              
+              _buildDetailRow(
+                'Thời gian',
+                _formatDateTime(request.createdAt),
+              ),
+              const Divider(height: 24),
+              
+              _buildDetailRow(
+                'Loại yêu cầu',
+                request.type.viName,
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Đóng'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Get.back();
+                        focusOnLocation(
+                          LatLng(request.lat, request.lng),
+                          zoom: 16.0,
+                        );
+                        findRouteTo(LatLng(request.lat, request.lng));
+                      },
+                      icon: const Icon(Icons.directions),
+                      label: const Text('Tìm đường đi'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+    );
+  }
+  
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            '$label:',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(value),
+        ),
+      ],
+    );
+  }
+  
+  Color _getSeverityColor(domain.RequestSeverity severity) {
+    switch (severity) {
+      case domain.RequestSeverity.urgent:
+      case domain.RequestSeverity.high:
+        return Colors.red;
+      case domain.RequestSeverity.medium:
+        return Colors.orange;
+      case domain.RequestSeverity.low:
+        return Colors.yellow.shade700;
+    }
+  }
+  
+  String _getSeverityText(domain.RequestSeverity severity) {
+    switch (severity) {
+      case domain.RequestSeverity.urgent:
+        return 'Khẩn cấp cực cao';
+      case domain.RequestSeverity.high:
+        return 'Khẩn cấp cao';
+      case domain.RequestSeverity.medium:
+        return 'Khẩn cấp trung bình';
+      case domain.RequestSeverity.low:
+        return 'Khẩn cấp thấp';
+    }
+  }
+  
+  Color _getStatusColor(domain.RequestStatus status) {
+    switch (status) {
+      case domain.RequestStatus.pending:
+        return Colors.orange;
+      case domain.RequestStatus.inProgress:
+        return Colors.blue;
+      case domain.RequestStatus.completed:
+        return Colors.green;
+      case domain.RequestStatus.cancelled:
+        return Colors.red;
+    }
+  }
+  
+  String _getStatusText(domain.RequestStatus status) {
+    switch (status) {
+      case domain.RequestStatus.pending:
+        return 'Chờ xử lý';
+      case domain.RequestStatus.inProgress:
+        return 'Đang xử lý';
+      case domain.RequestStatus.completed:
+        return 'Hoàn thành';
+      case domain.RequestStatus.cancelled:
+        return 'Đã hủy';
+    }
+  }
+  
+  IconData _getStatusIcon(domain.RequestStatus status) {
+    switch (status) {
+      case domain.RequestStatus.pending:
+        return Icons.pending;
+      case domain.RequestStatus.inProgress:
+        return Icons.refresh;
+      case domain.RequestStatus.completed:
+        return Icons.check_circle;
+      case domain.RequestStatus.cancelled:
+        return Icons.cancel;
+    }
+  }
+  
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'Vừa xong';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes} phút trước';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours} giờ trước';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} ngày trước';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
   }
 

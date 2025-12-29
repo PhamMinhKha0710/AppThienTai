@@ -22,8 +22,10 @@ import '../../domain/repositories/donation_repository.dart';
 import '../../domain/repositories/news_repository.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/routing_service.dart';
+import '../../data/services/notification_service.dart';
 import '../../core/utils/network_manager.dart';
 import '../../data/repositories/user/user_repository_adapter.dart';
+import '../../presentation/features/admin/controllers/admin_alerts_controller.dart';
 
 /// GetIt instance - Service Locator
 final getIt = GetIt.instance;
@@ -36,6 +38,7 @@ Future<void> init() async {
   getIt.registerLazySingleton<LocationService>(() => LocationService());
   getIt.registerLazySingleton<RoutingService>(() => RoutingService());
   getIt.registerLazySingleton<NetworkManager>(() => NetworkManager());
+  getIt.registerLazySingleton<NotificationService>(() => NotificationService());
   
   // ============================
   // Adapters (for backward compatibility)
@@ -84,6 +87,14 @@ Future<void> init() async {
   );
   getIt.registerLazySingleton<NewsRepository>(
     () => news_impl.NewsRepositoryImpl(),
+  );
+
+  // ============================
+  // Controllers
+  // ============================
+  // Register as factory to create new instances each time
+  getIt.registerFactory<AdminAlertsController>(
+    () => AdminAlertsController(),
   );
 }
 

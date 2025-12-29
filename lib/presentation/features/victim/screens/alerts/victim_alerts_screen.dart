@@ -59,24 +59,30 @@ class VictimAlertsScreen extends StatelessWidget {
           // Alerts list
           Expanded(
             child: Obx(() {
-              final alerts = controller.selectedTab.value == 0
-                  ? controller.activeAlerts
-                  : controller.historyAlerts;
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final alerts = controller.currentList;
 
               if (alerts.isEmpty) {
-                return Center(
+                return const Center(
                   child: Text("Không có cảnh báo nào"),
                 );
               }
-
-
 
               return ListView.builder(
                 padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
                 itemCount: alerts.length,
                 itemBuilder: (context, index) {
                   final alert = alerts[index];
-                  return MinhAlertCard(alert: alert);
+                  final distance = controller.getDistance(alert.id);
+                  
+                  return MinhAlertCard(
+                    alertEntity: alert,
+                    distance: distance,
+                    onTap: () => controller.navigateToDetail(alert),
+                  );
                 },
               );
             }),

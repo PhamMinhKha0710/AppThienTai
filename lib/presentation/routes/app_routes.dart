@@ -19,6 +19,8 @@ import 'package:get/get_navigation/src/routes/transitions_type.dart';
 
 import '../features/authentication/screens/onboarding/onboarding.dart';
 import '../features/personalization/screens/profile/profile.dart';
+import '../features/admin/screens/alerts/admin_alerts_screen.dart';
+import '../features/admin/screens/alerts/create_alert_screen.dart';
 
 class AppRoutes {
   static final pages = <GetPage>[
@@ -48,6 +50,22 @@ class AppRoutes {
 
     GetPage(name: MinhRoutes.userProfile, page: () => const ProfileScreen()),
 
+    // Admin Alerts Routes
+    GetPage(
+      name: MinhRoutes.adminAlerts,
+      page: () => const AdminAlertsScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: MinhRoutes.adminAlertsCreate,
+      page: () => const CreateAlertScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: MinhRoutes.adminAlertsEdit,
+      page: () => const CreateAlertScreen(isEditing: true),
+      transition: Transition.rightToLeft,
+    ),
 
     // GetPage(name: MinhRoutes.notification, page: () => const NotificationScreen(), binding: NotificationBinding(), transition: Transition.fade),
     // GetPage(name: MinhRoutes.notificationDetails, page: () => const NotificationDetailScreen(), binding: NotificationBinding(), transition: Transition.fade),

@@ -55,6 +55,10 @@ class VolunteerAlertsScreen extends StatelessWidget {
           // Alerts list
           Expanded(
             child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
               final alerts = controller.currentList;
 
               if (alerts.isEmpty) {
@@ -66,7 +70,10 @@ class VolunteerAlertsScreen extends StatelessWidget {
                 itemCount: alerts.length,
                 itemBuilder: (context, index) {
                   final alert = alerts[index];
-                  return MinhAlertCard(alert: alert);
+                  return MinhAlertCard(
+                    alertEntity: alert,
+                    onTap: () => controller.navigateToDetail(alert),
+                  );
                 },
               );
             }),
