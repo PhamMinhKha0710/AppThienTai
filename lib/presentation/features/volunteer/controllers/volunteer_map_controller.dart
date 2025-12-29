@@ -21,18 +21,21 @@ class VolunteerMapController extends GetxController {
   final shelterMarkers = <Marker>[].obs;
   final taskMarkers = <Marker>[].obs;
   final isLoading = false.obs;
-  
+
   // Map controller for programmatic control
   final mapController = Rxn<MapController>();
-  
+
   // Focus location (for navigating to specific task)
   final focusLocation = Rxn<LatLng>();
-  
+
   // Route polylines for navigation
   final routePolylines = <Polyline>[].obs;
-  
+
   // Filter state
   final activeFilter = 'all'.obs;
+
+  // Store help requests for later access - cached from single fetch
+  final helpRequests = <domain.HelpRequestEntity>[].obs;
 
   @override
   void onInit() {
@@ -42,19 +45,19 @@ class VolunteerMapController extends GetxController {
     _loadLocation();
     loadMarkers();
   }
-  
+
   /// Focus map on a specific location
   void focusOnLocation(LatLng location, {double zoom = 15.0}) {
     focusLocation.value = location;
     mapController.value?.move(location, zoom);
   }
-  
+
   /// Find and display route from current position to target
   Future<void> findRouteTo(LatLng target) async {
     try {
       final current = currentPosition.value;
       if (current == null) {
-        print('Current position not available for routing');
+        debugPrint('Current position not available for routing');
         return;
       }
 
@@ -68,11 +71,11 @@ class VolunteerMapController extends GetxController {
           ),
         ];
       } else {
-        print('No route found');
+        debugPrint('No route found');
         routePolylines.clear();
       }
     } catch (e) {
-      print('Error finding route: $e');
+      debugPrint('Error finding route: $e');
       routePolylines.clear();
     }
   }
@@ -92,25 +95,37 @@ class VolunteerMapController extends GetxController {
         currentPosition.value = LatLng(pos.latitude, pos.longitude);
       }
     } catch (e) {
-      print('Error loading location: $e');
+      debugPrint('Error loading location: $e');
     }
   }
 
+  /// Optimized loadMarkers - fetches pending requests only ONCE
   Future<void> loadMarkers() async {
     isLoading.value = true;
     try {
-      await Future.wait([
-        loadDisasterMarkers(),
-        loadShelterMarkers(),
-        loadTaskMarkers(),
-      ]);
+      // Fetch pending requests ONCE and reuse for both disaster and task markers
+      final pendingRequests = await _helpRequestRepo
+          .getRequestsByStatus(domain.RequestStatus.pending)
+          .first;
+
+      debugPrint('[VOLUNTEER_MAP] Found ${pendingRequests.length} pending requests (single fetch)');
+
+      // Store for later access
+      helpRequests.value = pendingRequests;
+
+      // Build markers from the single fetch
+      _buildDisasterMarkers(pendingRequests);
+      _buildTaskMarkers(pendingRequests);
+
+      // Load shelter markers separately (different collection)
+      await loadShelterMarkers();
     } catch (e) {
-      print('Error loading markers: $e');
+      debugPrint('Error loading markers: $e');
     } finally {
       isLoading.value = false;
     }
   }
-  
+
   void filterMarkers(String filter) {
     activeFilter.value = filter;
     // Clear markers based on filter
@@ -129,83 +144,80 @@ class VolunteerMapController extends GetxController {
     }
   }
 
-  // Store help requests for later access
-  final helpRequests = <domain.HelpRequestEntity>[].obs;
+  /// Build disaster markers from cached requests
+  void _buildDisasterMarkers(List<domain.HelpRequestEntity> pendingRequests) {
+    disasterMarkers.value = pendingRequests.map((req) {
+      // Màu sắc theo mức độ nghiêm trọng
+      Color markerColor = Colors.orange;
+      IconData markerIcon = Icons.warning;
 
-  Future<void> loadDisasterMarkers() async {
-    try {
-      print('[VOLUNTEER_MAP] Loading ALL help requests for volunteer/admin view...');
-      
-      // Load TẤT CẢ pending requests (chờ xử lý) - Volunteer/Admin xem tất cả
-      final pendingRequests = await _helpRequestRepo
-          .getRequestsByStatus(domain.RequestStatus.pending)
-          .first;
-      
-      print('[VOLUNTEER_MAP] Found ${pendingRequests.length} pending requests');
-      
-      // Store requests for later access
-      helpRequests.value = pendingRequests;
+      switch (req.severity) {
+        case domain.RequestSeverity.urgent:
+        case domain.RequestSeverity.high:
+          markerColor = Colors.red;
+          markerIcon = Icons.warning;
+          break;
+        case domain.RequestSeverity.medium:
+          markerColor = Colors.orange;
+          markerIcon = Icons.info_outline;
+          break;
+        case domain.RequestSeverity.low:
+          markerColor = Colors.yellow;
+          markerIcon = Icons.circle_notifications;
+          break;
+      }
 
-      disasterMarkers.value = pendingRequests.map((req) {
-        // Màu sắc theo mức độ nghiêm trọng
-        Color markerColor = Colors.orange;
-        IconData markerIcon = Icons.warning;
-        
-        switch (req.severity) {
-          case domain.RequestSeverity.urgent:
-          case domain.RequestSeverity.high:
-            markerColor = Colors.red;
-            markerIcon = Icons.warning;
-            break;
-          case domain.RequestSeverity.medium:
-            markerColor = Colors.orange;
-            markerIcon = Icons.info_outline;
-            break;
-          case domain.RequestSeverity.low:
-            markerColor = Colors.yellow;
-            markerIcon = Icons.circle_notifications;
-            break;
-        }
-        
-        return Marker(
-          key: Key(req.id),
-          point: LatLng(req.lat, req.lng),
-          width: 50,
-          height: 50,
-          child: InkWell(
-            onTap: () {
-              print('[VOLUNTEER_MAP] Marker tapped for request: ${req.id}');
-              _showRequestDetail(req);
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: markerColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: markerColor.withOpacity(0.5),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(markerIcon, color: Colors.white, size: 28),
+      return Marker(
+        key: Key(req.id),
+        point: LatLng(req.lat, req.lng),
+        width: 50,
+        height: 50,
+        child: InkWell(
+          onTap: () {
+            debugPrint('[VOLUNTEER_MAP] Marker tapped for request: ${req.id}');
+            _showRequestDetail(req);
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: markerColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: markerColor.withOpacity(0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
+            child: Icon(markerIcon, color: Colors.white, size: 28),
           ),
-        );
-      }).toList();
-      
-      print('[VOLUNTEER_MAP] Created ${disasterMarkers.length} markers');
-    } catch (e) {
-      print('[VOLUNTEER_MAP] Error loading disaster markers: $e');
-    }
+        ),
+      );
+    }).toList();
+
+    debugPrint('[VOLUNTEER_MAP] Created ${disasterMarkers.length} disaster markers');
   }
-  
+
+  /// Build task markers from cached requests (reuses same data)
+  void _buildTaskMarkers(List<domain.HelpRequestEntity> pendingRequests) {
+    taskMarkers.value = pendingRequests.map((req) {
+      return Marker(
+        key: Key('task_${req.id}'),
+        point: LatLng(req.lat, req.lng),
+        width: 36,
+        height: 36,
+        child: const Icon(Icons.location_on, color: Colors.orange, size: 32),
+      );
+    }).toList();
+
+    debugPrint('[VOLUNTEER_MAP] Created ${taskMarkers.length} task markers');
+  }
+
   /// Hiển thị chi tiết yêu cầu và cho phép tìm đường
   void _showRequestDetail(domain.HelpRequestEntity request) {
-    print('[VOLUNTEER_MAP] Showing detail for request: ${request.id}');
-    
+    debugPrint('[VOLUNTEER_MAP] Showing detail for request: ${request.id}');
+
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -270,7 +282,7 @@ class VolunteerMapController extends GetxController {
                 ],
               ),
               const SizedBox(height: 20),
-              
+
               // Status badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -302,36 +314,36 @@ class VolunteerMapController extends GetxController {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Details
               _buildDetailRow('Mô tả', request.description),
               const Divider(height: 24),
-              
+
               _buildDetailRow('Địa chỉ', request.address),
               const Divider(height: 24),
-              
+
               _buildDetailRow('Liên hệ', request.contact),
               const Divider(height: 24),
-              
+
               _buildDetailRow(
                 'Tọa độ',
                 '${request.lat.toStringAsFixed(6)}, ${request.lng.toStringAsFixed(6)}',
               ),
               const Divider(height: 24),
-              
+
               _buildDetailRow(
                 'Thời gian',
                 _formatDateTime(request.createdAt),
               ),
               const Divider(height: 24),
-              
+
               _buildDetailRow(
                 'Loại yêu cầu',
                 request.type.viName,
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Action buttons
               Row(
                 children: [
@@ -379,7 +391,7 @@ class VolunteerMapController extends GetxController {
       ),
     );
   }
-  
+
   Widget _buildDetailRow(String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,7 +412,7 @@ class VolunteerMapController extends GetxController {
       ],
     );
   }
-  
+
   Color _getSeverityColor(domain.RequestSeverity severity) {
     switch (severity) {
       case domain.RequestSeverity.urgent:
@@ -412,7 +424,7 @@ class VolunteerMapController extends GetxController {
         return Colors.yellow.shade700;
     }
   }
-  
+
   String _getSeverityText(domain.RequestSeverity severity) {
     switch (severity) {
       case domain.RequestSeverity.urgent:
@@ -425,7 +437,7 @@ class VolunteerMapController extends GetxController {
         return 'Khẩn cấp thấp';
     }
   }
-  
+
   Color _getStatusColor(domain.RequestStatus status) {
     switch (status) {
       case domain.RequestStatus.pending:
@@ -438,7 +450,7 @@ class VolunteerMapController extends GetxController {
         return Colors.red;
     }
   }
-  
+
   String _getStatusText(domain.RequestStatus status) {
     switch (status) {
       case domain.RequestStatus.pending:
@@ -451,7 +463,7 @@ class VolunteerMapController extends GetxController {
         return 'Đã hủy';
     }
   }
-  
+
   IconData _getStatusIcon(domain.RequestStatus status) {
     switch (status) {
       case domain.RequestStatus.pending:
@@ -464,11 +476,11 @@ class VolunteerMapController extends GetxController {
         return Icons.cancel;
     }
   }
-  
+
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inMinutes < 1) {
       return 'Vừa xong';
     } else if (difference.inHours < 1) {
@@ -488,6 +500,7 @@ class VolunteerMapController extends GetxController {
 
       shelterMarkers.value = shelters.map((shelter) {
         return Marker(
+          key: Key('shelter_${shelter.id}'),
           point: LatLng(shelter.lat, shelter.lng),
           width: 36,
           height: 36,
@@ -495,27 +508,7 @@ class VolunteerMapController extends GetxController {
         );
       }).toList();
     } catch (e) {
-      print('Error loading shelter markers: $e');
-    }
-  }
-
-  Future<void> loadTaskMarkers() async {
-    try {
-      // Load pending requests as task markers
-      final pendingRequests = await _helpRequestRepo
-          .getRequestsByStatus(domain.RequestStatus.pending)
-          .first;
-
-      taskMarkers.value = pendingRequests.map((req) {
-        return Marker(
-          point: LatLng(req.lat, req.lng),
-          width: 36,
-          height: 36,
-          child: const Icon(Icons.location_on, color: Colors.orange, size: 32),
-        );
-      }).toList();
-    } catch (e) {
-      print('Error loading task markers: $e');
+      debugPrint('Error loading shelter markers: $e');
     }
   }
 
@@ -552,7 +545,7 @@ class VolunteerMapController extends GetxController {
           addressController.text = address;
         }
       } catch (e) {
-        print('Error loading address: $e');
+        debugPrint('Error loading address: $e');
       } finally {
         isLoadingAddress.value = false;
       }
@@ -591,28 +584,28 @@ class VolunteerMapController extends GetxController {
                 ),
                 const SizedBox(height: 12),
                 Obx(() => TextField(
-                  controller: addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Địa chỉ *',
-                    border: const OutlineInputBorder(),
-                    hintText: 'Ví dụ: 123 Đường ABC, Phường XYZ',
-                    suffixIcon: isLoadingAddress.value
-                        ? const Padding(
-                            padding: EdgeInsets.all(12.0),
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.my_location),
-                            tooltip: 'Lấy địa chỉ từ vị trí',
-                            onPressed: () => loadAddress(),
-                          ),
-                  ),
-                  maxLines: 2,
-                )),
+                      controller: addressController,
+                      decoration: InputDecoration(
+                        labelText: 'Địa chỉ *',
+                        border: const OutlineInputBorder(),
+                        hintText: 'Ví dụ: 123 Đường ABC, Phường XYZ',
+                        suffixIcon: isLoadingAddress.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.my_location),
+                                tooltip: 'Lấy địa chỉ từ vị trí',
+                                onPressed: () => loadAddress(),
+                              ),
+                      ),
+                      maxLines: 2,
+                    )),
                 const SizedBox(height: 12),
                 TextField(
                   controller: capacityController,
@@ -635,79 +628,81 @@ class VolunteerMapController extends GetxController {
                 ),
                 const SizedBox(height: 20),
                 Obx(() => Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: isLoading.value ? null : () => Get.back(),
-                      child: const Text('Hủy'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: isLoading.value
-                          ? null
-                          : () async {
-                              if (nameController.text.trim().isEmpty ||
-                                  addressController.text.trim().isEmpty ||
-                                  capacityController.text.trim().isEmpty) {
-                                Get.snackbar(
-                                  'Lỗi',
-                                  'Vui lòng điền đầy đủ thông tin bắt buộc',
-                                );
-                                return;
-                              }
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: isLoading.value ? null : () => Get.back(),
+                          child: const Text('Hủy'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: isLoading.value
+                              ? null
+                              : () async {
+                                  if (nameController.text.trim().isEmpty ||
+                                      addressController.text.trim().isEmpty ||
+                                      capacityController.text.trim().isEmpty) {
+                                    Get.snackbar(
+                                      'Lỗi',
+                                      'Vui lòng điền đầy đủ thông tin bắt buộc',
+                                    );
+                                    return;
+                                  }
 
-                              final capacity = int.tryParse(capacityController.text);
-                              if (capacity == null || capacity <= 0) {
-                                Get.snackbar(
-                                  'Lỗi',
-                                  'Sức chứa phải là số dương',
-                                );
-                                return;
-                              }
+                                  final capacity =
+                                      int.tryParse(capacityController.text);
+                                  if (capacity == null || capacity <= 0) {
+                                    Get.snackbar(
+                                      'Lỗi',
+                                      'Sức chứa phải là số dương',
+                                    );
+                                    return;
+                                  }
 
-                              isLoading.value = true;
-                              try {
-                                // Import ShelterEntity
-                                final shelter = ShelterEntity(
-                                  id: '', // Will be set by Firestore
-                                  name: nameController.text.trim(),
-                                  address: addressController.text.trim(),
-                                  lat: point.latitude,
-                                  lng: point.longitude,
-                                  capacity: capacity,
-                                  currentOccupancy: 0,
-                                  isActive: true,
-                                  createdAt: DateTime.now(),
-                                  description: descriptionController.text.trim().isEmpty 
-                                      ? null 
-                                      : descriptionController.text.trim(),
-                                );
-                                await _shelterRepo.createShelter(shelter);
-                                Get.back();
-                                Get.snackbar(
-                                  'Thành công',
-                                  'Đã thêm điểm trú ẩn thành công!',
-                                );
-                                await loadShelterMarkers();
-                              } catch (e) {
-                                Get.snackbar(
-                                  'Lỗi',
-                                  'Không thể thêm điểm trú ẩn: $e',
-                                );
-                              } finally {
-                                isLoading.value = false;
-                              }
-                            },
-                      child: isLoading.value
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Thêm'),
-                    ),
-                  ],
-                )),
+                                  isLoading.value = true;
+                                  try {
+                                    // Import ShelterEntity
+                                    final shelter = ShelterEntity(
+                                      id: '', // Will be set by Firestore
+                                      name: nameController.text.trim(),
+                                      address: addressController.text.trim(),
+                                      lat: point.latitude,
+                                      lng: point.longitude,
+                                      capacity: capacity,
+                                      currentOccupancy: 0,
+                                      isActive: true,
+                                      createdAt: DateTime.now(),
+                                      description:
+                                          descriptionController.text.trim().isEmpty
+                                              ? null
+                                              : descriptionController.text.trim(),
+                                    );
+                                    await _shelterRepo.createShelter(shelter);
+                                    Get.back();
+                                    Get.snackbar(
+                                      'Thành công',
+                                      'Đã thêm điểm trú ẩn thành công!',
+                                    );
+                                    await loadShelterMarkers();
+                                  } catch (e) {
+                                    Get.snackbar(
+                                      'Lỗi',
+                                      'Không thể thêm điểm trú ẩn: $e',
+                                    );
+                                  } finally {
+                                    isLoading.value = false;
+                                  }
+                                },
+                          child: isLoading.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Thêm'),
+                        ),
+                      ],
+                    )),
               ],
             ),
           ),

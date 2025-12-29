@@ -9,87 +9,22 @@ import 'package:iconsax/iconsax.dart';
 import 'package:latlong2/latlong.dart';
 
 /// Volunteer SOS Map Screen - Shows SOS requests on a map
+/// Optimized with minimal Obx widgets for better rebuild performance
 class VolunteerSOSMapScreen extends StatelessWidget {
   const VolunteerSOSMapScreen({super.key});
+
+  static const _fallbackVNCenter = LatLng(12.24507, 109.19432);
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(VolunteerSOSMapController());
-    const fallbackVNCenter = LatLng(12.24507, 109.19432);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Obx(() => Text(
-              'Yêu cầu SOS (${controller.filteredRequests.length})',
-            )),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.refresh),
-            onPressed: controller.refreshData,
-            tooltip: 'Làm mới',
-          ),
-          IconButton(
-            icon: const Icon(Iconsax.location),
-            onPressed: controller.goToCurrentLocation,
-            tooltip: 'Vị trí hiện tại',
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(controller),
       body: Stack(
         children: [
-          // Map
-          Obx(() {
-            final position = controller.currentPosition.value;
-            LatLng center = fallbackVNCenter;
-            double zoom = 5.5;
-
-            if (position != null) {
-              center = LatLng(position.latitude, position.longitude);
-              zoom = 12.0;
-            } else if (controller.sosMarkers.isNotEmpty) {
-              center = controller.sosMarkers.first.point;
-              zoom = 10.0;
-            }
-
-            return FlutterMap(
-              mapController: controller.mapController,
-              options: MapOptions(
-                initialCenter: center,
-                initialZoom: zoom,
-                onTap: (_, __) => controller.selectedRequest.value = null,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                ),
-                MarkerLayer(
-                  markers: [
-                    // Current location
-                    if (position != null)
-                      Marker(
-                        point: LatLng(position.latitude, position.longitude),
-                        width: 50,
-                        height: 50,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Iconsax.location,
-                            color: Colors.blue,
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                    // SOS markers
-                    ...controller.sosMarkers,
-                  ],
-                ),
-              ],
-            );
-          }),
+          // Map - uses GetX for optimal rebuild
+          _SOSMapView(controller: controller),
 
           // Filter buttons at top
           Positioned(
@@ -99,53 +34,189 @@ class VolunteerSOSMapScreen extends StatelessWidget {
             child: _FilterRow(controller: controller),
           ),
 
-          // Stats card
-          Positioned(
+          // Stats card - separate Obx for independent rebuild
+          const Positioned(
             top: 70,
             left: 10,
-            child: Obx(() => _StatsCard(
-                  pendingCount: controller.pendingCount,
-                  inProgressCount: controller.inProgressCount,
-                )),
+            child: _StatsCardObx(),
           ),
 
-          // Legend
-          Positioned(
+          // Legend - static, no rebuild needed
+          const Positioned(
             bottom: 100,
             left: 10,
             child: _MapLegend(),
           ),
 
-          // Selected request card
-          Obx(() {
-            final request = controller.selectedRequest.value;
-            if (request == null) return const SizedBox.shrink();
-            return Positioned(
-              bottom: 20,
-              left: 10,
-              right: 10,
-              child: _SOSRequestCard(
-                request: request,
-                distance: controller.getDistanceToRequest(request),
-                onAccept: () => controller.acceptRequest(request),
-                onNavigate: () => controller.navigateToRequest(request),
-                onClose: () => controller.selectedRequest.value = null,
-              ),
-            );
-          }),
+          // Selected request card - separate Obx
+          const _SelectedRequestCardObx(),
 
-          // Loading indicator
-          Obx(() => controller.isLoading.value
-              ? Positioned.fill(
-                  child: Container(
-                    color: Colors.black26,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                )
-              : const SizedBox.shrink()),
+          // Loading indicator - minimal Obx
+          const _LoadingIndicatorObx(),
         ],
       ),
     );
+  }
+
+  PreferredSizeWidget _buildAppBar(VolunteerSOSMapController controller) {
+    return AppBar(
+      // Title with Obx for filtered count only
+      title: Obx(() => Text(
+            'Yêu cầu SOS (${controller.filteredRequests.length})',
+          )),
+      actions: [
+        IconButton(
+          icon: const Icon(Iconsax.refresh),
+          onPressed: controller.refreshData,
+          tooltip: 'Làm mới',
+        ),
+        IconButton(
+          icon: const Icon(Iconsax.location),
+          onPressed: controller.goToCurrentLocation,
+          tooltip: 'Vị trí hiện tại',
+        ),
+      ],
+    );
+  }
+}
+
+/// Optimized map view with GetX builder
+class _SOSMapView extends StatelessWidget {
+  final VolunteerSOSMapController controller;
+
+  const _SOSMapView({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final position = controller.currentPosition.value;
+      final markers = controller.sosMarkers;
+
+      LatLng center = VolunteerSOSMapScreen._fallbackVNCenter;
+      double zoom = 5.5;
+
+      if (position != null) {
+        center = LatLng(position.latitude, position.longitude);
+        zoom = 12.0;
+      } else if (markers.isNotEmpty) {
+        center = markers.first.point;
+        zoom = 10.0;
+      }
+
+      return FlutterMap(
+        mapController: controller.mapController,
+        options: MapOptions(
+          initialCenter: center,
+          initialZoom: zoom,
+          onTap: (_, __) => controller.selectedRequest.value = null,
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            subdomains: const ['a', 'b', 'c'],
+          ),
+          MarkerLayer(
+            markers: [
+              // Current location marker
+              if (position != null)
+                Marker(
+                  key: const ValueKey('current_location'),
+                  point: LatLng(position.latitude, position.longitude),
+                  width: 50,
+                  height: 50,
+                  child: const _CurrentLocationMarker(),
+                ),
+              // SOS markers from cached list
+              ...markers,
+            ],
+          ),
+        ],
+      );
+    });
+  }
+}
+
+/// Current location marker widget - const for optimization
+class _CurrentLocationMarker extends StatelessWidget {
+  const _CurrentLocationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.2),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Iconsax.location,
+        color: Colors.blue,
+        size: 32,
+      ),
+    );
+  }
+}
+
+/// Stats card with its own Obx - isolates rebuild
+class _StatsCardObx extends StatelessWidget {
+  const _StatsCardObx();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<VolunteerSOSMapController>();
+
+    return Obx(() => _StatsCard(
+          pendingCount: controller.pendingCount,
+          inProgressCount: controller.inProgressCount,
+        ));
+  }
+}
+
+/// Selected request card with its own Obx
+class _SelectedRequestCardObx extends StatelessWidget {
+  const _SelectedRequestCardObx();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<VolunteerSOSMapController>();
+
+    return Obx(() {
+      final request = controller.selectedRequest.value;
+      if (request == null) return const SizedBox.shrink();
+
+      return Positioned(
+        bottom: 20,
+        left: 10,
+        right: 10,
+        child: _SOSRequestCard(
+          request: request,
+          distance: controller.getDistanceToRequest(request),
+          onAccept: () => controller.acceptRequest(request),
+          onNavigate: () => controller.navigateToRequest(request),
+          onClose: () => controller.selectedRequest.value = null,
+        ),
+      );
+    });
+  }
+}
+
+/// Loading indicator with minimal Obx
+class _LoadingIndicatorObx extends StatelessWidget {
+  const _LoadingIndicatorObx();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<VolunteerSOSMapController>();
+
+    return Obx(() {
+      if (!controller.isLoading.value) return const SizedBox.shrink();
+
+      return Positioned.fill(
+        child: Container(
+          color: Colors.black26,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    });
   }
 }
 
@@ -291,8 +362,10 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-/// Map legend widget
+/// Map legend widget - const for optimization
 class _MapLegend extends StatelessWidget {
+  const _MapLegend();
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -504,4 +577,3 @@ class _SOSRequestCard extends StatelessWidget {
     );
   }
 }
-

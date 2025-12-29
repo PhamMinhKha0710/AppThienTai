@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
@@ -20,6 +21,9 @@ class VolunteerSOSMapController extends GetxController {
 
   final MapController mapController = MapController();
 
+  // Stream subscription - must be cancelled on dispose
+  StreamSubscription<List<HelpRequestEntity>>? _requestsSubscription;
+
   // Observable state
   final isLoading = false.obs;
   final currentPosition = Rxn<Position>();
@@ -28,11 +32,35 @@ class VolunteerSOSMapController extends GetxController {
   final selectedFilter = 'all'.obs;
   final sortType = 'time'.obs;
 
+  // Cached computed values - avoid recomputing on every getter call
+  final _cachedFilteredRequests = <HelpRequestEntity>[].obs;
+  final _cachedSosMarkers = <Marker>[].obs;
+
+  // Distance cache - memoize expensive calculations
+  final Map<String, double> _distanceCache = {};
+
   @override
   void onInit() {
     super.onInit();
     _initLocationService();
     _loadData();
+
+    // Setup reactive listeners to update cache when dependencies change
+    ever(requests, (_) => _updateCachedValues());
+    ever(selectedFilter, (_) => _updateCachedValues());
+    ever(sortType, (_) => _updateCachedValues());
+    ever(currentPosition, (_) {
+      _distanceCache.clear(); // Clear distance cache when position changes
+      _updateCachedValues();
+    });
+  }
+
+  @override
+  void onClose() {
+    // CRITICAL: Cancel stream subscription to prevent memory leak
+    _requestsSubscription?.cancel();
+    _distanceCache.clear();
+    super.onClose();
   }
 
   void _initLocationService() {
@@ -51,16 +79,24 @@ class VolunteerSOSMapController extends GetxController {
       final position = await _locationService?.getCurrentLocation();
       currentPosition.value = position;
 
-      // Load help requests
-      _helpRequestRepo.getAllRequests().listen((requestList) {
-        // Filter to show only pending or in-progress requests
-        final activeRequests = requestList.where((request) {
-          return request.status == RequestStatus.pending ||
-              request.status == RequestStatus.inProgress;
-        }).toList();
+      // Cancel existing subscription before creating new one
+      _requestsSubscription?.cancel();
 
-        requests.value = activeRequests;
-      });
+      // Load help requests with proper subscription management
+      _requestsSubscription = _helpRequestRepo.getAllRequests().listen(
+        (requestList) {
+          // Filter to show only pending or in-progress requests
+          final activeRequests = requestList.where((request) {
+            return request.status == RequestStatus.pending ||
+                request.status == RequestStatus.inProgress;
+          }).toList();
+
+          requests.value = activeRequests;
+        },
+        onError: (e) {
+          debugPrint('Error in requests stream: $e');
+        },
+      );
     } catch (e) {
       debugPrint('Error loading SOS map data: $e');
     } finally {
@@ -68,7 +104,93 @@ class VolunteerSOSMapController extends GetxController {
     }
   }
 
+  /// Update cached computed values - called reactively when dependencies change
+  void _updateCachedValues() {
+    _cachedFilteredRequests.value = _computeFilteredRequests();
+    _cachedSosMarkers.value = _buildSosMarkers(_cachedFilteredRequests);
+  }
+
+  /// Compute filtered requests - internal method
+  List<HelpRequestEntity> _computeFilteredRequests() {
+    var result = requests.toList();
+
+    // Apply filter
+    switch (selectedFilter.value) {
+      case 'pending':
+        result = result
+            .where((r) => r.status == RequestStatus.pending)
+            .toList();
+        break;
+      case 'urgent':
+        result = result
+            .where((r) => r.severity == RequestSeverity.urgent)
+            .toList();
+        break;
+      case 'nearby':
+        if (currentPosition.value != null) {
+          result = result.where((r) {
+            final distance = _getCachedDistance(r);
+            return distance != null && distance <= 10; // Within 10km
+          }).toList();
+        }
+        break;
+    }
+
+    // Apply sort
+    switch (sortType.value) {
+      case 'distance':
+        if (currentPosition.value != null) {
+          result.sort((a, b) {
+            final distA = _getCachedDistance(a) ?? double.infinity;
+            final distB = _getCachedDistance(b) ?? double.infinity;
+            return distA.compareTo(distB);
+          });
+        }
+        break;
+      case 'severity':
+        result.sort((a, b) {
+          const severityOrder = {
+            RequestSeverity.urgent: 0,
+            RequestSeverity.high: 1,
+            RequestSeverity.medium: 2,
+            RequestSeverity.low: 3,
+          };
+          return (severityOrder[a.severity] ?? 4)
+              .compareTo(severityOrder[b.severity] ?? 4);
+        });
+        break;
+      case 'time':
+      default:
+        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+
+    return result;
+  }
+
+  /// Build SOS markers from filtered requests
+  List<Marker> _buildSosMarkers(List<HelpRequestEntity> filteredList) {
+    return filteredList.map((request) {
+      final isPending = request.status == RequestStatus.pending;
+      final color = isPending ? Colors.red.shade700 : Colors.orange.shade700;
+
+      return Marker(
+        key: ValueKey(request.id),
+        point: LatLng(request.lat, request.lng),
+        width: 44,
+        height: 44,
+        child: GestureDetector(
+          onTap: () {
+            selectedRequest.value = request;
+          },
+          child: SOSMarkerWidget(color: color, isPending: isPending),
+        ),
+      );
+    }).toList();
+  }
+
   Future<void> refreshData() async {
+    _distanceCache.clear();
     await _loadData();
   }
 
@@ -92,78 +214,8 @@ class VolunteerSOSMapController extends GetxController {
     sortType.value = type;
   }
 
-  /// Get filtered and sorted requests
-  List<HelpRequestEntity> get filteredRequests {
-    var result = requests.toList();
-
-    // Apply filter
-    switch (selectedFilter.value) {
-      case 'pending':
-        result = result
-            .where((r) => r.status == RequestStatus.pending)
-            .toList();
-        break;
-      case 'urgent':
-        result = result
-            .where((r) => r.severity == RequestSeverity.urgent)
-            .toList();
-        break;
-      case 'nearby':
-        if (currentPosition.value != null) {
-          result = result.where((r) {
-            final distance = _calculateDistance(
-              currentPosition.value!.latitude,
-              currentPosition.value!.longitude,
-              r.lat,
-              r.lng,
-            );
-            return distance <= 10; // Within 10km
-          }).toList();
-        }
-        break;
-    }
-
-    // Apply sort
-    switch (sortType.value) {
-      case 'distance':
-        if (currentPosition.value != null) {
-          result.sort((a, b) {
-            final distA = _calculateDistance(
-              currentPosition.value!.latitude,
-              currentPosition.value!.longitude,
-              a.lat,
-              a.lng,
-            );
-            final distB = _calculateDistance(
-              currentPosition.value!.latitude,
-              currentPosition.value!.longitude,
-              b.lat,
-              b.lng,
-            );
-            return distA.compareTo(distB);
-          });
-        }
-        break;
-      case 'severity':
-        result.sort((a, b) {
-          final severityOrder = {
-            RequestSeverity.urgent: 0,
-            RequestSeverity.high: 1,
-            RequestSeverity.medium: 2,
-            RequestSeverity.low: 3,
-          };
-          return (severityOrder[a.severity] ?? 4)
-              .compareTo(severityOrder[b.severity] ?? 4);
-        });
-        break;
-      case 'time':
-      default:
-        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
-    }
-
-    return result;
-  }
+  /// Get filtered and sorted requests - uses cached value
+  List<HelpRequestEntity> get filteredRequests => _cachedFilteredRequests;
 
   /// Get counts
   int get pendingCount =>
@@ -172,38 +224,25 @@ class VolunteerSOSMapController extends GetxController {
   int get inProgressCount =>
       requests.where((r) => r.status == RequestStatus.inProgress).length;
 
-  /// Get SOS markers for the map
-  List<Marker> get sosMarkers {
-    return filteredRequests.map((request) {
-      final isPending = request.status == RequestStatus.pending;
-      final color = isPending ? Colors.red.shade700 : Colors.orange.shade700;
+  /// Get SOS markers for the map - uses cached value
+  List<Marker> get sosMarkers => _cachedSosMarkers;
 
-      return Marker(
-        point: LatLng(request.lat, request.lng),
-        width: 44,
-        height: 44,
-        child: GestureDetector(
-          onTap: () {
-            selectedRequest.value = request;
-          },
-          child: _AnimatedSOSMarker(color: color, isPending: isPending),
-        ),
-      );
-    }).toList();
-  }
+  /// Get cached distance to request - memoized
+  double? _getCachedDistance(HelpRequestEntity request) {
+    if (currentPosition.value == null) return null;
 
-  /// Calculate distance to request
-  double? getDistanceToRequest(HelpRequestEntity request) {
-    if (currentPosition.value == null) {
-      return null;
-    }
-
-    return _calculateDistance(
+    final cacheKey = request.id;
+    return _distanceCache[cacheKey] ??= _calculateDistance(
       currentPosition.value!.latitude,
       currentPosition.value!.longitude,
       request.lat,
       request.lng,
     );
+  }
+
+  /// Calculate distance to request - public API uses cache
+  double? getDistanceToRequest(HelpRequestEntity request) {
+    return _getCachedDistance(request);
   }
 
   /// Navigate to request location
@@ -239,7 +278,7 @@ class VolunteerSOSMapController extends GetxController {
       await _helpRequestRepo.updateHelpRequest(updatedRequest);
 
       selectedRequest.value = null;
-      
+
       MinhLoaders.successSnackBar(
         title: 'Thành công',
         message: 'Bạn đã nhận yêu cầu hỗ trợ này',
@@ -276,24 +315,26 @@ class VolunteerSOSMapController extends GetxController {
   double _toRadians(double degrees) => degrees * (math.pi / 180);
 }
 
-/// Animated SOS marker widget
-class _AnimatedSOSMarker extends StatefulWidget {
+/// Animated SOS marker widget - fixed AnimationController bug
+class SOSMarkerWidget extends StatefulWidget {
   final Color color;
   final bool isPending;
 
-  const _AnimatedSOSMarker({
+  const SOSMarkerWidget({
+    super.key,
     required this.color,
     required this.isPending,
   });
 
   @override
-  State<_AnimatedSOSMarker> createState() => _AnimatedSOSMarkerState();
+  State<SOSMarkerWidget> createState() => _SOSMarkerWidgetState();
 }
 
-class _AnimatedSOSMarkerState extends State<_AnimatedSOSMarker>
+class _SOSMarkerWidgetState extends State<SOSMarkerWidget>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  // Use nullable instead of late to prevent crash when isPending is false
+  AnimationController? _controller;
+  Animation<double>? _animation;
 
   @override
   void initState() {
@@ -305,16 +346,15 @@ class _AnimatedSOSMarkerState extends State<_AnimatedSOSMarker>
       )..repeat(reverse: true);
 
       _animation = Tween<double>(begin: 1.0, end: 1.3).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+        CurvedAnimation(parent: _controller!, curve: Curves.easeInOut),
       );
     }
   }
 
   @override
   void dispose() {
-    if (widget.isPending) {
-      _controller.dispose();
-    }
+    // Safe disposal with null check
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -341,12 +381,12 @@ class _AnimatedSOSMarkerState extends State<_AnimatedSOSMarker>
       ),
     );
 
-    if (widget.isPending) {
+    if (widget.isPending && _animation != null) {
       return AnimatedBuilder(
-        animation: _animation,
+        animation: _animation!,
         builder: (context, child) {
           return Transform.scale(
-            scale: _animation.value,
+            scale: _animation!.value,
             child: markerWidget,
           );
         },
@@ -356,4 +396,3 @@ class _AnimatedSOSMarkerState extends State<_AnimatedSOSMarker>
     return markerWidget;
   }
 }
-
