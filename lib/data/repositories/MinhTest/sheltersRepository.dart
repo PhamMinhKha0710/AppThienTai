@@ -84,7 +84,7 @@ class SheltersRepository extends GetxService {
 
   Future<void> createShelter(ShelterEntity shelter) async {
     try {
-      final docRef = _db.collection('Shelters').doc();
+      final docRef = _db.collection('shelters').doc();
 
       // Convert entity to DTO then to JSON
       final dto = ShelterDto.fromEntity(shelter.copyWith(id: docRef.id));

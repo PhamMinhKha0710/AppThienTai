@@ -215,10 +215,11 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: _controller.messages.length,
       itemBuilder: (context, index) {
         final message = _controller.messages[index];
-        return _buildMessageBubble(message);
+        return _buildMessageBubble2(message);
       },
     );
   }
+
 
   Widget _buildMessageBubble(Map<String, dynamic> message) {
     final isUser = message['isUser'] == true;
@@ -318,6 +319,124 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
+  Widget _buildMessageBubble2(Map<String, dynamic> message) {
+    final isUser = message['isUser'] == true;
+    final isLoading = message['isLoading'] == true;
+    final isSystem = message['isSystem'] == true;
+    final hasActions = message['hasActions'] == true;
+
+    if (isSystem) {
+      return _buildSystemMessage(message);
+    }
+
+    if (hasActions) {
+      return _buildActionMessage(message);
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isUser && !isLoading)
+            _buildAvatar(isUser: false),
+
+          const SizedBox(width: 8),
+
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              child: Card(
+                elevation: 1,
+                color: isUser ? Colors.blue[50] : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
+                    bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: isLoading
+                      ? _buildLoadingIndicator()
+                      : _parseMarkdownText( // ĐÂY LÀ PHẦN CẦN SỬA
+                    message['text'] ?? '',
+                    isUser: isUser,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          if (isUser && !isLoading)
+            _buildAvatar(isUser: true),
+        ],
+      ),
+    );
+  }
+
+  // THÊM HÀM MỚI VÀO CLASS _ChatScreenState
+  Widget _parseMarkdownText(String text, {required bool isUser}) {
+    final regex = RegExp(r'\*\*(.*?)\*\*');
+
+    final List<TextSpan> spans = [];
+    int lastIndex = 0;
+
+    for (final match in regex.allMatches(text)) {
+      // Text thường trước đoạn in đậm
+      if (match.start > lastIndex) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastIndex, match.start),
+            style: TextStyle(
+              fontSize: 14,
+              color: isUser ? Colors.blue[900] : Colors.black87,
+            ),
+          ),
+        );
+      }
+
+      // Text in đậm
+      spans.add(
+        TextSpan(
+          text: match.group(1), // chỉ lấy nội dung, bỏ **
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: isUser ? Colors.blue[900] : Colors.black87,
+          ),
+        ),
+      );
+
+      lastIndex = match.end;
+    }
+
+    // Phần text còn lại sau cùng
+    if (lastIndex < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastIndex),
+          style: TextStyle(
+            fontSize: 14,
+            color: isUser ? Colors.blue[900] : Colors.black87,
+          ),
+        ),
+      );
+    }
+
+    return RichText(
+      text: TextSpan(children: spans),
+    );
+  }
+
 
   IconData _getSystemIcon(String text) {
     if (text.contains('📍')) return Icons.location_on;
@@ -476,29 +595,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.grey[300]!),
               ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller.textController,
-                      decoration: const InputDecoration(
-                        hintText: 'Nhập tin nhắn...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      maxLines: 3,
-                      minLines: 1,
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.attach_file, color: Colors.grey[600]),
-                    onPressed: () {
-                      // TODO: Thêm chức năng đính kèm file
-                    },
-                  ),
-                ],
+              child: TextField(
+                controller: _controller.textController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập tin nhắn...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+                maxLines: 3,
+                minLines: 1,
+                onSubmitted: (_) => _sendMessage(),
               ),
             ),
           ),

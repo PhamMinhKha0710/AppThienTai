@@ -8,6 +8,8 @@ import 'package:cuutrobaolu/domain/entities/news_entity.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:iconsax/iconsax.dart';
 
+import '../../chat/screens/chat_screen.dart';
+
 class VictimNewsController extends GetxController {
   final NewsRepository _newsRepo = getIt<NewsRepository>();
 
@@ -131,7 +133,7 @@ class VictimNewsController extends GetxController {
                   MinhChatbotSuggestion(
                     text: "Thông báo cứu trợ",
                     onTap: () {
-                      // TODO: Handle chatbot query
+                      Get.to(() => ChatScreen());
                     },
                   ),
                 ],
