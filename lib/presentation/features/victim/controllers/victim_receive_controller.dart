@@ -302,3 +302,34 @@ class VictimReceiveController extends GetxController {
 
 
 
+
+        title: 'Lỗi',
+        message: 'Không thể hủy đăng ký: $e',
+      );
+    }
+  }
+
+  List<Map<String, dynamic>> get filteredPoints {
+    var filtered = List<Map<String, dynamic>>.from(nearbyDistributionPoints);
+    
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      filtered = filtered.where((point) {
+        final name = (point['name'] ?? '').toString().toLowerCase();
+        final address = (point['address'] ?? '').toString().toLowerCase();
+        return name.contains(query) || address.contains(query);
+      }).toList();
+    }
+    
+    return filtered;
+  }
+
+  Future<void> refreshData() async {
+    await loadData();
+  }
+}
+
+
+
+
+
