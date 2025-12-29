@@ -1,15 +1,18 @@
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/data/services/location_service.dart';
-import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/core/constants/enums.dart';
+import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
+import 'package:cuutrobaolu/domain/entities/help_request_entity.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/NavigationVolunteerController.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
 class VolunteerHomeController extends GetxController {
   LocationService? _locationService;
-  final HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
+  // Use getIt for consistent dependency injection
+  final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final isLoading = false.obs;
@@ -20,6 +23,11 @@ class VolunteerHomeController extends GetxController {
 
   final nearbyTasks = <Map<String, dynamic>>[].obs;
   final currentPosition = Rxn<Position>();
+
+  // Location cache
+  Position? _cachedPosition;
+  DateTime? _positionCacheTime;
+  static const _locationCacheDuration = Duration(seconds: 60);
 
   @override
   void onInit() {
@@ -36,25 +44,45 @@ class VolunteerHomeController extends GetxController {
     }
   }
 
+  /// Load all data in parallel for faster loading
   Future<void> loadData() async {
     isLoading.value = true;
     try {
+      // Get location first (needed for nearby tasks)
       await getCurrentLocation();
-      await loadStats();
-      await loadNearbyTasks();
+
+      // Load stats and nearby tasks in parallel
+      await Future.wait([
+        loadStats(),
+        loadNearbyTasks(),
+      ]);
     } catch (e) {
-      print('Error loading data: $e');
+      debugPrint('Error loading data: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
+  /// Get current location with caching
   Future<void> getCurrentLocation() async {
     try {
+      // Check cache first
+      final now = DateTime.now();
+      if (_cachedPosition != null &&
+          _positionCacheTime != null &&
+          now.difference(_positionCacheTime!) < _locationCacheDuration) {
+        currentPosition.value = _cachedPosition;
+        return;
+      }
+
       final position = await _locationService?.getCurrentLocation();
-      currentPosition.value = position;
+      if (position != null) {
+        _cachedPosition = position;
+        _positionCacheTime = now;
+        currentPosition.value = position;
+      }
     } catch (e) {
-      print('Error getting location: $e');
+      debugPrint('Error getting location: $e');
     }
   }
 
@@ -63,9 +91,9 @@ class VolunteerHomeController extends GetxController {
       final userId = _auth.currentUser?.uid;
       if (userId == null) return;
 
-      // Count completed tasks
+      // Count completed tasks using domain repository
       final completedRequests = await _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.completed.toJson())
+          .getRequestsByStatus(RequestStatus.completed)
           .first;
 
       final userCompleted = completedRequests
@@ -77,7 +105,7 @@ class VolunteerHomeController extends GetxController {
         'badge': _getBadgeLevel(userCompleted),
       };
     } catch (e) {
-      print('Error loading stats: $e');
+      debugPrint('Error loading stats: $e');
     }
   }
 
@@ -91,28 +119,22 @@ class VolunteerHomeController extends GetxController {
 
   Future<void> loadNearbyTasks() async {
     try {
-      print('[VOLUNTEER_HOME] Loading nearby rescue requests from database...');
-      
-      if (currentPosition.value == null) {
-        print('[VOLUNTEER_HOME] Getting current location...');
-        await getCurrentLocation();
-      }
+      debugPrint('[VOLUNTEER_HOME] Loading nearby rescue requests from database...');
 
       final position = currentPosition.value;
       if (position == null) {
-        print('[VOLUNTEER_HOME] No position available');
+        debugPrint('[VOLUNTEER_HOME] No position available');
         return;
       }
-      
-      print('[VOLUNTEER_HOME] Current position: ${position.latitude}, ${position.longitude}');
+
+      debugPrint('[VOLUNTEER_HOME] Current position: ${position.latitude}, ${position.longitude}');
 
       // Get pending rescue requests from real database (help_requests collection)
-      print('[VOLUNTEER_HOME] Fetching pending rescue requests from Firestore...');
       final allRequests = await _helpRequestRepo
-          .getRequestsByStatus(RequestStatus.pending.toJson())
+          .getRequestsByStatus(RequestStatus.pending)
           .first;
-      
-      print('[VOLUNTEER_HOME] Found ${allRequests.length} pending rescue requests in database');
+
+      debugPrint('[VOLUNTEER_HOME] Found ${allRequests.length} pending rescue requests in database');
 
       // Calculate distance and filter nearby (within 50km radius)
       final nearby = <Map<String, dynamic>>[];
@@ -123,14 +145,13 @@ class VolunteerHomeController extends GetxController {
           request.lat,
           request.lng,
         );
-        
-        print('[VOLUNTEER_HOME] Request "${request.title}" - Distance: ${distance.toStringAsFixed(1)} km');
 
         if (distance <= 50) {
           nearby.add({
             'id': request.id,
             'title': request.title,
             'distance': '${distance.toStringAsFixed(1)} km',
+            'distanceValue': distance, // Store numeric value for sorting
             'severity': request.severity.viName,
             'type': request.type.viName,
             'description': request.description,
@@ -138,24 +159,24 @@ class VolunteerHomeController extends GetxController {
             'lat': request.lat,
             'lng': request.lng,
             'createdAt': request.createdAt,
-            'userId': request.userId, // User who created the request
+            'userId': request.userId,
           });
         }
       }
-      
-      print('[VOLUNTEER_HOME] Found ${nearby.length} rescue points within 50km');
+
+      debugPrint('[VOLUNTEER_HOME] Found ${nearby.length} rescue points within 50km');
 
       // Sort by distance (closest first) and take top 5
       nearby.sort((a, b) {
-        final distA = double.parse(a['distance'].toString().replaceAll(' km', ''));
-        final distB = double.parse(b['distance'].toString().replaceAll(' km', ''));
+        final distA = a['distanceValue'] as double;
+        final distB = b['distanceValue'] as double;
         return distA.compareTo(distB);
       });
 
       nearbyTasks.value = nearby.take(5).toList();
-      print('[VOLUNTEER_HOME] Displaying top ${nearbyTasks.length} nearest rescue points');
+      debugPrint('[VOLUNTEER_HOME] Displaying top ${nearbyTasks.length} nearest rescue points');
     } catch (e) {
-      print('[VOLUNTEER_HOME] Error loading nearby rescue requests: $e');
+      debugPrint('[VOLUNTEER_HOME] Error loading nearby rescue requests: $e');
     }
   }
 
@@ -164,15 +185,18 @@ class VolunteerHomeController extends GetxController {
   }
 
   Future<void> refreshData() async {
+    // Clear cache to force fresh data
+    _cachedPosition = null;
+    _positionCacheTime = null;
     await loadData();
   }
-  
+
   /// Accept a task from nearby tasks list
   Future<void> acceptTask(Map<String, dynamic> task) async {
     try {
       final taskId = task['id'] as String?;
       final userId = _auth.currentUser?.uid;
-      
+
       if (taskId == null || userId == null) {
         MinhLoaders.errorSnackBar(
           title: 'Lỗi',
@@ -180,24 +204,23 @@ class VolunteerHomeController extends GetxController {
         );
         return;
       }
-      
-      // Update task status to inProgress
+
+      // Update task status to inProgress using domain repository
       await _helpRequestRepo.updateRequestStatus(
         taskId,
         RequestStatus.inProgress,
-        volunteerId: userId,
       );
-      
+
       MinhLoaders.successSnackBar(
         title: 'Thành công',
         message: 'Đã nhận nhiệm vụ thành công!',
       );
-      
+
       // Refresh data and navigate to tasks tab
       await loadData();
       NavigationVolunteerController.selectedIndex.value = 1; // Navigate to Tasks tab
     } catch (e) {
-      print('Error accepting task: $e');
+      debugPrint('Error accepting task: $e');
       MinhLoaders.errorSnackBar(
         title: 'Lỗi',
         message: 'Không thể nhận nhiệm vụ: $e',

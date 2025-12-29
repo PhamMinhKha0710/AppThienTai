@@ -1,4 +1,5 @@
 import 'package:cuutrobaolu/presentation/features/victim/NavigationVictimController.dart';
+import 'package:cuutrobaolu/presentation/features/victim/widgets/quick_sos_widget.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/utils/helper_functions.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ class NavigationVictimMenu extends StatelessWidget {
     final isDark = MinhHelperFunctions.isDarkMode(context);
 
     return Scaffold(
+      floatingActionButton: const QuickSOSButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Obx(
         () => NavigationBar(
           selectedIndex: NavigationVictimController.selectedIndex.value,
