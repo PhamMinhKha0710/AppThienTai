@@ -21,107 +21,128 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final controller = Get.put(UserController());
     var user = controller.user.value;
 
     return Scaffold(
-      appBar: MinhAppbar(
-        title: Text("Profile"),
-        showBackArrow: true,
-      ),
+      appBar: MinhAppbar(title: Text("Profile"), showBackArrow: true),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(MinhSizes.defaultSpace),
           child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      Obx(
-                        () {
-                          final networdImage = controller.user.value.profilePicture;
-                          final image = networdImage.isEmpty ? MinhImages.user : networdImage;
-                          if(controller.imageLoading.value)
-                          {
-                            // return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
-                            return CircularProgressIndicator();
-                          }
-                          else {
-                            return MinhCircularImage(
-                              image: image,
-                              width: 80,
-                              height: 80,
-                              isNetworkImage: networdImage.isNotEmpty,
-                            );
-                          }
-                        }
-                      ),
-                      // SizedBox(height: MinhSizes.spaceBtwItems,),
-                      TextButton(
-                          onPressed: (){
-                            controller.uploadUserProfilePicture();
-                          },
-                          child: Text("Change Profile Image"),
-
-                      ),
-                    ],
-                  ),
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Center(
+                child: Column(
+                  children: [
+                    Obx(() {
+                      final networdImage = controller.user.value.profilePicture;
+                      final image = networdImage.isEmpty
+                          ? MinhImages.user
+                          : networdImage;
+                      if (controller.imageLoading.value) {
+                        // return MinhShimmerEffect(width: 80, height: 80, radius: 80,);
+                        return CircularProgressIndicator();
+                      } else {
+                        return MinhCircularImage(
+                          image: image,
+                          width: 80,
+                          height: 80,
+                          isNetworkImage: networdImage.isNotEmpty,
+                        );
+                      }
+                    }),
+                    // SizedBox(height: MinhSizes.spaceBtwItems,),
+                    TextButton(
+                      onPressed: () {
+                        controller.uploadUserProfilePicture();
+                      },
+                      child: Text("Change Profile Image"),
+                    ),
+                  ],
                 ),
-                SizedBox(height: MinhSizes.spaceBtwItems/2,),
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems / 2),
 
-                Divider(color: MinhColors.darkerGrey,),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
+              Divider(color: MinhColors.darkerGrey),
+              SizedBox(height: MinhSizes.spaceBtwItems),
 
-                MinhSectionHeading(title: "Profile Information", showActionButton: false,),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
+              MinhSectionHeading(
+                title: "Profile Information",
+                showActionButton: false,
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
 
-                MinhProfileMenu(title: "Name", value: user.fullName, onTap: (){
+              MinhProfileMenu(
+                title: "Name",
+                value: user.fullName,
+                onTap: () {
                   print("gsvahbd jnmg");
                   Get.to(() => ChangeName());
-                }),
-                MinhProfileMenu(title: "UserName", value: user.username, onTap: (){
+                },
+              ),
+              MinhProfileMenu(
+                title: "UserName",
+                value: user.username,
+                onTap: () {
                   Get.to(() => ChangeUserName());
-                }),
+                },
+              ),
 
-                SizedBox(height: MinhSizes.spaceBtwItems,),
+              SizedBox(height: MinhSizes.spaceBtwItems),
 
-                Divider(color: MinhColors.darkerGrey,),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
+              Divider(color: MinhColors.darkerGrey),
+              SizedBox(height: MinhSizes.spaceBtwItems),
 
-                MinhSectionHeading(title: "Personal Information", showActionButton: false,),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
+              MinhSectionHeading(
+                title: "Personal Information",
+                showActionButton: false,
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
 
-                MinhProfileMenu(title: "UserId", value: user.id, icon: Iconsax.copy, onTap: (){}),
-                MinhProfileMenu(title: "Email", value: user.email, onTap: (){}),
-                MinhProfileMenu(title: "Phone Number", value: "+84 ${user.phoneNumber}", onTap: (){
+              MinhProfileMenu(
+                title: "UserId",
+                value: user.id,
+                icon: Iconsax.copy,
+                onTap: () {},
+              ),
+              MinhProfileMenu(title: "Email", value: user.email, onTap: () {}),
+              MinhProfileMenu(
+                title: "Phone Number",
+                value: "+84 ${user.phoneNumber}",
+                onTap: () {
                   Get.to(() => ChangeContact());
-                }),
-                MinhProfileMenu(title: "Gender", value: "Male", onTap: (){}),
-                MinhProfileMenu(title: "Date of Birth", value: "4 Aril, 2004 ", onTap: (){}),
-                MinhProfileMenu(title: "Đổi mật khẩu", value: "", onTap: (){
+                },
+              ),
+              MinhProfileMenu(title: "Gender", value: "Male", onTap: () {}),
+              MinhProfileMenu(
+                title: "Date of Birth",
+                value: "4 Aril, 2004 ",
+                onTap: () {},
+              ),
+              MinhProfileMenu(
+                title: "Đổi mật khẩu",
+                value: "",
+                onTap: () {
                   Get.to(() => ChangePassword());
-                }),
+                },
+              ),
 
-                Divider(color: MinhColors.darkerGrey,),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
-                Center(
-                  child: TextButton(
-                      onPressed: (){
-                        controller.deleteAccountWarningPopup();
-                      },
-                      child: Text("Close Account", style: TextStyle(color: Colors.red),),
+              Divider(color: MinhColors.darkerGrey),
+              SizedBox(height: MinhSizes.spaceBtwItems),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    controller.deleteAccountWarningPopup();
+                  },
+                  child: Text(
+                    "Close Account",
+                    style: TextStyle(color: Colors.red),
                   ),
                 ),
-                SizedBox(height: MinhSizes.spaceBtwItems,),
-
-
-
-
-
-              ],
-
+              ),
+              SizedBox(height: MinhSizes.spaceBtwItems),
+            ],
           ),
         ),
       ),

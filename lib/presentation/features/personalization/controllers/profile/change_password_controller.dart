@@ -17,12 +17,19 @@ class ChangePasswordController extends GetxController {
 
   Future<void> changePassword() async {
     try {
-      if (newPassword.text.trim().isEmpty || currentPassword.text.trim().isEmpty) {
-        MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Vui lòng điền mật khẩu hiện tại và mật khẩu mới');
+      if (newPassword.text.trim().isEmpty ||
+          currentPassword.text.trim().isEmpty) {
+        MinhLoaders.errorSnackBar(
+          title: 'Lỗi',
+          message: 'Vui lòng điền mật khẩu hiện tại và mật khẩu mới',
+        );
         return;
       }
       if (newPassword.text.trim() != confirmPassword.text.trim()) {
-        MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Mật khẩu xác nhận không khớp');
+        MinhLoaders.errorSnackBar(
+          title: 'Lỗi',
+          message: 'Mật khẩu xác nhận không khớp',
+        );
         return;
       }
 
@@ -30,7 +37,10 @@ class ChangePasswordController extends GetxController {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null || user.email == null) {
-        MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Người dùng chưa đăng nhập');
+        MinhLoaders.errorSnackBar(
+          title: 'Lỗi',
+          message: 'Người dùng chưa đăng nhập',
+        );
         isSubmitting.value = false;
         return;
       }
@@ -41,15 +51,22 @@ class ChangePasswordController extends GetxController {
       // Update password
       await user.updatePassword(newPassword.text.trim());
 
-      MinhLoaders.successSnackBar(title: 'Thành công', message: 'Đổi mật khẩu thành công');
+      MinhLoaders.successSnackBar(
+        title: 'Thành công',
+        message: 'Đổi mật khẩu thành công',
+      );
       Get.back();
     } catch (e) {
-      MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Không thể đổi mật khẩu: ${e.toString()}');
+      MinhLoaders.errorSnackBar(
+        title: 'Lỗi',
+        message: 'Không thể đổi mật khẩu: ${e.toString()}',
+      );
     } finally {
       isSubmitting.value = false;
     }
   }
 }
+<<<<<<< Updated upstream
 
 
 
@@ -61,3 +78,5 @@ class ChangePasswordController extends GetxController {
 
 
 
+=======
+>>>>>>> Stashed changes

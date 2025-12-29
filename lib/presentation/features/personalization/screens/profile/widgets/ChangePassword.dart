@@ -12,7 +12,10 @@ class ChangePassword extends StatelessWidget {
     final controller = Get.put(ChangePasswordController());
 
     return Scaffold(
-      appBar: MinhAppbar(title: const Text('Đổi mật khẩu'), showBackArrow: true),
+      appBar: MinhAppbar(
+        title: const Text('Đổi mật khẩu'),
+        showBackArrow: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(MinhSizes.defaultSpace),
         child: Column(
@@ -32,22 +35,40 @@ class ChangePassword extends StatelessWidget {
             TextField(
               controller: controller.confirmPassword,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Xác nhận mật khẩu mới'),
+              decoration: const InputDecoration(
+                labelText: 'Xác nhận mật khẩu mới',
+              ),
             ),
             const SizedBox(height: MinhSizes.spaceBtwSections),
-            Obx(() => SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: controller.isSubmitting.value ? null : () => controller.changePassword(),
-                child: controller.isSubmitting.value ? const SizedBox(width:20, height:20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Lưu'),
+            Obx(
+              () => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: controller.isSubmitting.value
+                      ? null
+                      : () => controller.changePassword(),
+                  child: controller.isSubmitting.value
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Lưu'),
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
     );
   }
 }
+<<<<<<< Updated upstream
 
 
 
+=======
+>>>>>>> Stashed changes

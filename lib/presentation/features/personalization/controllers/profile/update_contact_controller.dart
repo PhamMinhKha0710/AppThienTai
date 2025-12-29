@@ -15,7 +15,8 @@ class UpdateContactController extends GetxController {
 
   final userController = UserController.instance;
 
-  GetCurrentUserUseCase get _getCurrentUserUseCase => Get.find<GetCurrentUserUseCase>();
+  GetCurrentUserUseCase get _getCurrentUserUseCase =>
+      Get.find<GetCurrentUserUseCase>();
   UpdateUserUseCase get _updateUserUseCase => Get.find<UpdateUserUseCase>();
 
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -32,7 +33,10 @@ class UpdateContactController extends GetxController {
 
   Future<void> updateContact() async {
     try {
-      MinhFullScreenLoader.openLoadingDialog("Updating", MinhImages.docerAnimation);
+      MinhFullScreenLoader.openLoadingDialog(
+        "Updating",
+        MinhImages.docerAnimation,
+      );
       if (!formKey.currentState!.validate()) {
         MinhFullScreenLoader.stopLoading();
         return;
@@ -41,7 +45,10 @@ class UpdateContactController extends GetxController {
       final currentUserEntity = await _getCurrentUserUseCase();
       if (currentUserEntity == null) {
         MinhFullScreenLoader.stopLoading();
-        MinhLoaders.errorSnackBar(title: "Lỗi", message: "Không tìm thấy người dùng");
+        MinhLoaders.errorSnackBar(
+          title: "Lỗi",
+          message: "Không tìm thấy người dùng",
+        );
         return;
       }
 
@@ -56,7 +63,14 @@ class UpdateContactController extends GetxController {
       userController.user.refresh();
 
       MinhFullScreenLoader.stopLoading();
+<<<<<<< Updated upstream
       MinhLoaders.successSnackBar(title: "Thành công", message: "Thông tin liên hệ đã được cập nhật");
+=======
+      MinhLoaders.successSnackBar(
+        title: "Thành công",
+        message: "Thông tin liên hệ đã được cập nhật",
+      );
+>>>>>>> Stashed changes
       Get.off(() => ProfileScreen());
     } on Failure catch (f) {
       MinhFullScreenLoader.stopLoading();
@@ -67,6 +81,9 @@ class UpdateContactController extends GetxController {
     }
   }
 }
+<<<<<<< Updated upstream
 
 
 
+=======
+>>>>>>> Stashed changes

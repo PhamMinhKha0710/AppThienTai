@@ -8,7 +8,8 @@ import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
 import 'package:cuutrobaolu/presentation/features/chat/screens/chat_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/screens/sos/victim_sos_screen.dart';
-import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart';
+import 'package:cuutrobaolu/presentation/features/victim/screens/map/victim_map_screen.dart'
+    hide Obx;
 import 'package:cuutrobaolu/presentation/features/victim/screens/receive/victim_receive_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_home_controller.dart';
 import 'package:cuutrobaolu/presentation/features/victim/NavigationVictimController.dart';
@@ -38,9 +39,8 @@ class VictimHomeScreen extends StatelessWidget {
                     MinhAppbar(
                       title: Text(
                         "Hỗ trợ Thiên tai",
-                        style: Theme.of(context).textTheme.headlineMedium!.apply(
-                          color: MinhColors.white,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium!
+                            .apply(color: MinhColors.white),
                       ),
                     ),
                     SizedBox(height: MinhSizes.spaceBtwItems),
@@ -67,7 +67,7 @@ class VictimHomeScreen extends StatelessWidget {
                   child: Obx(() {
                     final position = controller.currentPosition.value;
                     if (position == null) {
-                      return const Center(
+                      return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -83,7 +83,10 @@ class VictimHomeScreen extends StatelessWidget {
                       children: [
                         FlutterMap(
                           options: MapOptions(
-                            initialCenter: LatLng(position.latitude, position.longitude),
+                            initialCenter: LatLng(
+                              position.latitude,
+                              position.longitude,
+                            ),
                             initialZoom: 13.0,
                             onTap: (tapPosition, point) {
                               Get.to(() => VictimMapScreen());
@@ -91,14 +94,18 @@ class VictimHomeScreen extends StatelessWidget {
                           ),
                           children: [
                             TileLayer(
-                              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              urlTemplate:
+                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                               subdomains: const ['a', 'b', 'c'],
                             ),
                             MarkerLayer(
                               markers: [
                                 // Vị trí hiện tại
                                 Marker(
-                                  point: LatLng(position.latitude, position.longitude),
+                                  point: LatLng(
+                                    position.latitude,
+                                    position.longitude,
+                                  ),
                                   width: 40,
                                   height: 40,
                                   child: Icon(
@@ -111,7 +118,7 @@ class VictimHomeScreen extends StatelessWidget {
                                 ...controller.myRequests.map((req) {
                                   Color markerColor = Colors.orange;
                                   IconData markerIcon = Iconsax.clock;
-                                  
+
                                   switch (req.status) {
                                     case domain.RequestStatus.pending:
                                       markerColor = Colors.orange;
@@ -130,7 +137,7 @@ class VictimHomeScreen extends StatelessWidget {
                                       markerIcon = Iconsax.close_circle;
                                       break;
                                   }
-                                  
+
                                   return Marker(
                                     point: LatLng(req.lat, req.lng),
                                     width: 45,
@@ -143,10 +150,15 @@ class VictimHomeScreen extends StatelessWidget {
                                         decoration: BoxDecoration(
                                           color: markerColor,
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: markerColor.withOpacity(0.5),
+                                              color: markerColor.withOpacity(
+                                                0.5,
+                                              ),
                                               blurRadius: 8,
                                               spreadRadius: 1,
                                             ),
@@ -186,18 +198,19 @@ class VictimHomeScreen extends StatelessWidget {
 
               // Nút Cần giúp / Cần nhận nổi bật
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MinhSizes.defaultSpace,
+                ),
                 child: Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(MinhSizes.defaultSpace),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.red.shade400,
-                        Colors.red.shade600,
-                      ],
+                      colors: [Colors.red.shade400, Colors.red.shade600],
                     ),
-                    borderRadius: BorderRadius.circular(MinhSizes.borderRadiusLg),
+                    borderRadius: BorderRadius.circular(
+                      MinhSizes.borderRadiusLg,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.red.withOpacity(0.3),
@@ -208,11 +221,7 @@ class VictimHomeScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Icon(
-                        Iconsax.warning_2,
-                        color: Colors.white,
-                        size: 48,
-                      ),
+                      Icon(Iconsax.warning_2, color: Colors.white, size: 48),
                       SizedBox(height: MinhSizes.spaceBtwItems),
                       Text(
                         "Cần cứu trợ khẩn cấp?",
@@ -243,7 +252,9 @@ class VictimHomeScreen extends StatelessWidget {
                                 foregroundColor: Colors.red,
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+                                  borderRadius: BorderRadius.circular(
+                                    MinhSizes.borderRadiusMd,
+                                  ),
                                 ),
                               ),
                             ),
@@ -261,7 +272,9 @@ class VictimHomeScreen extends StatelessWidget {
                                 side: BorderSide(color: Colors.white, width: 2),
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+                                  borderRadius: BorderRadius.circular(
+                                    MinhSizes.borderRadiusMd,
+                                  ),
                                 ),
                               ),
                             ),
@@ -277,7 +290,9 @@ class VictimHomeScreen extends StatelessWidget {
 
               // Cảnh báo
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MinhSizes.defaultSpace,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -309,7 +324,9 @@ class VictimHomeScreen extends StatelessWidget {
                             final alert = alerts[index];
                             return Container(
                               width: 300,
-                              margin: EdgeInsets.only(right: MinhSizes.spaceBtwItems),
+                              margin: EdgeInsets.only(
+                                right: MinhSizes.spaceBtwItems,
+                              ),
                               child: MinhAlertCard(
                                 alert: alert,
                                 showActions: false,
@@ -327,7 +344,9 @@ class VictimHomeScreen extends StatelessWidget {
 
               // Shortcut buttons
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MinhSizes.defaultSpace,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -355,7 +374,8 @@ class VictimHomeScreen extends StatelessWidget {
                             label: "Hướng dẫn",
                             color: Colors.green,
                             onTap: () {
-                              NavigationVictimController.selectedIndex.value = 3;
+                              NavigationVictimController.selectedIndex.value =
+                                  3;
                             },
                           ),
                         ),
@@ -369,11 +389,13 @@ class VictimHomeScreen extends StatelessWidget {
 
               // Dự báo ML
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MinhSizes.defaultSpace,
+                ),
                 child: Obx(() {
                   final forecast = controller.forecast.value;
                   if (forecast == null) return SizedBox.shrink();
-                  
+
                   return Container(
                     padding: EdgeInsets.all(MinhSizes.defaultSpace),
                     decoration: BoxDecoration(
@@ -383,7 +405,9 @@ class VictimHomeScreen extends StatelessWidget {
                           Colors.red.withOpacity(0.3),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(MinhSizes.borderRadiusLg),
+                      borderRadius: BorderRadius.circular(
+                        MinhSizes.borderRadiusLg,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -426,5 +450,3 @@ class VictimHomeScreen extends StatelessWidget {
     );
   }
 }
-
-

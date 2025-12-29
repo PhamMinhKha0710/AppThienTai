@@ -34,7 +34,7 @@ class VolunteerMapScreen extends StatelessWidget {
             final focusLoc = controller.focusLocation.value;
             LatLng center = fallbackVNCenter;
             double zoom = 5.5;
-            
+
             // Priority: focusLocation > currentPosition > disasterMarkers
             if (focusLoc != null) {
               center = focusLoc;
@@ -56,29 +56,34 @@ class VolunteerMapScreen extends StatelessWidget {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
                 ),
-                MarkerLayer(markers: [
-                  if (pos != null)
-                    Marker(
-                      point: pos,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Iconsax.location, color: Colors.blue, size: 40),
-                    ),
-                  ...controller.disasterMarkers,
-                  ...controller.taskMarkers,
-                  ...controller.shelterMarkers,
-                ]),
+                MarkerLayer(
+                  markers: [
+                    if (pos != null)
+                      Marker(
+                        point: pos,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Iconsax.location,
+                          color: Colors.blue,
+                          size: 40,
+                        ),
+                      ),
+                    ...controller.disasterMarkers,
+                    ...controller.taskMarkers,
+                    ...controller.shelterMarkers,
+                  ],
+                ),
                 // Tuyến đường từ vị trí hiện tại tới điểm cần cứu trợ / trú ẩn
                 Obx(() {
                   if (controller.routePolylines.isEmpty) {
                     return const SizedBox.shrink();
                   }
-                  return PolylineLayer(
-                    polylines: controller.routePolylines,
-                  );
+                  return PolylineLayer(polylines: controller.routePolylines);
                 }),
               ],
             );
@@ -100,7 +105,10 @@ class VolunteerMapScreen extends StatelessWidget {
                           hintText: 'Tìm kiếm...',
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         onChanged: (value) {
                           // TODO: Implement search
@@ -117,7 +125,10 @@ class VolunteerMapScreen extends StatelessWidget {
                       itemBuilder: (context) => const [
                         PopupMenuItem(value: 'all', child: Text('Tất cả')),
                         PopupMenuItem(value: 'tasks', child: Text('Nhiệm vụ')),
-                        PopupMenuItem(value: 'disasters', child: Text('Thiên tai')),
+                        PopupMenuItem(
+                          value: 'disasters',
+                          child: Text('Thiên tai'),
+                        ),
                         PopupMenuItem(value: 'shelters', child: Text('Trú ẩn')),
                       ],
                     ),
@@ -138,6 +149,7 @@ class VolunteerMapScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
+<<<<<<< Updated upstream
                     Text(
                       "Chú thích",
                       style: TextStyle(
@@ -156,6 +168,31 @@ class VolunteerMapScreen extends StatelessWidget {
                     MinhMapLegendItem(icon: Icons.circle_notifications, color: Colors.yellow, label: "Yêu cầu (Khẩn cấp thấp)"),
                     SizedBox(height: 4),
                     MinhMapLegendItem(icon: Iconsax.home_2, color: Colors.green, label: "Điểm trú ẩn"),
+=======
+                    MinhMapLegendItem(
+                      icon: Iconsax.location,
+                      color: Colors.blue,
+                      label: "Bạn",
+                    ),
+                    SizedBox(height: 4),
+                    MinhMapLegendItem(
+                      icon: Icons.warning,
+                      color: Colors.red,
+                      label: "Thiên tai",
+                    ),
+                    SizedBox(height: 4),
+                    MinhMapLegendItem(
+                      icon: Icons.location_on,
+                      color: Colors.orange,
+                      label: "Nhiệm vụ",
+                    ),
+                    SizedBox(height: 4),
+                    MinhMapLegendItem(
+                      icon: Iconsax.home_2,
+                      color: Colors.green,
+                      label: "Trú ẩn",
+                    ),
+>>>>>>> Stashed changes
                   ],
                 ),
               ),

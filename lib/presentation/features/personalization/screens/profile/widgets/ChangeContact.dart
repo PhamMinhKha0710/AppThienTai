@@ -13,7 +13,10 @@ class ChangeContact extends StatelessWidget {
     final controller = Get.put(UpdateContactController());
 
     return Scaffold(
-      appBar: MinhAppbar(title: const Text("Cập nhật liên hệ"), showBackArrow: true),
+      appBar: MinhAppbar(
+        title: const Text("Cập nhật liên hệ"),
+        showBackArrow: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(MinhSizes.defaultSpace),
         child: Form(
@@ -25,7 +28,8 @@ class ChangeContact extends StatelessWidget {
                 controller: controller.phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: "Số điện thoại"),
-                validator: (v) => MinhValidator.validateEmptyText("Số điện thoại", v),
+                validator: (v) =>
+                    MinhValidator.validateEmptyText("Số điện thoại", v),
               ),
               const SizedBox(height: MinhSizes.spaceBtwInputFields),
               const SizedBox(height: MinhSizes.spaceBtwSections),
@@ -35,7 +39,11 @@ class ChangeContact extends StatelessWidget {
                   onPressed: () => controller.updateContact(),
                   child: const Text("Lưu"),
                 ),
+<<<<<<< Updated upstream
               )
+=======
+              ),
+>>>>>>> Stashed changes
             ],
           ),
         ),
@@ -43,5 +51,8 @@ class ChangeContact extends StatelessWidget {
     );
   }
 }
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes
