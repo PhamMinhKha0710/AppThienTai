@@ -4,10 +4,13 @@ import '../../data/datasources/remote/user_remote_data_source.dart';
 import '../../data/datasources/remote/authentication_remote_data_source.dart';
 import '../../data/datasources/remote/banner_remote_data_source.dart';
 import '../../data/datasources/remote/help_request_remote_data_source.dart';
+import '../../data/datasources/remote/support_remote_data_source.dart';
+import '../../data/datasources/local/support_local_data_source.dart';
 import '../../data/repositories/user_repository_impl.dart';
 import '../../data/repositories/authentication_repository_impl.dart';
 import '../../data/repositories/banner_repository_impl.dart';
 import '../../data/repositories/help_request_repository_impl.dart';
+import '../../data/repositories/support_repository_impl.dart';
 import '../../data/repositories/alerts/alert_repository.dart' as alert_impl;
 import '../../data/repositories/shelters/shelter_repository.dart' as shelter_impl;
 import '../../data/repositories/donations/donation_repository.dart' as donation_impl;
@@ -16,6 +19,7 @@ import '../../domain/repositories/user_repository.dart';
 import '../../domain/repositories/authentication_repository.dart';
 import '../../domain/repositories/banner_repository.dart';
 import '../../domain/repositories/help_request_repository.dart';
+import '../../domain/repositories/support_repository.dart';
 import '../../domain/repositories/alert_repository.dart';
 import '../../domain/repositories/shelter_repository.dart';
 import '../../domain/repositories/donation_repository.dart';
@@ -60,6 +64,12 @@ Future<void> init() async {
   getIt.registerLazySingleton<HelpRequestRemoteDataSource>(
     () => HelpRequestRemoteDataSourceImpl(),
   );
+  getIt.registerLazySingleton<SupportRemoteDataSource>(
+    () => SupportRemoteDataSourceImpl(),
+  );
+  getIt.registerLazySingleton<SupportLocalDataSource>(
+    () => SupportLocalDataSourceImpl(),
+  );
 
   // ============================
   // Repositories - Register as Interface
@@ -87,6 +97,12 @@ Future<void> init() async {
   );
   getIt.registerLazySingleton<NewsRepository>(
     () => news_impl.NewsRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<SupportRepository>(
+    () => SupportRepositoryImpl(
+      remoteDataSource: getIt<SupportRemoteDataSource>(),
+      localDataSource: getIt<SupportLocalDataSource>(),
+    ),
   );
 
   // ============================

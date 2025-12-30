@@ -8,8 +8,10 @@ import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
 import 'package:cuutrobaolu/domain/repositories/authentication_repository.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
-import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_profile_controller.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/notification_settings_screen.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/support/support_hub_screen.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/upload_data/upload_data.dart';
@@ -231,14 +233,24 @@ class SettingScreen extends StatelessWidget {
                   ),
                   MinhSettingsMenuTitle(
                     icon: Iconsax.notification,
-                    title: "Notifications",
-                    subtitle: "Set Shopping delivery address",
-                    onTap: (){},
+                    title: "Thông báo",
+                    subtitle: "Quản lý cài đặt thông báo và cảnh báo",
+                    onTap: (){
+                      Get.to(() => const NotificationSettingsScreen());
+                    },
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.lock,
+                    title: "Đổi mật khẩu",
+                    subtitle: "Thay đổi mật khẩu tài khoản",
+                    onTap: (){
+                      Get.to(() => const ChangePassword());
+                    },
                   ),
                   MinhSettingsMenuTitle(
                     icon: Iconsax.security_card,
-                    title: "Account Private",
-                    subtitle: "Set Shopping delivery address",
+                    title: "Quyền riêng tư",
+                    subtitle: "Quản lý cài đặt quyền riêng tư",
                     onTap: (){},
                   ),
 
@@ -291,6 +303,20 @@ class SettingScreen extends StatelessWidget {
                       },
                     ),
                     onTap: (){},
+                  ),
+
+                  SizedBox(height: MinhSizes.spaceBtwSections,),
+
+                  MinhSectionHeading(title: "Hỗ trợ", showActionButton: false,),
+
+                  SizedBox(height: MinhSizes.spaceBtwItems,),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.message_question,
+                    title: "Trung tâm hỗ trợ",
+                    subtitle: "FAQ, liên hệ, hướng dẫn sử dụng",
+                    onTap: (){
+                      Get.to(() => const SupportHubScreen());
+                    },
                   ),
 
                   SizedBox(height: MinhSizes.spaceBtwSections,),

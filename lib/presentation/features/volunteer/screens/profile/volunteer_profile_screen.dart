@@ -5,8 +5,11 @@ import 'package:cuutrobaolu/core/widgets/list_titles/MinhSettingsMenuTitle.dart'
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/controllers/user/user_controller.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_profile_controller.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/donation/volunteer_donation_screen.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/notification_settings_screen.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/support/support_hub_screen.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/domain/usecases/logout_usecase.dart';
 import 'package:cuutrobaolu/domain/repositories/authentication_repository.dart';
@@ -156,18 +159,22 @@ class VolunteerProfileScreen extends StatelessWidget {
                         ),
                         onTap: () {},
                       )),
-                  Obx(() => MinhSettingsMenuTitle(
-                        icon: Iconsax.notification,
-                        title: "Thông báo",
-                        subtitle: controller.notificationsEnabled.value
-                            ? "Đã bật"
-                            : "Đã tắt",
-                        trailing: Switch(
-                          value: controller.notificationsEnabled.value,
-                          onChanged: controller.toggleNotifications,
-                        ),
-                        onTap: () {},
-                      )),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.notification,
+                    title: "Cài đặt thông báo",
+                    subtitle: "Quản lý thông báo và cảnh báo",
+                    onTap: () {
+                      Get.to(() => const NotificationSettingsScreen());
+                    },
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.lock,
+                    title: "Đổi mật khẩu",
+                    subtitle: "Thay đổi mật khẩu tài khoản",
+                    onTap: () {
+                      Get.to(() => const ChangePassword());
+                    },
+                  ),
                   Obx(() => MinhSettingsMenuTitle(
                         icon: Iconsax.location,
                         title: "Chia sẻ vị trí",
@@ -186,6 +193,14 @@ class VolunteerProfileScreen extends StatelessWidget {
                     subtitle: "Quyên góp tiền, vật phẩm hoặc thời gian",
                     onTap: () {
                       Get.to(() => VolunteerDonationScreen());
+                    },
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.message_question,
+                    title: "Trung tâm hỗ trợ",
+                    subtitle: "FAQ, liên hệ, hướng dẫn sử dụng",
+                    onTap: () {
+                      Get.to(() => const SupportHubScreen());
                     },
                   ),
 

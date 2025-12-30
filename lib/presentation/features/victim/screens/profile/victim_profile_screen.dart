@@ -9,6 +9,9 @@ import 'package:cuutrobaolu/presentation/features/authentication/screens/login/l
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_profile_controller.dart';
 import 'package:cuutrobaolu/presentation/features/victim/NavigationVictimController.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/notification_settings_screen.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/support/support_hub_screen.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:get/get.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/profile.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
@@ -255,17 +258,17 @@ class VictimProfileScreen extends StatelessWidget {
                     title: "Cài đặt thông báo",
                     subtitle: "Quản lý thông báo ứng dụng",
                     onTap: () {
-                      Get.snackbar(
-                        "Đang phát triển",
-                        "Tính năng cài đặt thông báo sẽ sớm có",
-                        icon: Icon(Iconsax.info_circle, color: Colors.white),
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.blue,
-                        colorText: Colors.white,
-                      );
+                      Get.to(() => const NotificationSettingsScreen());
                     },
                   ),
-                  
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.lock,
+                    title: "Đổi mật khẩu",
+                    subtitle: "Thay đổi mật khẩu tài khoản",
+                    onTap: () {
+                      Get.to(() => const ChangePassword());
+                    },
+                  ),
                   MinhSettingsMenuTitle(
                     icon: Iconsax.location,
                     title: "Vị trí",
@@ -275,6 +278,14 @@ class VictimProfileScreen extends StatelessWidget {
                       onChanged: (value) {},
                     ),
                     onTap: () {},
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.message_question,
+                    title: "Trung tâm hỗ trợ",
+                    subtitle: "FAQ, liên hệ, hướng dẫn sử dụng",
+                    onTap: () {
+                      Get.to(() => const SupportHubScreen());
+                    },
                   ),
 
                   SizedBox(height: MinhSizes.spaceBtwSections),
@@ -373,6 +384,10 @@ class _QuickAccessCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 
 

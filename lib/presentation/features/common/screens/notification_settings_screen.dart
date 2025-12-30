@@ -504,3 +504,7 @@ class NotificationSettingsController extends GetxController {
   }
 }
 
+
+
+
+

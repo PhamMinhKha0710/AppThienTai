@@ -293,3 +293,7 @@ class GeofencingService extends GetxService {
   }
 }
 
+
+
+
+

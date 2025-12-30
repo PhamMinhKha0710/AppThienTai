@@ -4,6 +4,9 @@ import 'package:cuutrobaolu/core/widgets/list_titles/MinhSettingsMenuTitle.dart'
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/notification_settings_screen.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/support/support_hub_screen.dart';
+import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -54,11 +57,7 @@ class SettingAdminScreen extends StatelessWidget {
                           subtitle: "Quản lý thông báo push và email",
                           trailing: const Icon(Iconsax.arrow_right_3),
                           onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
+                            Get.to(() => const NotificationSettingsScreen());
                           },
                         ),
                         const Divider(height: 1),
@@ -106,15 +105,11 @@ class SettingAdminScreen extends StatelessWidget {
                         const Divider(height: 1),
                         MinhSettingsMenuTitle(
                           icon: Iconsax.lock,
-                          title: "Bảo mật hệ thống",
-                          subtitle: "Cài đặt mật khẩu và xác thực",
+                          title: "Đổi mật khẩu",
+                          subtitle: "Thay đổi mật khẩu tài khoản",
                           trailing: const Icon(Iconsax.arrow_right_3),
                           onTap: () {
-                            Get.snackbar(
-                              'Thông báo',
-                              'Tính năng đang phát triển',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
+                            Get.to(() => const ChangePassword());
                           },
                         ),
                         const Divider(height: 1),
@@ -277,6 +272,30 @@ class SettingAdminScreen extends StatelessWidget {
                                 ],
                               ),
                             );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: MinhSizes.spaceBtwSections),
+
+                  // Hỗ trợ
+                  MinhSectionHeading(
+                    title: "Hỗ trợ",
+                    showActionButton: false,
+                  ),
+                  const SizedBox(height: MinhSizes.spaceBtwItems),
+                  Card(
+                    child: Column(
+                      children: [
+                        MinhSettingsMenuTitle(
+                          icon: Iconsax.message_question,
+                          title: "Trung tâm hỗ trợ",
+                          subtitle: "FAQ, liên hệ, hướng dẫn sử dụng",
+                          trailing: const Icon(Iconsax.arrow_right_3),
+                          onTap: () {
+                            Get.to(() => const SupportHubScreen());
                           },
                         ),
                       ],
