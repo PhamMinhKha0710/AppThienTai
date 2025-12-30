@@ -40,8 +40,8 @@ class VolunteerProfileScreen extends StatelessWidget {
                     title: Text(
                       "Hồ sơ Tình nguyện viên",
                       style: Theme.of(context).textTheme.headlineMedium!.apply(
-                            color: MinhColors.white,
-                          ),
+                        color: MinhColors.white,
+                      ),
                     ),
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems),
@@ -49,7 +49,9 @@ class VolunteerProfileScreen extends StatelessWidget {
                   Obx(() {
                     final user = userController.user.value;
                     final networkImage = user.profilePicture;
-                    final image = networkImage.isEmpty ? MinhImages.user : networkImage;
+                    final image = networkImage.isEmpty
+                        ? MinhImages.user
+                        : networkImage;
                     return Column(
                       children: [
                         GestureDetector(
@@ -59,50 +61,53 @@ class VolunteerProfileScreen extends StatelessWidget {
                             height: 80,
                             isNetworkImage: networkImage.isNotEmpty,
                           ),
-                          onTap: () {Get.to(() => ProfileScreen());},
+                          onTap: () {
+                            Get.to(() => ProfileScreen());
+                          },
                         ),
                         SizedBox(height: MinhSizes.spaceBtwItems / 2),
                         Text(
                           user.fullName,
-                          style: Theme.of(context).textTheme.headlineSmall!.apply(
-                                color: MinhColors.white,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall!
+                              .apply(color: MinhColors.white),
                         ),
                         SizedBox(height: MinhSizes.spaceBtwItems / 4),
                         Text(
                           user.email,
                           style: Theme.of(context).textTheme.bodyMedium!.apply(
-                                color: MinhColors.white.withOpacity(0.8),
-                              ),
+                            color: MinhColors.white.withOpacity(0.8),
+                          ),
                         ),
                       ],
                     );
                   }),
                   SizedBox(height: MinhSizes.spaceBtwItems),
                   // Stats
-                  Obx(() => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _StatItem(
-                            icon: Iconsax.task_square,
-                            label: 'Nhiệm vụ',
-                            value: '${controller.completedTasksCount.value}',
-                            color: MinhColors.white,
-                          ),
-                          _StatItem(
-                            icon: Iconsax.clock,
-                            label: 'Giờ làm',
-                            value: '${controller.totalHours.value}h',
-                            color: MinhColors.white,
-                          ),
-                          _StatItem(
-                            icon: Iconsax.heart,
-                            label: 'Đóng góp',
-                            value: '${controller.contributionsCount.value}',
-                            color: MinhColors.white,
-                          ),
-                        ],
-                      )),
+                  Obx(
+                    () => Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _StatItem(
+                          icon: Iconsax.task_square,
+                          label: 'Nhiệm vụ',
+                          value: '${controller.completedTasksCount.value}',
+                          color: MinhColors.white,
+                        ),
+                        _StatItem(
+                          icon: Iconsax.clock,
+                          label: 'Giờ làm',
+                          value: '${controller.totalHours.value}h',
+                          color: MinhColors.white,
+                        ),
+                        _StatItem(
+                          icon: Iconsax.heart,
+                          label: 'Đóng góp',
+                          value: '${controller.contributionsCount.value}',
+                          color: MinhColors.white,
+                        ),
+                      ],
+                    ),
+                  ),
                   SizedBox(height: MinhSizes.spaceBtwSections),
                 ],
               ),
@@ -122,30 +127,29 @@ class VolunteerProfileScreen extends StatelessWidget {
                     onPressed: () => controller.addSkill(),
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems),
-                  Obx(() => Wrap(
-                        spacing: MinhSizes.spaceBtwItems / 2,
-                        runSpacing: MinhSizes.spaceBtwItems / 2,
-                        children: [
-                          ...controller.availableSkills.map((skill) {
-                            final isSelected = controller.skills.contains(skill);
-                            return FilterChip(
-                              label: Text(skill),
-                              selected: isSelected,
-                              onSelected: (_) => controller.toggleSkill(skill),
-                              selectedColor: MinhColors.primary.withOpacity(0.2),
-                              checkmarkColor: MinhColors.primary,
-                            );
-                          }),
-                        ],
-                      )),
+                  Obx(
+                    () => Wrap(
+                      spacing: MinhSizes.spaceBtwItems / 2,
+                      runSpacing: MinhSizes.spaceBtwItems / 2,
+                      children: [
+                        ...controller.availableSkills.map((skill) {
+                          final isSelected = controller.skills.contains(skill);
+                          return FilterChip(
+                            label: Text(skill),
+                            selected: isSelected,
+                            onSelected: (_) => controller.toggleSkill(skill),
+                            selectedColor: MinhColors.primary.withOpacity(0.2),
+                            checkmarkColor: MinhColors.primary,
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
 
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
                   // Settings Section
-                  MinhSectionHeading(
-                    title: "Cài đặt",
-                    showActionButton: false,
-                  ),
+                  MinhSectionHeading(title: "Cài đặt", showActionButton: false),
                   SizedBox(height: MinhSizes.spaceBtwItems),
                   Obx(() => MinhSettingsMenuTitle(
                         icon: Iconsax.toggle_on,
@@ -219,22 +223,29 @@ class VolunteerProfileScreen extends StatelessWidget {
                           } catch (e) {
                             // If not found, create new from dependencies
                             try {
-                              final authRepo = Get.find<AuthenticationRepository>();
+                              final authRepo =
+                                  Get.find<AuthenticationRepository>();
                               logoutUseCase = LogoutUseCase(authRepo);
                               Get.put(logoutUseCase);
                             } catch (e2) {
-                              Get.snackbar("Lỗi", "Không thể khởi tạo LogoutUseCase: ${e2.toString()}");
+                              Get.snackbar(
+                                "Lỗi",
+                                "Không thể khởi tạo LogoutUseCase: ${e2.toString()}",
+                              );
                               return;
                             }
                           }
-                          
+
                           // Perform logout
                           await logoutUseCase();
-                          
+
                           // Navigate to login (logout already cleared session)
                           Get.offAll(() => LoginScreen());
                         } catch (e) {
-                          Get.snackbar("Lỗi", "Không thể đăng xuất: ${e.toString()}");
+                          Get.snackbar(
+                            "Lỗi",
+                            "Không thể đăng xuất: ${e.toString()}",
+                          );
                         }
                       },
                       icon: Icon(Iconsax.logout, color: Colors.red),
@@ -252,10 +263,7 @@ class VolunteerProfileScreen extends StatelessWidget {
                   SizedBox(height: MinhSizes.spaceBtwSections),
 
                   // History Section
-                  MinhSectionHeading(
-                    title: "Lịch sử",
-                    showActionButton: false,
-                  ),
+                  MinhSectionHeading(title: "Lịch sử", showActionButton: false),
                   SizedBox(height: MinhSizes.spaceBtwItems),
 
                   // Completed Tasks
@@ -264,54 +272,57 @@ class VolunteerProfileScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                  Obx(() => controller.completedTasks.isEmpty
-                      ? Padding(
-                          padding: EdgeInsets.all(MinhSizes.defaultSpace),
-                          child: Text(
-                            "Chưa có nhiệm vụ nào",
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: controller.completedTasks.length,
-                          separatorBuilder: (_, __) =>
-                              SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                          itemBuilder: (context, index) {
-                            final task = controller.completedTasks[index];
-                            return Card(
-                              child: ListTile(
-                                leading: Icon(Iconsax.task_square,
-                                    color: MinhColors.primary),
-                                title: Text(task['title'] ?? ''),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(height: 4),
-                                    Text(
-                                      '${task['date']} • ${task['location']}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                    Text(
-                                      '${task['hours']} giờ',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.apply(
-                                            color: MinhColors.primary,
-                                          ),
-                                    ),
-                                  ],
+                  Obx(
+                    () => controller.completedTasks.isEmpty
+                        ? Padding(
+                            padding: EdgeInsets.all(MinhSizes.defaultSpace),
+                            child: Text(
+                              "Chưa có nhiệm vụ nào",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: controller.completedTasks.length,
+                            separatorBuilder: (_, __) =>
+                                SizedBox(height: MinhSizes.spaceBtwItems / 2),
+                            itemBuilder: (context, index) {
+                              final task = controller.completedTasks[index];
+                              return Card(
+                                child: ListTile(
+                                  leading: Icon(
+                                    Iconsax.task_square,
+                                    color: MinhColors.primary,
+                                  ),
+                                  title: Text(task['title'] ?? ''),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '${task['date']} • ${task['location']}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                      Text(
+                                        '${task['hours']} giờ',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.apply(color: MinhColors.primary),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Icon(Iconsax.arrow_right_3),
                                 ),
-                                trailing: Icon(Iconsax.arrow_right_3),
-                              ),
-                            );
-                          },
-                        )),
+                              );
+                            },
+                          ),
+                  ),
 
                   SizedBox(height: MinhSizes.spaceBtwItems),
 
@@ -321,41 +332,46 @@ class VolunteerProfileScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                  Obx(() => controller.contributions.isEmpty
-                      ? Padding(
-                          padding: EdgeInsets.all(MinhSizes.defaultSpace),
-                          child: Text(
-                            "Chưa có đóng góp nào",
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
+                  Obx(
+                    () => controller.contributions.isEmpty
+                        ? Padding(
+                            padding: EdgeInsets.all(MinhSizes.defaultSpace),
+                            child: Text(
+                              "Chưa có đóng góp nào",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: controller.contributions.length,
+                            separatorBuilder: (_, __) =>
+                                SizedBox(height: MinhSizes.spaceBtwItems / 2),
+                            itemBuilder: (context, index) {
+                              final contribution =
+                                  controller.contributions[index];
+                              return Card(
+                                child: ListTile(
+                                  leading: Icon(
+                                    contribution['type'] == 'Shelter'
+                                        ? Iconsax.home
+                                        : Iconsax.box,
+                                    color: MinhColors.primary,
+                                  ),
+                                  title: Text(contribution['title'] ?? ''),
+                                  subtitle: Text(
+                                    '${contribution['date']} • ${contribution['location']}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                  trailing: Icon(Iconsax.arrow_right_3),
+                                ),
+                              );
+                            },
                           ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: controller.contributions.length,
-                          separatorBuilder: (_, __) =>
-                              SizedBox(height: MinhSizes.spaceBtwItems / 2),
-                          itemBuilder: (context, index) {
-                            final contribution = controller.contributions[index];
-                            return Card(
-                              child: ListTile(
-                                leading: Icon(
-                                  contribution['type'] == 'Shelter'
-                                      ? Iconsax.home
-                                      : Iconsax.box,
-                                  color: MinhColors.primary,
-                                ),
-                                title: Text(contribution['title'] ?? ''),
-                                subtitle: Text(
-                                  '${contribution['date']} • ${contribution['location']}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                trailing: Icon(Iconsax.arrow_right_3),
-                              ),
-                            );
-                          },
-                        )),
+                  ),
 
                   SizedBox(height: MinhSizes.spaceBtwSections * 2),
                 ],
@@ -389,17 +405,16 @@ class _StatItem extends StatelessWidget {
         SizedBox(height: MinhSizes.spaceBtwItems / 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.headlineSmall!.apply(
-                color: color,
-                fontWeightDelta: 2,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall!.apply(color: color, fontWeightDelta: 2),
         ),
         SizedBox(height: MinhSizes.spaceBtwItems / 8),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall!.apply(
-                color: color.withOpacity(0.8),
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall!.apply(color: color.withOpacity(0.8)),
         ),
       ],
     );

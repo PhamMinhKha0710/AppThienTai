@@ -24,8 +24,11 @@ class VictimProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final victimProfileController = Get.put(VictimProfileController(), permanent: false);
-    
+    final victimProfileController = Get.put(
+      VictimProfileController(),
+      permanent: false,
+    );
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -65,7 +68,7 @@ class VictimProfileScreen extends StatelessWidget {
                     showActionButton: false,
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems),
-                  
+
                   // Quick Access Cards
                   Row(
                     children: [
@@ -92,7 +95,10 @@ class VictimProfileScreen extends StatelessWidget {
                             Get.snackbar(
                               "Nơi trú ẩn",
                               "Xem các điểm trú ẩn gần bạn trên bản đồ",
-                              icon: Icon(Iconsax.info_circle, color: Colors.white),
+                              icon: Icon(
+                                Iconsax.info_circle,
+                                color: Colors.white,
+                              ),
                               snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: Colors.teal,
                               colorText: Colors.white,
@@ -124,10 +130,10 @@ class VictimProfileScreen extends StatelessWidget {
                     showActionButton: false,
                   ),
                   SizedBox(height: MinhSizes.spaceBtwItems),
-                  
+
                   Obx(() {
                     final controller = victimProfileController;
-                    
+
                     if (controller.isLoading.value) {
                       return Center(
                         child: Padding(
@@ -156,8 +162,12 @@ class VictimProfileScreen extends StatelessWidget {
                           SizedBox(height: MinhSizes.spaceBtwItems / 2),
                       itemBuilder: (context, index) {
                         final request = controller.myRequests[index];
-                        final statusColor = controller.getStatusColor(request['status']);
-                        final severityColor = controller.getSeverityColor(request['severity']);
+                        final statusColor = controller.getStatusColor(
+                          request['status'],
+                        );
+                        final severityColor = controller.getSeverityColor(
+                          request['severity'],
+                        );
 
                         return Card(
                           child: ListTile(
@@ -166,7 +176,9 @@ class VictimProfileScreen extends StatelessWidget {
                               padding: EdgeInsets.all(MinhSizes.sm),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(MinhSizes.borderRadiusSm),
+                                borderRadius: BorderRadius.circular(
+                                  MinhSizes.borderRadiusSm,
+                                ),
                               ),
                               child: Icon(
                                 Iconsax.document_text,
@@ -202,13 +214,18 @@ class VictimProfileScreen extends StatelessWidget {
                                       ),
                                       child: Text(
                                         request['statusVi'] ?? '',
-                                        style: Theme.of(context).textTheme.bodySmall?.apply(
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.apply(
                                               color: statusColor,
                                               fontSizeFactor: 0.9,
                                             ),
                                       ),
                                     ),
-                                    SizedBox(width: MinhSizes.spaceBtwItems / 2),
+                                    SizedBox(
+                                      width: MinhSizes.spaceBtwItems / 2,
+                                    ),
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal: MinhSizes.sm,
@@ -220,7 +237,10 @@ class VictimProfileScreen extends StatelessWidget {
                                       ),
                                       child: Text(
                                         request['severityVi'] ?? '',
-                                        style: Theme.of(context).textTheme.bodySmall?.apply(
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.apply(
                                               color: severityColor,
                                               fontSizeFactor: 0.9,
                                             ),
@@ -231,9 +251,8 @@ class VictimProfileScreen extends StatelessWidget {
                                 SizedBox(height: 4),
                                 Text(
                                   '${request['timeStr']} • ${request['address'] ?? ''}',
-                                  style: Theme.of(context).textTheme.bodySmall?.apply(
-                                        color: MinhColors.darkerGrey,
-                                      ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.apply(color: MinhColors.darkerGrey),
                                 ),
                               ],
                             ),
@@ -273,10 +292,7 @@ class VictimProfileScreen extends StatelessWidget {
                     icon: Iconsax.location,
                     title: "Vị trí",
                     subtitle: "Cho phép chia sẻ vị trí",
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (value) {},
-                    ),
+                    trailing: Switch(value: true, onChanged: (value) {}),
                     onTap: () {},
                   ),
                   MinhSettingsMenuTitle(
@@ -289,7 +305,7 @@ class VictimProfileScreen extends StatelessWidget {
                   ),
 
                   SizedBox(height: MinhSizes.spaceBtwSections),
-                  
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -299,17 +315,21 @@ class VictimProfileScreen extends StatelessWidget {
                           try {
                             logoutUseCase = Get.find<LogoutUseCase>();
                           } catch (e) {
-                            final authRepo = Get.find<AuthenticationRepository>();
+                            final authRepo =
+                                Get.find<AuthenticationRepository>();
                             logoutUseCase = LogoutUseCase(authRepo);
                             Get.put(logoutUseCase);
                           }
-                          
+
                           await logoutUseCase();
                           Get.offAll(() => LoginScreen());
                         } on Failure catch (failure) {
                           Get.snackbar("Lỗi", failure.message);
                         } catch (e) {
-                          Get.snackbar("Lỗi", "Không thể đăng xuất: ${e.toString()}");
+                          Get.snackbar(
+                            "Lỗi",
+                            "Không thể đăng xuất: ${e.toString()}",
+                          );
                         }
                       },
                       child: Text("Đăng xuất"),
@@ -362,20 +382,15 @@ class _QuickAccessCard extends StatelessWidget {
                 color: color.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 28),
             ),
             SizedBox(height: MinhSizes.spaceBtwItems / 2),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall!.apply(
-                color: color,
-                fontWeightDelta: 2,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.apply(color: color, fontWeightDelta: 2),
               maxLines: 2,
             ),
           ],
@@ -384,15 +399,3 @@ class _QuickAccessCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

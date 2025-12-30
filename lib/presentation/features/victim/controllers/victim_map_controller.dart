@@ -337,7 +337,7 @@ class VictimMapController extends GetxController {
                     );
                   },
                   icon: const Icon(Iconsax.edit),
-                  label: const Text('Cập nhật thông tin'),
+                  label:  Text('Cập nhật thông tin'),
                 ),
               ),
           ],
@@ -718,7 +718,7 @@ class VictimMapController extends GetxController {
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Hủy'),
+            child:  Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -958,7 +958,7 @@ class _DetailRow extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 2),
+               SizedBox(height: 2),
               Text(
                 value,
                 style: const TextStyle(
@@ -1009,3 +1009,9 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+<<<<<<< Updated upstream
+=======
+
+  
+
+>>>>>>> Stashed changes

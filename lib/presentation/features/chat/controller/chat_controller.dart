@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -12,11 +13,18 @@ import 'package:cuutrobaolu/presentation/utils/help_request_mapper.dart';
 import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
 import 'package:cuutrobaolu/domain/usecases/create_help_request_usecase.dart';
 
+import '../../../../data/repositories/help/help_request_repository.dart';
+
 class ChatController extends GetxController {
   static ChatController get instance => Get.find();
 
+  HelpRequestRepository _helpRequestRepo = HelpRequestRepository();
+
   final ChatRepository _chatRepo = Get.put(ChatRepository());
-  final CreateHelpRequestUseCase _createHelpRequestUseCase = Get.find<CreateHelpRequestUseCase>();
+
+  // final CreateHelpRequestUseCase _createHelpRequestUseCase =
+  //     Get.find<CreateHelpRequestUseCase>();
+
   LocationService? _locationService;
 
   final messages = <Map<String, dynamic>>[].obs;
@@ -94,7 +102,8 @@ class ChatController extends GetxController {
   void _addWelcomeMessage() {
     messages.add({
       'id': 'welcome',
-      'text': 'Xin chào! Tôi là trợ lý cứu trợ. Vui lòng mô tả tình huống của bạn.',
+      'text':
+          '**Xin chào!** Tôi là trợ lý cứu trợ. Vui lòng mô tả tình huống của bạn.',
       'isUser': false,
       'timestamp': DateTime.now(),
     });
@@ -162,7 +171,9 @@ class ChatController extends GetxController {
         _updateCollectedInfo(extractedData);
 
         // QUAN TRỌNG: Chỉ hỏi khi AI nói đã hoàn thành VÀ đủ thông tin
-        if (isComplete.value && _checkIfInfoComplete() && !_hasAskedForConfirmation) {
+        if (isComplete.value &&
+            _checkIfInfoComplete() &&
+            !_hasAskedForConfirmation) {
           // Nếu đã đủ thông tin VÀ AI nói hoàn thành, hỏi người dùng
           _askToSubmitRequest();
         } else if (!isComplete.value && _checkIfInfoComplete()) {
@@ -180,9 +191,7 @@ class ChatController extends GetxController {
         print('Debug - isComplete: ${isComplete.value}');
         print('Debug - Check info: ${_checkIfInfoComplete()}');
         print('Debug - Has asked: $_hasAskedForConfirmation');
-
       }
-
     } catch (e) {
       // Xóa tin nhắn loading nếu có lỗi
       messages.removeWhere((msg) => msg['isLoading'] == true);
@@ -190,14 +199,14 @@ class ChatController extends GetxController {
       // Thêm tin nhắn lỗi
       messages.add({
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'text': 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.',
+        'text': '**Xin lỗi**, có lỗi xảy ra. Vui lòng thử lại.',
         'isUser': false,
         'timestamp': DateTime.now(),
       });
 
       MinhLoaders.errorSnackBar(
-          title: 'Lỗi',
-          message: 'Không thể gửi tin nhắn: $e'
+        title: 'Lỗi',
+        message: 'Không thể gửi tin nhắn: $e',
       );
     } finally {
       isLoading.value = false;
@@ -242,7 +251,7 @@ class ChatController extends GetxController {
               'Title': jsonData['Title']?.toString() ?? '',
               'Description': jsonData['Description']?.toString() ?? '',
               'Contact': jsonData['Contact']?.toString() ?? '',
-            }
+            },
           };
         } catch (e) {
           print('Lỗi parse JSON: $e');
@@ -251,12 +260,7 @@ class ChatController extends GetxController {
 
       // Fallback
       print('Fallback response');
-      return {
-        'reply': output,
-        'isComplete': false,
-        'dto': null,
-      };
-
+      return {'reply': output, 'isComplete': false, 'dto': null};
     } catch (e) {
       print('Lỗi parse n8n response: $e');
       return {
@@ -279,11 +283,13 @@ class ChatController extends GetxController {
       collectedInfo['title'] = newData['Title'];
       updated = true;
     }
-    if (newData['Description'] != null && newData['Description'].toString().isNotEmpty) {
+    if (newData['Description'] != null &&
+        newData['Description'].toString().isNotEmpty) {
       collectedInfo['description'] = newData['Description'];
       updated = true;
     }
-    if (newData['Contact'] != null && newData['Contact'].toString().isNotEmpty) {
+    if (newData['Contact'] != null &&
+        newData['Contact'].toString().isNotEmpty) {
       collectedInfo['contact'] = newData['Contact'];
       updated = true;
     }
@@ -297,7 +303,8 @@ class ChatController extends GetxController {
   // Kiểm tra xem đã đủ thông tin chưa
   bool _checkIfInfoComplete() {
     final contact = collectedInfo['contact'].toString();
-    final hasValidContact = contact.isNotEmpty &&
+    final hasValidContact =
+        contact.isNotEmpty &&
         !contact.toLowerCase().contains('chưa') &&
         !contact.toLowerCase().contains('none') &&
         !contact.toLowerCase().contains('missing') &&
@@ -308,7 +315,9 @@ class ChatController extends GetxController {
     final hasTitle = collectedInfo['title'].toString().isNotEmpty;
     final hasDescription = collectedInfo['description'].toString().isNotEmpty;
 
-    print('Check info - Type: $hasType, Title: $hasTitle, Desc: $hasDescription, Contact: $contact (valid: $hasValidContact)');
+    print(
+      'Check info - Type: $hasType, Title: $hasTitle, Desc: $hasDescription, Contact: $contact (valid: $hasValidContact)',
+    );
 
     return hasType && hasTitle && hasDescription && hasValidContact;
   }
@@ -324,7 +333,8 @@ class ChatController extends GetxController {
     // Thêm tin nhắn hỏi người dùng
     messages.add({
       'id': 'ask_submit',
-      'text': '✅ Tôi đã thu thập đủ thông tin:\n'
+      'text':
+          '✅ Tôi đã thu thập đủ thông tin:\n'
           '• Loại: ${collectedInfo['type']}\n'
           '• Tiêu đề: ${collectedInfo['title']}\n'
           '• Mô tả: ${collectedInfo['description']}\n'
@@ -360,7 +370,6 @@ class ChatController extends GetxController {
 
       // Reset flag sau khi gửi thành công
       _hasAskedForConfirmation = false;
-
     } catch (e) {
       // Xóa tin nhắn đang xử lý
       messages.removeWhere((msg) => msg['id'] == 'processing_request');
@@ -382,11 +391,14 @@ class ChatController extends GetxController {
 
     messages.add({
       'id': 'continue_chat',
-      'text': 'Được rồi, bạn có thể tiếp tục mô tả thêm hoặc chỉnh sửa thông tin.',
+      'text':
+          'Được rồi, bạn có thể tiếp tục mô tả thêm hoặc chỉnh sửa thông tin.',
       'isUser': false,
       'timestamp': DateTime.now(),
     });
   }
+
+
 
   // Tạo help request
   Future<void> _createHelpRequest() async {
@@ -412,7 +424,8 @@ class ChatController extends GetxController {
         description: collectedInfo['description'] ?? "",
         lat: currentPosition.value!.latitude,
         lng: currentPosition.value!.longitude,
-        contact: collectedInfo['contact'] ?? user.phoneNumber ?? user.email ?? "",
+        contact:
+            collectedInfo['contact'] ?? user.phoneNumber ?? user.email ?? "",
         address: currentAddress.value.isNotEmpty
             ? currentAddress.value
             : "Vị trí GPS: ${currentPosition.value!.latitude.toStringAsFixed(6)}, ${currentPosition.value!.longitude.toStringAsFixed(6)}",
@@ -424,12 +437,15 @@ class ChatController extends GetxController {
         createdAt: DateTime.now(),
       );
 
-      final helpRequestEntity = HelpRequestMapper.toEntity(helpRequest);
-      await _createHelpRequestUseCase(helpRequestEntity);
+      // final helpRequestEntity = HelpRequestMapper.toEntity(helpRequest);
+      // await _createHelpRequestUseCase(helpRequestEntity);
+
+      await _helpRequestRepo.createHelpRequest(helpRequest);
 
       messages.add({
         'id': 'request_success',
-        'text': '✅ Yêu cầu cứu trợ đã được gửi thành công!\n'
+        'text':
+            '✅ Yêu cầu cứu trợ đã được gửi thành công!\n'
             'Mã yêu cầu: ${helpRequest.id}\n'
             'Đội cứu trợ sẽ liên hệ với bạn qua: ${collectedInfo['contact']}',
         'isUser': false,
@@ -438,7 +454,6 @@ class ChatController extends GetxController {
 
       // Reset sau khi gửi thành công
       _resetCollectedInfo();
-
     } catch (e) {
       messages.add({
         'id': 'request_error',
@@ -451,6 +466,10 @@ class ChatController extends GetxController {
       throw e;
     }
   }
+
+
+
+
 
   // Reset thông tin đã thu thập
   void _resetCollectedInfo() {
@@ -472,9 +491,13 @@ class ChatController extends GetxController {
 
     if (typeStr.contains('rescue') || typeStr.contains('cứu hộ')) {
       return RequestType.rescue;
-    } else if (typeStr.contains('medical') || typeStr.contains('y tế') || typeStr.contains('medicine')) {
+    } else if (typeStr.contains('medical') ||
+        typeStr.contains('y tế') ||
+        typeStr.contains('medicine')) {
       return RequestType.medicine;
-    } else if (typeStr.contains('food') || typeStr.contains('lương thực') || typeStr.contains('thực phẩm')) {
+    } else if (typeStr.contains('food') ||
+        typeStr.contains('lương thực') ||
+        typeStr.contains('thực phẩm')) {
       return RequestType.food;
     } else {
       return RequestType.other;
@@ -568,7 +591,9 @@ class ChatController extends GetxController {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isComplete.value ? 'Đã hoàn thành thu thập' : 'Đang thu thập thông tin',
+                  isComplete.value
+                      ? 'Đã hoàn thành thu thập'
+                      : 'Đang thu thập thông tin',
                   style: TextStyle(
                     color: isComplete.value ? Colors.green : Colors.orange,
                   ),
@@ -600,10 +625,7 @@ class ChatController extends GetxController {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Get.back(),
-          child: const Text('Đóng'),
-        ),
+        TextButton(onPressed: () => Get.back(), child: const Text('Đóng')),
         if (_checkIfInfoComplete() && !showConfirmDialog.value)
           ElevatedButton(
             onPressed: () {
@@ -651,11 +673,11 @@ class ChatController extends GetxController {
     Get.snackbar(
       'Thông tin đã thu thập',
       '''
-Loại: ${collectedInfo['type']}
-Tiêu đề: ${collectedInfo['title']}
-Mô tả: ${collectedInfo['description']}
-Liên hệ: ${collectedInfo['contact']}
-Vị trí: ${currentAddress.value.isNotEmpty ? currentAddress.value : 'Đang xác định'}
+        Loại: ${collectedInfo['type']}
+        Tiêu đề: ${collectedInfo['title']}
+        Mô tả: ${collectedInfo['description']}
+        Liên hệ: ${collectedInfo['contact']}
+        Vị trí: ${currentAddress.value.isNotEmpty ? currentAddress.value : 'Đang xác định'}
       ''',
       duration: const Duration(seconds: 5),
       snackPosition: SnackPosition.BOTTOM,

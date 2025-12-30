@@ -86,7 +86,7 @@ class VolunteerProfileController extends GetxController {
             .collection('Users')
             .doc(userId)
             .get();
-        
+
         if (userDoc.exists) {
           final data = userDoc.data();
           if (data != null && data['Skills'] != null) {
@@ -95,11 +95,12 @@ class VolunteerProfileController extends GetxController {
           } else {
             skills.value = [];
           }
-          
+
           // Load toggles
           isAvailable.value = data?['IsAvailable'] ?? true;
           notificationsEnabled.value = data?['NotificationsEnabled'] ?? true;
-          locationSharingEnabled.value = data?['LocationSharingEnabled'] ?? true;
+          locationSharingEnabled.value =
+              data?['LocationSharingEnabled'] ?? true;
         }
       }
     } catch (e) {
@@ -190,9 +191,7 @@ class VolunteerProfileController extends GetxController {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId != null) {
-        await _userRepo.updateSingField({
-          'Skills': skills.toList(),
-        });
+        await _userRepo.updateSingField({'Skills': skills.toList()});
       }
     } catch (e) {
       print('Error saving skills: $e');
@@ -205,9 +204,7 @@ class VolunteerProfileController extends GetxController {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId != null) {
-        await _userRepo.updateSingField({
-          'IsAvailable': value,
-        });
+        await _userRepo.updateSingField({'IsAvailable': value});
       }
     } catch (e) {
       print('Error saving availability: $e');
@@ -219,9 +216,7 @@ class VolunteerProfileController extends GetxController {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId != null) {
-        await _userRepo.updateSingField({
-          'NotificationsEnabled': value,
-        });
+        await _userRepo.updateSingField({'NotificationsEnabled': value});
       }
     } catch (e) {
       print('Error saving notifications: $e');
@@ -233,9 +228,7 @@ class VolunteerProfileController extends GetxController {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId != null) {
-        await _userRepo.updateSingField({
-          'LocationSharingEnabled': value,
-        });
+        await _userRepo.updateSingField({'LocationSharingEnabled': value});
       }
     } catch (e) {
       print('Error saving location sharing: $e');
@@ -245,62 +238,70 @@ class VolunteerProfileController extends GetxController {
   void addSkill() {
     final nameController = TextEditingController();
 
-    Get.dialog(Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Thêm kỹ năng', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Tên kỹ năng',
-                border: OutlineInputBorder(),
+    Get.dialog(
+      Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Thêm kỹ năng',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(onPressed: () => Get.back(), child: const Text('Hủy')),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) {
-                      Get.snackbar('Lỗi', 'Tên kỹ năng không được để trống');
-                      return;
-                    }
-                    // Add to available skills and select it
-                    if (!availableSkills.contains(name)) {
-                      availableSkills.add(name);
-                    }
-                    if (!skills.contains(name)) {
-                      skills.add(name);
-                    }
-                    // Persist to user profile
-                    try {
-                      final userId = FirebaseAuth.instance.currentUser?.uid;
-                      if (userId != null) {
-                        await _userRepo.updateSingField({
-                          'Skills': skills.toList(),
-                        });
-                      }
-                    } catch (e) {
-                      print('Error saving new skill: $e');
-                    }
-
-                    Get.back();
-                  },
-                  child: const Text('Thêm'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Tên kỹ năng',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('Hủy'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) {
+                        Get.snackbar('Lỗi', 'Tên kỹ năng không được để trống');
+                        return;
+                      }
+                      // Add to available skills and select it
+                      if (!availableSkills.contains(name)) {
+                        availableSkills.add(name);
+                      }
+                      if (!skills.contains(name)) {
+                        skills.add(name);
+                      }
+                      // Persist to user profile
+                      try {
+                        final userId = FirebaseAuth.instance.currentUser?.uid;
+                        if (userId != null) {
+                          await _userRepo.updateSingField({
+                            'Skills': skills.toList(),
+                          });
+                        }
+                      } catch (e) {
+                        print('Error saving new skill: $e');
+                      }
+
+                      Get.back();
+                    },
+                    child: const Text('Thêm'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }

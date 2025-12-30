@@ -15,7 +15,8 @@ class SosQueueService extends GetxService {
   final _processing = false.obs;
   Timer? _timer;
 
-  CreateHelpRequestUseCase get _createUseCase => Get.find<CreateHelpRequestUseCase>();
+  CreateHelpRequestUseCase get _createUseCase =>
+      Get.find<CreateHelpRequestUseCase>();
 
   List<Map<String, dynamic>> get _queue {
     final raw = _storage.read(_storageKey);
@@ -56,9 +57,12 @@ class SosQueueService extends GetxService {
       for (var item in List<Map<String, dynamic>>.from(q)) {
         try {
           // upload image if present and is local path
-          if (item['imagePath'] != null && (item['imageUrl'] == null || item['imageUrl'].isEmpty)) {
+          if (item['imagePath'] != null &&
+              (item['imageUrl'] == null || item['imageUrl'].isEmpty)) {
             try {
-              final uploaded = await CloudinaryService.uploadImageInAsset(item['imagePath']);
+              final uploaded = await CloudinaryService.uploadImageInAsset(
+                item['imagePath'],
+              );
               if (uploaded != null) {
                 item['imageUrl'] = uploaded;
               }
@@ -88,7 +92,9 @@ class SosQueueService extends GetxService {
           await _saveQueue(q);
         } catch (e) {
           // increment attempts
-          item['attempts'] = (item['attempts'] as int?) != null ? (item['attempts'] as int) + 1 : 1;
+          item['attempts'] = (item['attempts'] as int?) != null
+              ? (item['attempts'] as int) + 1
+              : 1;
           // if too many attempts, keep but skip for now
           if ((item['attempts'] as int) >= 3) {
             // leave in queue but don't retry immediately
@@ -122,7 +128,10 @@ class SosQueueService extends GetxService {
     super.onClose();
   }
 }
+<<<<<<< Updated upstream
 
 
 
 
+=======
+>>>>>>> Stashed changes

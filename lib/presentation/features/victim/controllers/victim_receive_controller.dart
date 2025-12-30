@@ -12,13 +12,14 @@ class VictimReceiveController extends GetxController {
   LocationService? _locationService;
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   final currentPosition = Rxn<Position>(); // vị trí hiện tại
-  final nearbyDistributionPoints = <Map<String, dynamic>>[].obs; // điểm phân phối gần nhất
+  final nearbyDistributionPoints =
+      <Map<String, dynamic>>[].obs; // điểm phân phối gần nhất
   final myRegistrations = <Map<String, dynamic>>[].obs; // đăng ký của tôi
   final isLoading = false.obs;
   final searchQuery = ''.obs;
-  
+
   StreamSubscription? _registrationsSub;
 
   @override
@@ -82,46 +83,53 @@ class VictimReceiveController extends GetxController {
           20.0,
         );
 
-        nearbyDistributionPoints.value = await Future.wait(nearby.map((shelter) async {
-          final available = shelter.availableSlots;
-          final occupancyPercent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
-          final availPercent = shelter.capacity > 0 ? ((available / shelter.capacity) * 100).toInt() : 0;
+        nearbyDistributionPoints.value = await Future.wait(
+          nearby.map((shelter) async {
+            final available = shelter.availableSlots;
+            final occupancyPercent = shelter.capacity > 0
+                ? (shelter.currentOccupancy / shelter.capacity * 100).toInt()
+                : 0;
+            final availPercent = shelter.capacity > 0
+                ? ((available / shelter.capacity) * 100).toInt()
+                : 0;
 
-          double distanceKm = 0.0;
-          int etaMinutes = -1;
-          try {
-            distanceKm = _locationService?.getDistanceInKm(
-                  position.latitude,
-                  position.longitude,
-                  shelter.lat,
-                  shelter.lng,
-                ) ??
-                0.0;
-            // Estimate ETA: walking if very close, else driving
-            final speedKmh = distanceKm < 2.0 ? 5.0 : 40.0;
-            etaMinutes = (distanceKm / speedKmh * 60).round();
-          } catch (_) {
-            distanceKm = 0.0;
-            etaMinutes = -1;
-          }
+            double distanceKm = 0.0;
+            int etaMinutes = -1;
+            try {
+              distanceKm =
+                  _locationService?.getDistanceInKm(
+                    position.latitude,
+                    position.longitude,
+                    shelter.lat,
+                    shelter.lng,
+                  ) ??
+                  0.0;
+              // Estimate ETA: walking if very close, else driving
+              final speedKmh = distanceKm < 2.0 ? 5.0 : 40.0;
+              etaMinutes = (distanceKm / speedKmh * 60).round();
+            } catch (_) {
+              distanceKm = 0.0;
+              etaMinutes = -1;
+            }
 
-          return {
-            'id': shelter.id,
-            'name': shelter.name,
-            'address': shelter.address,
-            'lat': shelter.lat,
-            'lng': shelter.lng,
-            'distanceKm': double.parse(distanceKm.toStringAsFixed(2)),
-            'etaMinutes': etaMinutes,
-            'capacity': shelter.capacity,
-            'occupancy': shelter.currentOccupancy,
-            'available': available,
-            'availPercent': availPercent,
-            'occupancyPercent': occupancyPercent,
-            'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
-            'items': shelter.amenities ?? <String>[],
-          };
-        }).toList());
+            return {
+              'id': shelter.id,
+              'name': shelter.name,
+              'address': shelter.address,
+              'lat': shelter.lat,
+              'lng': shelter.lng,
+              'distanceKm': double.parse(distanceKm.toStringAsFixed(2)),
+              'etaMinutes': etaMinutes,
+              'capacity': shelter.capacity,
+              'occupancy': shelter.currentOccupancy,
+              'available': available,
+              'availPercent': availPercent,
+              'occupancyPercent': occupancyPercent,
+              'distributionTime': shelter.distributionTime ?? '08:00 - 17:00',
+              'items': shelter.amenities ?? <String>[],
+            };
+          }).toList(),
+        );
 
         // sort by distance
         nearbyDistributionPoints.sort((a, b) {
@@ -134,8 +142,12 @@ class VictimReceiveController extends GetxController {
         final allShelters = await _shelterRepo.getAllShelters().first;
         nearbyDistributionPoints.value = allShelters.take(10).map((shelter) {
           final available = shelter.availableSlots;
-          final occupancyPercent = shelter.capacity > 0 ? (shelter.currentOccupancy / shelter.capacity * 100).toInt() : 0;
-          final availPercent = shelter.capacity > 0 ? ((available / shelter.capacity) * 100).toInt() : 0;
+          final occupancyPercent = shelter.capacity > 0
+              ? (shelter.currentOccupancy / shelter.capacity * 100).toInt()
+              : 0;
+          final availPercent = shelter.capacity > 0
+              ? ((available / shelter.capacity) * 100).toInt()
+              : 0;
 
           return {
             'id': shelter.id,
@@ -169,19 +181,22 @@ class VictimReceiveController extends GetxController {
         .where('UserId', isEqualTo: user.uid)
         .snapshots()
         .listen((snapshot) {
-      myRegistrations.value = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-          'CreatedAt': data['CreatedAt']?.toDate(),
-          'DistributionTime': data['DistributionTime']?.toDate(),
-        };
-      }).toList();
-    });
+          myRegistrations.value = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              ...data,
+              'CreatedAt': data['CreatedAt']?.toDate(),
+              'DistributionTime': data['DistributionTime']?.toDate(),
+            };
+          }).toList();
+        });
   }
 
-  Future<void> registerForDistribution(String pointId, Map<String, dynamic> pointData) async {
+  Future<void> registerForDistribution(
+    String pointId,
+    Map<String, dynamic> pointData,
+  ) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -242,19 +257,19 @@ class VictimReceiveController extends GetxController {
       );
     } catch (e) {
       print('[VICTIM_RECEIVE] Error registering: $e');
-      MinhLoaders.errorSnackBar(
-        title: 'Lỗi',
-        message: 'Không thể đăng ký: $e',
-      );
+      MinhLoaders.errorSnackBar(title: 'Lỗi', message: 'Không thể đăng ký: $e');
     }
   }
 
   Future<void> cancelRegistration(String registrationId, String pointId) async {
     try {
-      await _firestore.collection('distribution_registrations').doc(registrationId).update({
-        'Status': 'cancelled',
-        'CancelledAt': FieldValue.serverTimestamp(),
-      });
+      await _firestore
+          .collection('distribution_registrations')
+          .doc(registrationId)
+          .update({
+            'Status': 'cancelled',
+            'CancelledAt': FieldValue.serverTimestamp(),
+          });
 
       // Decrease shelter occupancy
       final shelter = await _shelterRepo.getShelterById(pointId);
@@ -280,7 +295,7 @@ class VictimReceiveController extends GetxController {
 
   List<Map<String, dynamic>> get filteredPoints {
     var filtered = List<Map<String, dynamic>>.from(nearbyDistributionPoints);
-    
+
     if (searchQuery.value.isNotEmpty) {
       final query = searchQuery.value.toLowerCase();
       filtered = filtered.where((point) {
@@ -289,7 +304,7 @@ class VictimReceiveController extends GetxController {
         return name.contains(query) || address.contains(query);
       }).toList();
     }
-    
+
     return filtered;
   }
 
@@ -297,6 +312,7 @@ class VictimReceiveController extends GetxController {
     await loadData();
   }
 }
+<<<<<<< Updated upstream
 
 
 
@@ -304,3 +320,5 @@ class VictimReceiveController extends GetxController {
 
 
 
+=======
+>>>>>>> Stashed changes
