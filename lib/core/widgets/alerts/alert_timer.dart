@@ -1,10 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+
 import 'package:iconsax/iconsax.dart';
 
-/// Countdown timer widget for expiring alerts
-/// 
-/// Displays time remaining with visual indicator.
-/// Supports animation for urgent alerts.
 class AlertTimer extends StatelessWidget {
   const AlertTimer({
     super.key,
@@ -33,7 +30,7 @@ class AlertTimer extends StatelessWidget {
         if (showIcon) const SizedBox(width: 4),
         Expanded(
           child: Text(
-            'Hết hạn sau $timeText',
+            'Háº¿t háº¡n sau $timeText',
             style: TextStyle(
               fontSize: 12,
               color: Colors.orange.shade700,
@@ -49,16 +46,15 @@ class AlertTimer extends StatelessWidget {
 
   String _formatTimeRemaining(Duration remaining) {
     if (remaining.inHours < 1) {
-      return '${remaining.inMinutes} phút';
+      return '${remaining.inMinutes} phÃºt';
     } else if (remaining.inDays < 1) {
-      return '${remaining.inHours} giờ';
+      return '${remaining.inHours} giá»';
     } else {
-      return '${remaining.inDays} ngày';
+      return '${remaining.inDays} ngÃ y';
     }
   }
 }
 
-/// Animated version of AlertTimer with pulse effect for urgent alerts
 class AnimatedAlertTimer extends StatefulWidget {
   const AnimatedAlertTimer({
     super.key,
@@ -75,8 +71,8 @@ class AnimatedAlertTimer extends StatefulWidget {
 
 class _AnimatedAlertTimerState extends State<AnimatedAlertTimer>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  AnimationController? _controller;
+  Animation<double>? _animation;
 
   @override
   void initState() {
@@ -92,7 +88,7 @@ class _AnimatedAlertTimerState extends State<AnimatedAlertTimer>
 
       _animation = Tween<double>(begin: 0.8, end: 1.0).animate(
         CurvedAnimation(
-          parent: _controller,
+          parent: _controller!,
           curve: Curves.easeInOut,
         ),
       );
@@ -101,7 +97,7 @@ class _AnimatedAlertTimerState extends State<AnimatedAlertTimer>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -115,14 +111,14 @@ class _AnimatedAlertTimerState extends State<AnimatedAlertTimer>
       showIcon: widget.showIcon,
     );
 
-    if (isUrgent && _controller.isAnimating) {
+    if (isUrgent && _controller != null && _controller!.isAnimating) {
       timer = AnimatedBuilder(
-        animation: _animation,
+        animation: _animation!,
         builder: (context, child) {
           return Transform.scale(
-            scale: _animation.value,
+            scale: _animation!.value,
             child: Opacity(
-              opacity: 0.7 + (_animation.value - 0.8) * 1.5,
+              opacity: 0.7 + (_animation!.value - 0.8) * 1.5,
               child: timer,
             ),
           );
@@ -133,4 +129,3 @@ class _AnimatedAlertTimerState extends State<AnimatedAlertTimer>
     return timer;
   }
 }
-
