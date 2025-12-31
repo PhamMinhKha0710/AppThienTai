@@ -39,6 +39,8 @@ class AdminDashboardController extends GetxController {
   StreamSubscription? _pendingSub;
   StreamSubscription? _inProgressSub;
   StreamSubscription? _completedSub;
+  StreamSubscription? _allRequestsSub;
+  StreamSubscription? _sheltersSub;
   
   @override
   void onInit() {
@@ -52,6 +54,8 @@ class AdminDashboardController extends GetxController {
     _pendingSub?.cancel();
     _inProgressSub?.cancel();
     _completedSub?.cancel();
+    _allRequestsSub?.cancel();
+    _sheltersSub?.cancel();
     super.onClose();
   }
   
@@ -138,6 +142,116 @@ class AdminDashboardController extends GetxController {
               print('[ADMIN_DASHBOARD] Error listening to active volunteers: $error');
             },
           );
+
+      // Real-time listener for recent SOS and map SOS
+      _allRequestsSub = _helpRequestRepo
+          .getRequestsByStatus(domain.RequestStatus.pending)
+          .listen(
+            (requests) {
+              // Update recent SOS (take 5 most recent)
+              final recent = requests.take(5).map((req) {
+                return {
+                  'id': req.id,
+                  'title': req.title,
+                  'severity': req.severity.viName,
+                  'address': req.address,
+                  'createdAt': req.createdAt,
+                  'lat': req.lat,
+                  'lng': req.lng,
+                };
+              }).toList();
+              recentSOS.value = recent;
+
+              // Update map SOS
+              mapSOS.value = requests
+                  .map((req) => {
+                        'id': req.id,
+                        'title': req.title,
+                        'lat': req.lat,
+                        'lng': req.lng,
+                        'severity': req.severity.viName,
+                      })
+                  .toList();
+            },
+            onError: (error) {
+              print('[ADMIN_DASHBOARD] Error listening to all requests: $error');
+            },
+          );
+
+      // Real-time listener for SOS type distribution (today)
+      _helpRequestRepo.getAllRequests().listen(
+        (allRequests) {
+          try {
+            final today = DateTime.now();
+            final start = DateTime(today.year, today.month, today.day);
+            final end = start.add(const Duration(days: 1));
+            final todaySOS = allRequests.where((req) {
+              final created = req.createdAt;
+              return created.isAfter(start) && created.isBefore(end);
+            }).toList();
+
+            // Count by type
+            final Map<String, int> distribution = {};
+            for (var request in todaySOS) {
+              final type = request.type.viName;
+              distribution[type] = (distribution[type] ?? 0) + 1;
+            }
+
+            // Convert to list of maps
+            final result = distribution.entries.map((entry) {
+              return {
+                'type': entry.key,
+                'count': entry.value,
+              };
+            }).toList();
+
+            // Sort by count descending
+            result.sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+
+            sosTypeDistribution.value = result;
+          } catch (e) {
+            print('[ADMIN_DASHBOARD] Error processing SOS type distribution: $e');
+          }
+        },
+        onError: (error) {
+          print('[ADMIN_DASHBOARD] Error listening to SOS type distribution: $error');
+        },
+      );
+
+      // Real-time listener for shelter stats
+      _sheltersSub = _shelterRepo.getAllShelters().listen(
+        (shelters) {
+          try {
+            final stats = <Map<String, dynamic>>[];
+            for (var shelter in shelters) {
+              final capacity = shelter.capacity;
+              final occupancy = shelter.currentOccupancy;
+              final available = capacity - occupancy;
+              final percent = capacity > 0 ? (occupancy / capacity * 100).toInt() : 0;
+
+              // Only show shelters that are nearly full (> 80%)
+              if (percent > 80) {
+                stats.add({
+                  'id': shelter.id,
+                  'name': shelter.name,
+                  'capacity': capacity,
+                  'occupancy': occupancy,
+                  'available': available,
+                  'percent': percent,
+                });
+              }
+            }
+
+            shelterStats.value = stats;
+          } catch (e) {
+            print('[ADMIN_DASHBOARD] Error processing shelter stats: $e');
+            shelterStats.value = [];
+          }
+        },
+        onError: (error) {
+          print('[ADMIN_DASHBOARD] Error listening to shelters: $error');
+        },
+      );
     } catch (e) {
       print('[ADMIN_DASHBOARD] Error setting up realtime listeners: $e');
     }
@@ -325,26 +439,14 @@ class AdminDashboardController extends GetxController {
     NavigationAdminController.selectedIndex.value = 1;
   }
   
+  void navigateToAlerts() {
+    // Navigate to Alerts management screen (index 2)
+    NavigationAdminController.selectedIndex.value = 2;
+  }
+
   void showCreateAlertDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Phát cảnh báo'),
-        content: const Text('Tính năng quản lý cảnh báo đang được phát triển. Vui lòng sử dụng màn hình Quản lý SOS để tạo cảnh báo khẩn cấp.'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Đóng'),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              navigateToSOS();
-            },
-            child: const Text('Đi đến SOS'),
-          ),
-        ],
-      ),
-    );
+    // Navigate to alerts screen instead of showing dialog
+    navigateToAlerts();
   }
   
   void showCreateTaskDialog() {

@@ -27,15 +27,36 @@ class AlertRepositoryImpl implements AlertRepository {
   @override
   Stream<List<AlertEntity>> getActiveAlerts() {
     final now = DateTime.now();
+    
+    // Fetch all active alerts, then filter in memory to handle null ExpiresAt
     return _collection
         .where('IsActive', isEqualTo: true)
-        .where('ExpiresAt', isGreaterThan: Timestamp.fromDate(now))
-        .orderBy('ExpiresAt')
         .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
-            .toList());
+        .map((snapshot) {
+          final alerts = snapshot.docs
+              .map((doc) => AlertDto.fromSnapshot(doc).toEntity())
+              .toList();
+          
+          // Filter: alert is active if ExpiresAt is null or in the future
+          return alerts.where((alert) {
+            if (alert.expiresAt == null) {
+              return true; // No expiration date means always active
+            }
+            return alert.expiresAt!.isAfter(now);
+          }).toList()
+            ..sort((a, b) {
+              // Sort by expiration date (nulls last), then by created date
+              if (a.expiresAt == null && b.expiresAt == null) {
+                return b.createdAt.compareTo(a.createdAt);
+              }
+              if (a.expiresAt == null) return 1;
+              if (b.expiresAt == null) return -1;
+              final expiresCompare = a.expiresAt!.compareTo(b.expiresAt!);
+              if (expiresCompare != 0) return expiresCompare;
+              return b.createdAt.compareTo(a.createdAt);
+            });
+        });
   }
 
   @override

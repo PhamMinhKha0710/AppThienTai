@@ -16,7 +16,7 @@ class NavigationVictimMenu extends StatelessWidget {
 
     return Scaffold(
       floatingActionButton: const QuickSOSButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: Obx(
         () => NavigationBar(
           selectedIndex: NavigationVictimController.selectedIndex.value,

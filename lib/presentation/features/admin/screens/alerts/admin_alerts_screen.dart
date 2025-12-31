@@ -1,8 +1,11 @@
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/data/services/alert_seed_service.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:cuutrobaolu/presentation/features/admin/controllers/admin_alerts_controller.dart';
 import 'package:cuutrobaolu/presentation/features/admin/screens/alerts/create_alert_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -18,6 +21,13 @@ class AdminAlertsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Quản lý cảnh báo'),
         actions: [
+          // Seed data button (only in debug mode)
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Iconsax.document_download),
+              onPressed: () => _showSeedDataDialog(context, controller),
+              tooltip: 'Seed dữ liệu mẫu',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => controller.loadAlerts(),
@@ -489,7 +499,81 @@ class AdminAlertsScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showSeedDataDialog(
+    BuildContext context,
+    AdminAlertsController controller,
+  ) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Seed Dữ Liệu Mẫu'),
+        content: const Text(
+          'Bạn có muốn tạo dữ liệu mẫu cảnh báo vào Firestore? '
+          'Hành động này sẽ tạo khoảng 17 cảnh báo mẫu cho cả nạn nhân và tình nguyện viên.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              await _seedAlertsData(controller);
+            },
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _seedAlertsData(AdminAlertsController controller) async {
+    try {
+      final seedService = getIt<AlertSeedService>();
+      
+      // Show loading dialog
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      await seedService.seedAlerts();
+
+      // Close loading dialog
+      Get.back();
+
+      // Show success message
+      Get.snackbar(
+        'Thành công',
+        'Đã tạo dữ liệu mẫu cảnh báo thành công!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+
+      // Refresh alerts list
+      await controller.loadAlerts();
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      // Show error message
+      Get.snackbar(
+        'Lỗi',
+        'Không thể tạo dữ liệu mẫu: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
 }
+
 
 
 

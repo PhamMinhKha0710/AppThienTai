@@ -65,7 +65,6 @@ class VolunteerTasksController extends GetxController {
     super.onClose();
   }
 
-<<<<<<< Updated upstream
   /// Pre-fetch location at initialization to avoid delay later
   Future<void> _prefetchLocation() async {
     try {
@@ -99,8 +98,6 @@ class VolunteerTasksController extends GetxController {
     }
   }
 
-=======
->>>>>>> Stashed changes
   void listenTasksRealtime() {
     _taskSub?.cancel(); // huỷ stream cũ khi đổi tab
     isLoading.value = true;
@@ -412,17 +409,6 @@ class VolunteerTasksController extends GetxController {
   List<Map<String, dynamic>> get filteredTasks {
     var filtered = List<Map<String, dynamic>>.from(tasks);
 
-<<<<<<< Updated upstream
-=======
-    // Debug từng task
-    for (var i = 0; i < filtered.length; i++) {
-      var t = filtered[i];
-      print(
-        'Task ${i + 1}: id=${t['id']}, severity=${t['severity']}, distance=${t['distance']}',
-      );
-    }
-
->>>>>>> Stashed changes
     // Filter by type/severity
     if (filterType.value != 'all') {
       filtered = filtered.where((t) {

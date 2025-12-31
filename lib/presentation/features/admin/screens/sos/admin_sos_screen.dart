@@ -285,9 +285,13 @@ class _SOSCard extends StatelessWidget {
               children: [
                 Icon(Iconsax.calendar, size: 12, color: Colors.grey.shade600),
                 const SizedBox(width: 4),
-                Text(
-                  createdAt,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                Flexible(
+                  child: Text(
+                    createdAt,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Container(

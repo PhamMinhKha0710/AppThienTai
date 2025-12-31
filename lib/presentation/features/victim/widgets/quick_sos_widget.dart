@@ -19,29 +19,23 @@ class QuickSOSButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.large(
+    return FloatingActionButton.extended(
       onPressed: () => _showQuickSOSBottomSheet(context),
       backgroundColor: Colors.red.shade700,
       heroTag: 'quick_sos_fab',
       elevation: 8,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.sos,
-            color: Colors.white,
-            size: 32,
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'SOS',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      icon: const Icon(
+        Icons.sos,
+        color: Colors.white,
+        size: 24,
+      ),
+      label: const Text(
+        'SOS',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

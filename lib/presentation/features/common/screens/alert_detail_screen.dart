@@ -275,17 +275,25 @@ class _TimeInfoRow extends StatelessWidget {
       children: [
         Icon(Iconsax.clock, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
-        Text(
-          AlertDateTimeHelper.format(alert.createdAt),
-          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+        Flexible(
+          child: Text(
+            AlertDateTimeHelper.format(alert.createdAt),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         if (alert.expiresAt != null) ...[
           const SizedBox(width: 16),
           Icon(Iconsax.timer, size: 16, color: Colors.grey[600]),
           const SizedBox(width: 4),
-          Text(
-            'Hết hạn: ${AlertDateTimeHelper.format(alert.expiresAt!)}',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          Flexible(
+            child: Text(
+              'Hết hạn: ${AlertDateTimeHelper.format(alert.expiresAt!)}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ],

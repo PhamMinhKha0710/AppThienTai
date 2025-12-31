@@ -1,4 +1,8 @@
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_badge.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_card_header.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_meta_info.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_timer.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
@@ -61,108 +65,144 @@ class MinhAlertCard extends StatelessWidget {
         alertEntity!.expiresAt != null &&
         alertEntity!.expiresAt!.difference(DateTime.now()).inHours < 24;
 
-    return Card(
-      margin: EdgeInsets.only(bottom: MinhSizes.spaceBtwItems),
-      color: severityColor.withOpacity(0.05),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
-        side: BorderSide(
-          color: severityColor.withOpacity(0.3),
-          width: 1,
+    // Build badges
+    final severityBadge = AlertBadge(
+      label: severityText,
+      color: severityColor,
+      variant: BadgeVariant.soft,
+      size: BadgeSize.small,
+    );
+
+    final extraBadges = <AlertBadge>[];
+    
+    if (alertEntity != null) {
+      extraBadges.add(
+        AlertBadge(
+          label: alertEntity!.alertType.viName,
+          color: Colors.blue.shade700,
+          variant: BadgeVariant.soft,
+          size: BadgeSize.small,
         ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
-        child: Padding(
-          padding: EdgeInsets.all(MinhSizes.md),
+      );
+    }
+
+    if (distance != null && distance! < 5) {
+      extraBadges.add(
+        AlertBadge(
+          label: 'Gần bạn',
+          color: Colors.green.shade700,
+          variant: BadgeVariant.soft,
+          size: BadgeSize.small,
+        ),
+      );
+    }
+
+    if (isExpiringSoon) {
+      extraBadges.add(
+        AlertBadge(
+          label: 'Sắp hết hạn',
+          color: Colors.orange.shade700,
+          variant: BadgeVariant.soft,
+          size: BadgeSize.small,
+        ),
+      );
+    }
+
+    // Build meta info items
+    final metaInfoItems = <AlertMetaInfo>[];
+    
+    if (time != null) {
+      metaInfoItems.add(
+        AlertMetaInfo(
+          icon: Iconsax.clock,
+          text: time,
+          color: Colors.grey.shade600,
+        ),
+      );
+    }
+
+    if (location != null) {
+      metaInfoItems.add(
+        AlertMetaInfo(
+          icon: Iconsax.location,
+          text: location,
+          color: Colors.grey.shade600,
+        ),
+      );
+    }
+
+    if (distance != null) {
+      metaInfoItems.add(
+        AlertMetaInfo(
+          icon: Iconsax.routing,
+          text: '${distance!.toStringAsFixed(1)} km',
+          color: Colors.blue.shade700,
+        ),
+      );
+    }
+
+    if (alertEntity != null) {
+      metaInfoItems.add(
+        AlertMetaInfo(
+          icon: Iconsax.people,
+          text: alertEntity!.targetAudience.viName,
+          color: Colors.grey.shade600,
+        ),
+      );
+    }
+
+    // Determine elevation based on severity
+    final elevation = _getElevation(alertEntity?.severity);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive padding based on screen size
+        final isTablet = constraints.maxWidth > 600;
+        final isSmall = constraints.maxWidth < 360;
+        final cardPadding = isTablet
+            ? MinhSizes.lg
+            : isSmall
+                ? MinhSizes.sm
+                : MinhSizes.md;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: MinhSizes.spaceBtwItems),
+          color: severityColor.withOpacity(0.05),
+          elevation: elevation,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+            side: BorderSide(
+              color: severityColor.withOpacity(0.3),
+              width: 1.5,
+            ),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
+            child: Padding(
+              padding: EdgeInsets.all(cardPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header with icon and badges
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Alert icon
-                  Container(
-                    padding: EdgeInsets.all(MinhSizes.sm),
-                    decoration: BoxDecoration(
-                      color: severityColor,
-                      borderRadius: BorderRadius.circular(MinhSizes.borderRadiusSm),
-                    ),
-                    child: Icon(
-                      alertIcon,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  SizedBox(width: MinhSizes.spaceBtwItems),
-                  
-                  // Title and badges
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: MinhSizes.xs),
-                        
-                        // Badges row
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            // Severity badge
-                            _buildBadge(
-                              severityText,
-                              severityColor,
-                            ),
-                            
-                            // Alert type badge (if entity)
-                            if (alertEntity != null)
-                              _buildBadge(
-                                alertEntity!.alertType.viName,
-                                Colors.blue.shade700,
-                              ),
-                            
-                            // Near you badge
-                            if (distance != null && distance! < 5)
-                              _buildBadge(
-                                'Gần bạn',
-                                Colors.green.shade700,
-                              ),
-                            
-                            // Expiring soon badge
-                            if (isExpiringSoon)
-                              _buildBadge(
-                                'Sắp hết hạn',
-                                Colors.orange.shade700,
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Arrow icon
-                  Icon(
-                    Iconsax.arrow_right_3,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                ],
+              AlertCardHeader(
+                icon: alertIcon,
+                iconColor: severityColor,
+                title: title,
+                severityBadge: severityBadge,
+                alertTypeBadge: alertEntity != null
+                    ? AlertBadge(
+                        label: alertEntity!.alertType.viName,
+                        color: Colors.blue.shade700,
+                        variant: BadgeVariant.soft,
+                        size: BadgeSize.small,
+                      )
+                    : null,
+                extraBadges: extraBadges,
               ),
-              
+
               SizedBox(height: MinhSizes.spaceBtwItems),
-              
+
               // Content
               Text(
                 content,
@@ -170,112 +210,47 @@ class MinhAlertCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              
-              SizedBox(height: MinhSizes.spaceBtwItems),
-              
-              // Footer with meta info
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: [
-                  // Time
-                  if (time != null)
-                    _buildMetaInfo(
-                      Iconsax.clock,
-                      time,
-                      Colors.grey,
-                    ),
-                  
-                  // Location
-                  if (location != null)
-                    _buildMetaInfo(
-                      Iconsax.location,
-                      location,
-                      Colors.grey,
-                    ),
-                  
-                  // Distance
-                  if (distance != null)
-                    _buildMetaInfo(
-                      Iconsax.routing,
-                      '${distance!.toStringAsFixed(1)} km',
-                      Colors.blue,
-                    ),
-                  
-                  // Target audience (if entity)
-                  if (alertEntity != null)
-                    _buildMetaInfo(
-                      Iconsax.people,
-                      alertEntity!.targetAudience.viName,
-                      Colors.grey,
-                    ),
-                ],
-              ),
-              
-              // Countdown timer (if expiring soon)
-              if (isExpiringSoon && alertEntity!.expiresAt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Iconsax.timer,
-                        size: 14,
-                        color: Colors.orange.shade700,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Hết hạn sau ${_getTimeRemaining(alertEntity!.expiresAt!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+
+              if (metaInfoItems.isNotEmpty) ...[
+                SizedBox(height: MinhSizes.spaceBtwItems),
+
+                // Footer with meta info
+                AlertMetaInfoGrid(
+                  items: metaInfoItems,
+                  spacing: 16,
+                  runSpacing: 8,
                 ),
+              ],
+
+              // Countdown timer (if expiring soon)
+              if (isExpiringSoon && alertEntity!.expiresAt != null) ...[
+                SizedBox(height: MinhSizes.sm),
+                AnimatedAlertTimer(
+                  expiresAt: alertEntity!.expiresAt!,
+                  showIcon: true,
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color, width: 1),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      },
     );
   }
 
-  Widget _buildMetaInfo(IconData icon, String text, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-          ),
-        ),
-      ],
-    );
+  double _getElevation(AlertSeverity? severity) {
+    if (severity == null) return 2;
+    switch (severity) {
+      case AlertSeverity.critical:
+        return 4;
+      case AlertSeverity.high:
+        return 3;
+      case AlertSeverity.medium:
+        return 2;
+      case AlertSeverity.low:
+        return 1;
+    }
   }
 
   Color _getSeverityColor(AlertSeverity severity) {
@@ -318,15 +293,4 @@ class MinhAlertCard extends StatelessWidget {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
-  String _getTimeRemaining(DateTime expiresAt) {
-    final remaining = expiresAt.difference(DateTime.now());
-
-    if (remaining.inHours < 1) {
-      return '${remaining.inMinutes} phút';
-    } else if (remaining.inDays < 1) {
-      return '${remaining.inHours} giờ';
-    } else {
-      return '${remaining.inDays} ngày';
-    }
-  }
 }

@@ -39,11 +39,7 @@ class ChangeContact extends StatelessWidget {
                   onPressed: () => controller.updateContact(),
                   child: const Text("Lưu"),
                 ),
-<<<<<<< Updated upstream
-              )
-=======
               ),
->>>>>>> Stashed changes
             ],
           ),
         ),
@@ -51,8 +47,3 @@ class ChangeContact extends StatelessWidget {
     );
   }
 }
-<<<<<<< Updated upstream
-
-
-=======
->>>>>>> Stashed changes

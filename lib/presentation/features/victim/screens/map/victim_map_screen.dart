@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VictimMapScreen extends StatelessWidget {
   const VictimMapScreen({super.key});
@@ -63,8 +64,6 @@ class VictimMapScreen extends StatelessWidget {
                       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
                 ),
-<<<<<<< Updated upstream
-=======
                 // Optional radar/weather overlay
                 Obx(() {
                   final url = controller.radarImageUrl.value;
@@ -92,7 +91,6 @@ class VictimMapScreen extends StatelessWidget {
                     child: TileLayer(urlTemplate: template),
                   );
                 }),
->>>>>>> Stashed changes
                 // Markers cho thiên tai
                 MarkerLayer(
                   markers: [
@@ -116,130 +114,6 @@ class VictimMapScreen extends StatelessWidget {
                     ...controller.shelterMarkers.map((marker) => marker),
                   ],
                 ),
-<<<<<<< Updated upstream
-=======
-                // Distribution / Donation points (nearby supply distribution)
-                Obx(() {
-                  final pts = receiveCtrl.nearbyDistributionPoints;
-                  if (pts.isEmpty) return const SizedBox.shrink();
-                  return MarkerLayer(
-                    markers: pts.map((p) {
-                      final lat = p['lat'] as double?;
-                      final lng = p['lng'] as double?;
-                      if (lat == null || lng == null)
-                        return Marker(
-                          point: LatLng(0, 0),
-                          width: 0,
-                          height: 0,
-                          child: const SizedBox.shrink(),
-                        );
-                      return Marker(
-                        point: LatLng(lat, lng),
-                        width: 44,
-                        height: 44,
-                        child: GestureDetector(
-                          onTap: () {
-                            // show bottom sheet with distribution info
-                            Get.bottomSheet(
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.local_shipping,
-                                          size: 28,
-                                          color: Colors.green,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            p['name'] ?? 'Điểm phân phối',
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if ((p['address'] ?? '')
-                                        .toString()
-                                        .isNotEmpty)
-                                      Text(
-                                        p['address'],
-                                        style: const TextStyle(
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Sức chứa: ${p['capacity'] ?? '-'}  -  Còn trống: ${p['available'] ?? '-'}',
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Thời gian phân phối: ${p['distributionTime'] ?? '-'}',
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        TextButton(
-                                          onPressed: () => Get.back(),
-                                          child: const Text('Đóng'),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            Get.back();
-                                            await receiveCtrl
-                                                .registerForDistribution(
-                                                  p['id'],
-                                                  p,
-                                                );
-                                          },
-                                          child: const Text('Đăng ký nhận'),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.teal,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black26, blurRadius: 4),
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.local_shipping,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                }),
->>>>>>> Stashed changes
                 // Polyline routes
                 Obx(() {
                   if (controller.routePolylines.isEmpty) {
@@ -247,8 +121,6 @@ class VictimMapScreen extends StatelessWidget {
                   }
                   return PolylineLayer(polylines: controller.routePolylines);
                 }),
-<<<<<<< Updated upstream
-=======
                 // Hazard polygons (storms, flood zones, landslides)
                 Obx(() {
                   if (!controller.showHazards.value ||
@@ -257,13 +129,10 @@ class VictimMapScreen extends StatelessWidget {
                   }
                   return PolygonLayer(polygons: controller.hazardPolygons);
                 }),
->>>>>>> Stashed changes
               ],
             );
           }),
 
-<<<<<<< Updated upstream
-=======
           // Hazard banner & guidance
           Obx(() {
             if (!controller.showHazardBanner.value)
@@ -394,7 +263,6 @@ class VictimMapScreen extends StatelessWidget {
             );
           }),
 
->>>>>>> Stashed changes
           // Controls ở trên
           Positioned(
             top: 10,
@@ -434,8 +302,6 @@ class VictimMapScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-<<<<<<< Updated upstream
-=======
                     const SizedBox(width: 8),
                     // Distribution list toggle
                     IconButton(
@@ -574,7 +440,6 @@ class VictimMapScreen extends StatelessWidget {
                         );
                       },
                     ),
->>>>>>> Stashed changes
                   ],
                 ),
               ),
@@ -610,9 +475,6 @@ class VictimMapScreen extends StatelessWidget {
                       label: "Thiên tai",
                     ),
                     SizedBox(height: 4),
-<<<<<<< Updated upstream
-                    MinhMapLegendItem(icon: Iconsax.home_2, color: Colors.green, label: "Điểm trú ẩn"),
-=======
                     // Toggle hiển thị vùng nguy hiểm
                     Obx(
                       () => Row(
@@ -636,276 +498,12 @@ class VictimMapScreen extends StatelessWidget {
                       color: Colors.green,
                       label: "Điểm trú ẩn",
                     ),
->>>>>>> Stashed changes
                   ],
                 ),
               ),
             ),
           ),
 
-<<<<<<< Updated upstream
-=======
-          // Right-side distribution list panel
-          Obx(() {
-            if (!controller.showDistributionPanel.value)
-              return const SizedBox.shrink();
-            final pts = receiveCtrl.filteredPoints;
-            return Positioned(
-              top: 80,
-              right: 0,
-              bottom: 80,
-              width: 320,
-              child: Card(
-                margin: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Điểm phân phối gần',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () =>
-                                controller.toggleDistributionPanel(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: pts.isEmpty
-                          ? const Center(child: Text('Không có điểm phân phối'))
-                          : ListView.builder(
-                              itemCount: pts.length,
-                              itemBuilder: (context, i) {
-                                final p = pts[i];
-                                final items =
-                                    (p['items'] as List<dynamic>?)
-                                        ?.cast<String>() ??
-                                    <String>[];
-                                final availPercent =
-                                    (p['availPercent'] as int?) ?? 0;
-                                Color availColor = Colors.green;
-                                if (availPercent < 20) {
-                                  availColor = Colors.red;
-                                } else if (availPercent < 50) {
-                                  availColor = Colors.orange;
-                                }
-
-                                final eta = (p['etaMinutes'] as int?) ?? -1;
-                                final etaText = eta > 0 ? 'ETA: ${eta}m' : '';
-
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: availColor,
-                                    child: Text(
-                                      '${p['available'] ?? 0}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  title: Text(p['name'] ?? 'Điểm phân phối'),
-                                  subtitle: Text(
-                                    items.isNotEmpty
-                                        ? items.join(', ')
-                                        : (p['address'] ?? ''),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (etaText.isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            right: 8.0,
-                                          ),
-                                          child: Text(
-                                            etaText,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black54,
-                                            ),
-                                          ),
-                                        ),
-                                      IconButton(
-                                        tooltip: 'Hiển thị trên bản đồ',
-                                        icon: const Icon(Icons.map),
-                                        onPressed: () {
-                                          final lat = p['lat'] as double?;
-                                          final lng = p['lng'] as double?;
-                                          if (lat != null && lng != null) {
-                                            controller.focusOnLocation(
-                                              LatLng(lat, lng),
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      IconButton(
-                                        tooltip: 'Chỉ đường',
-                                        icon: const Icon(Icons.directions),
-                                        onPressed: () {
-                                          final lat = p['lat'] as double?;
-                                          final lng = p['lng'] as double?;
-                                          if (lat != null && lng != null) {
-                                            controller.findRouteTo(
-                                              LatLng(lat, lng),
-                                            );
-                                            controller.focusOnLocation(
-                                              LatLng(lat, lng),
-                                            );
-                                            controller
-                                                .toggleDistributionPanel();
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    // open detailed bottom sheet (reuse marker tap behavior)
-                                    final lat = p['lat'] as double?;
-                                    final lng = p['lng'] as double?;
-                                    if (lat != null && lng != null) {
-                                      // open bottom sheet same as marker tap
-                                      Get.bottomSheet(
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.vertical(
-                                              top: Radius.circular(16),
-                                            ),
-                                          ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.local_shipping,
-                                                    size: 28,
-                                                    color: Colors.green,
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Expanded(
-                                                    child: Text(
-                                                      p['name'] ??
-                                                          'Điểm phân phối',
-                                                      style: const TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              if ((p['address'] ?? '')
-                                                  .toString()
-                                                  .isNotEmpty)
-                                                Text(
-                                                  p['address'],
-                                                  style: const TextStyle(
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Sức chứa: ${p['capacity'] ?? '-'}  -  Còn trống: ${p['available'] ?? '-'}',
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Thời gian phân phối: ${p['distributionTime'] ?? '-'}',
-                                              ),
-                                              const SizedBox(height: 12),
-                                              if (items.isNotEmpty) ...[
-                                                const Text(
-                                                  'Mặt hàng phân phối:',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                for (final it in items)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 2,
-                                                        ),
-                                                    child: Text('- $it'),
-                                                  ),
-                                                const SizedBox(height: 12),
-                                              ],
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  TextButton(
-                                                    onPressed: () => Get.back(),
-                                                    child: const Text('Đóng'),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  ElevatedButton(
-                                                    onPressed: () async {
-                                                      Get.back();
-                                                      await receiveCtrl
-                                                          .registerForDistribution(
-                                                            p['id'],
-                                                            p,
-                                                          );
-                                                    },
-                                                    child: const Text(
-                                                      'Đăng ký nhận',
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  ElevatedButton(
-                                                    onPressed: () {
-                                                      controller.findRouteTo(
-                                                        LatLng(
-                                                          p['lat'],
-                                                          p['lng'],
-                                                        ),
-                                                      );
-                                                      controller
-                                                          .focusOnLocation(
-                                                            LatLng(
-                                                              p['lat'],
-                                                              p['lng'],
-                                                            ),
-                                                          );
-                                                      Get.back();
-                                                    },
-                                                    child: const Text(
-                                                      'Chỉ đường',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
->>>>>>> Stashed changes
           // Button tìm đường
           Positioned(
             bottom: 20,
@@ -922,97 +520,8 @@ class VictimMapScreen extends StatelessWidget {
               );
             }),
           ),
-<<<<<<< Updated upstream
-=======
-          // Quick SOS button (fast path)
-          Positioned(
-            bottom: 90,
-            left: 12,
-            child: Obx(() {
-              return FloatingActionButton.extended(
-                heroTag: 'quick_sos',
-                backgroundColor: Colors.redAccent,
-                icon: sosCtrl.isSubmitting.value
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Iconsax.danger, color: Colors.white),
-                label: Text(
-                  sosCtrl.isSubmitting.value ? 'Đang gửi...' : 'Gửi SOS',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onPressed: sosCtrl.isSubmitting.value
-                    ? null
-                    : () {
-                        // Show quick confirm dialog with nearest shelter suggestion
-                        final nearest =
-                            receiveCtrl.nearbyDistributionPoints.isNotEmpty
-                            ? receiveCtrl.nearbyDistributionPoints.first
-                            : null;
-                        final shelterName = nearest != null
-                            ? (nearest['name'] ?? '')
-                            : 'Không có trú ẩn gần';
-                        Get.dialog(
-                          AlertDialog(
-                            title: const Text('Gửi SOS nhanh'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Bạn sắp gửi yêu cầu SOS khẩn cấp với thông tin tối thiểu.',
-                                ),
-                                const SizedBox(height: 8),
-                                Text('Trú ẩn gợi ý: $shelterName'),
-                                const SizedBox(height: 8),
-                                const Text('Bạn có muốn tiếp tục gửi ngay?'),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Get.back(),
-                                child: const Text('Hủy'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  Get.back();
-                                  // Prefill description with minimal info
-                                  final desc =
-                                      'SOS Khẩn cấp - Cần hỗ trợ ngay. Gửi từ ứng dụng.';
-                                  sosCtrl.descriptionController.text = desc;
-                                  // Ensure we have location
-                                  await sosCtrl.getCurrentLocation();
-                                  // Optionally attach nearest shelter info to description
-                                  if (nearest != null) {
-                                    sosCtrl.descriptionController.text =
-                                        '$desc\\nTrú ẩn gợi ý: ${nearest['name']} - ${nearest['address'] ?? ''}';
-                                  }
-                                  // Submit SOS
-                                  await sosCtrl.submitSOS();
-                                  // After sending, open distribution panel to show shelters
-                                  controller.toggleDistributionPanel();
-                                },
-                                child: const Text('Gửi ngay'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-              );
-            }),
-          ),
->>>>>>> Stashed changes
         ],
       ),
     );
   }
 }
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes

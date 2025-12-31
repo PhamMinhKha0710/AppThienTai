@@ -27,6 +27,7 @@ import '../../domain/repositories/news_repository.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/routing_service.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/alert_seed_service.dart';
 import '../../core/utils/network_manager.dart';
 import '../../data/repositories/user/user_repository_adapter.dart';
 import '../../presentation/features/admin/controllers/admin_alerts_controller.dart';
@@ -104,6 +105,12 @@ Future<void> init() async {
       localDataSource: getIt<SupportLocalDataSource>(),
     ),
   );
+
+  // ============================
+  // Services that depend on Repositories
+  // ============================
+  // AlertSeedService depends on AlertRepository, so register it after repositories
+  getIt.registerLazySingleton<AlertSeedService>(() => AlertSeedService());
 
   // ============================
   // Controllers

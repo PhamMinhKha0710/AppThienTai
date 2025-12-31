@@ -86,22 +86,30 @@ class ItemShelter extends StatelessWidget {
               children: [
                 Icon(Iconsax.route_square, size: 16, color: Colors.grey),
                 SizedBox(width: 6),
-                Obx(() {
-                  final distanceText = controller.getShelterDistanceText(shelter.id);
-                  return Text(
-                    distanceText,
-                    style: TextStyle(
-                      color: MinhColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  );
-                }),
+                Flexible(
+                  child: Obx(() {
+                    final distanceText = controller.getShelterDistanceText(shelter.id);
+                    return Text(
+                      distanceText,
+                      style: TextStyle(
+                        color: MinhColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  }),
+                ),
                 Spacer(),
                 Icon(Iconsax.people, size: 16, color: Colors.grey),
                 SizedBox(width: 6),
-                Text(
-                  '${shelter.currentOccupancy}/${shelter.capacity} ($occupancyPercent%)',
-                  style: TextStyle(color: Colors.grey[700]),
+                Flexible(
+                  child: Text(
+                    '${shelter.currentOccupancy}/${shelter.capacity} ($occupancyPercent%)',
+                    style: TextStyle(color: Colors.grey[700]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -183,22 +191,26 @@ class ItemShelter extends StatelessWidget {
             // Action buttons
             Row(
               children: [
-                ElevatedButton.icon(
-                  icon: Icon(Iconsax.direct, size: 16),
-                  label: Text('Chỉ đường'),
-                  onPressed: () => controller.navigateToShelter(shelter),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MinhColors.primary,
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: Icon(Iconsax.direct, size: 16),
+                    label: Text('Chỉ đường'),
+                    onPressed: () => controller.navigateToShelter(shelter),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MinhColors.primary,
+                    ),
                   ),
                 ),
                 SizedBox(width: 12),
-                OutlinedButton.icon(
-                  icon: Icon(Iconsax.map, size: 16),
-                  label: Text('Xem bản đồ'),
-                  onPressed: () => controller.viewShelterOnMap(shelter),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: Icon(Iconsax.map, size: 16),
+                    label: Text('Xem bản đồ'),
+                    onPressed: () => controller.viewShelterOnMap(shelter),
+                  ),
                 ),
-                Spacer(),
-                if (shelter.distributionTime != null)
+                if (shelter.distributionTime != null) ...[
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: Icon(Iconsax.clock, size: 20),
                     onPressed: () {
@@ -216,7 +228,10 @@ class ItemShelter extends StatelessWidget {
                       );
                     },
                     tooltip: 'Thời gian phân phát',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
+                ],
               ],
             ),
           ],

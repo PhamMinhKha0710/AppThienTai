@@ -66,9 +66,3 @@ class ChangePassword extends StatelessWidget {
     );
   }
 }
-<<<<<<< Updated upstream
-
-
-
-=======
->>>>>>> Stashed changes

@@ -18,6 +18,11 @@ class VictimAlertsController extends GetxController {
   final searchQuery = ''.obs;
   final currentPosition = Rxn<({double lat, double lng})>();
 
+  // Filter and sort options
+  final selectedSeverityFilter = Rxn<AlertSeverity>();
+  final selectedTypeFilter = Rxn<AlertType>();
+  final sortOption = 'severity'.obs; // 'severity', 'date', 'distance'
+
   @override
   void onInit() {
     super.onInit();
@@ -194,18 +199,87 @@ class VictimAlertsController extends GetxController {
   double _toRadians(double degrees) => degrees * (math.pi / 180);
 
   List<AlertEntity> get currentList {
-    final source = (selectedTab.value == 0 ? activeAlerts : historyAlerts).toList();
+    var source = (selectedTab.value == 0 ? activeAlerts : historyAlerts).toList();
 
     // Apply search filter
     if (searchQuery.value.isNotEmpty) {
       final query = searchQuery.value.toLowerCase();
-      return source.where((alert) {
+      source = source.where((alert) {
         return alert.title.toLowerCase().contains(query) ||
                alert.content.toLowerCase().contains(query);
       }).toList();
     }
 
+    // Apply severity filter
+    if (selectedSeverityFilter.value != null) {
+      source = source.where((alert) {
+        return alert.severity == selectedSeverityFilter.value;
+      }).toList();
+    }
+
+    // Apply type filter
+    if (selectedTypeFilter.value != null) {
+      source = source.where((alert) {
+        return alert.alertType == selectedTypeFilter.value;
+      }).toList();
+    }
+
+    // Apply sort
+    source = _applySort(source);
+
     return source;
+  }
+
+  List<AlertEntity> _applySort(List<AlertEntity> alerts) {
+    final sort = sortOption.value;
+    final sorted = List<AlertEntity>.from(alerts);
+
+    switch (sort) {
+      case 'severity':
+        sorted.sort(_compareAlerts);
+        break;
+      case 'date':
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case 'distance':
+        if (currentPosition.value != null) {
+          sorted.sort((a, b) {
+            final distA = getDistance(a.id);
+            final distB = getDistance(b.id);
+            if (distA == null && distB == null) return 0;
+            if (distA == null) return 1;
+            if (distB == null) return -1;
+            return distA.compareTo(distB);
+          });
+        } else {
+          sorted.sort(_compareAlerts);
+        }
+        break;
+      default:
+        sorted.sort(_compareAlerts);
+    }
+
+    return sorted;
+  }
+
+  void filterBySeverity(AlertSeverity? severity) {
+    selectedSeverityFilter.value = severity;
+  }
+
+  void filterByType(AlertType? type) {
+    selectedTypeFilter.value = type;
+  }
+
+  void setSortOption(String option) {
+    if (['severity', 'date', 'distance'].contains(option)) {
+      sortOption.value = option;
+    }
+  }
+
+  void clearFilters() {
+    selectedSeverityFilter.value = null;
+    selectedTypeFilter.value = null;
+    sortOption.value = 'severity';
   }
 
   void searchAlerts(String query) {

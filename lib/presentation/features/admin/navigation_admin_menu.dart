@@ -91,6 +91,7 @@ class NavigationAdminMenu extends StatelessWidget {
           destinations: const [
             NavigationDestination(icon: Icon(Iconsax.status), label: "Dashboard"),
             NavigationDestination(icon: Icon(Iconsax.danger), label: "SOS"),
+            NavigationDestination(icon: Icon(Iconsax.notification), label: "Cảnh báo"),
             NavigationDestination(icon: Icon(Iconsax.setting_2), label: "Cài đặt"),
             NavigationDestination(icon: Icon(Iconsax.user), label: "Cá nhân"),
           ],

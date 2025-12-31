@@ -128,10 +128,3 @@ class SosQueueService extends GetxService {
     super.onClose();
   }
 }
-<<<<<<< Updated upstream
-
-
-
-
-=======
->>>>>>> Stashed changes

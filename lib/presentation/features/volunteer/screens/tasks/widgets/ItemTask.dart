@@ -29,7 +29,15 @@ class ItemTask extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(task['title'] ?? '', style: Theme.of(context).textTheme.titleMedium),
+                Expanded(
+                  child: Text(
+                    task['title'] ?? '',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: MinhSizes.sm, vertical: 4),
                   decoration: BoxDecoration(
@@ -64,27 +72,40 @@ class ItemTask extends StatelessWidget {
               children: [
                 const Icon(Iconsax.location, size: 16),
                 SizedBox(width: 6),
-                Text(task['distanceText'] ?? 'Đang tính...'),
+                Expanded(
+                  child: Text(
+                    task['distanceText'] ?? 'Đang tính...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             SizedBox(height: MinhSizes.spaceBtwItems),
             Row(
               children: [
                 if (status == 'pending')
-                  ElevatedButton(
-                    onPressed: () => controller.onAccept(task),
-                    child: const Text('Nhận nhiệm vụ'),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => controller.onAccept(task),
+                      child: const Text('Nhận nhiệm vụ'),
+                    ),
                   ),
                 if (status == 'accepted')
-                  ElevatedButton(
-                    onPressed: () => controller.onComplete(task),
-                    child: const Text('Hoàn thành'),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => controller.onComplete(task),
+                      child: const Text('Hoàn thành'),
+                    ),
                   ),
-                const Spacer(),
-                OutlinedButton.icon(
-                  icon: const Icon(Iconsax.map),
-                  label: const Text('Xem bản đồ'),
-                  onPressed: () => controller.viewTaskOnMap(task),
+                if (status == 'pending' || status == 'accepted')
+                  const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Iconsax.map),
+                    label: const Text('Xem bản đồ'),
+                    onPressed: () => controller.viewTaskOnMap(task),
+                  ),
                 ),
               ],
             ),

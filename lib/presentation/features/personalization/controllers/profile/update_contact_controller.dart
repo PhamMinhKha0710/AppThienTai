@@ -63,14 +63,10 @@ class UpdateContactController extends GetxController {
       userController.user.refresh();
 
       MinhFullScreenLoader.stopLoading();
-<<<<<<< Updated upstream
-      MinhLoaders.successSnackBar(title: "Thành công", message: "Thông tin liên hệ đã được cập nhật");
-=======
       MinhLoaders.successSnackBar(
         title: "Thành công",
         message: "Thông tin liên hệ đã được cập nhật",
       );
->>>>>>> Stashed changes
       Get.off(() => ProfileScreen());
     } on Failure catch (f) {
       MinhFullScreenLoader.stopLoading();
@@ -81,9 +77,3 @@ class UpdateContactController extends GetxController {
     }
   }
 }
-<<<<<<< Updated upstream
-
-
-
-=======
->>>>>>> Stashed changes

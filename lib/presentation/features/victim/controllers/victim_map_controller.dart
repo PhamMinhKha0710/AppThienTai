@@ -1009,9 +1009,3 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
-<<<<<<< Updated upstream
-=======
-
-  
-
->>>>>>> Stashed changes

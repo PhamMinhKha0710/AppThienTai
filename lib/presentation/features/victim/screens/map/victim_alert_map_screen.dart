@@ -410,11 +410,15 @@ class _AlertInfoCard extends StatelessWidget {
                               color: Colors.grey.shade600,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              '${distance!.toStringAsFixed(1)} km',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
+                            Flexible(
+                              child: Text(
+                                '${distance!.toStringAsFixed(1)} km',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],

@@ -72,7 +72,11 @@ class VictimNewsScreen extends StatelessWidget {
                       child: Text("Không có tin tức nào"),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: MinhSizes.defaultSpace),
+                      padding: EdgeInsets.only(
+                        left: MinhSizes.defaultSpace,
+                        right: MinhSizes.defaultSpace,
+                        bottom: 100, // Space for SOS button
+                      ),
                       itemCount: news.length,
                       itemBuilder: (context, index) {
                         final article = news[index];

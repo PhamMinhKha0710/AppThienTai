@@ -312,13 +312,3 @@ class VictimReceiveController extends GetxController {
     await loadData();
   }
 }
-<<<<<<< Updated upstream
-
-
-
-
-
-
-
-=======
->>>>>>> Stashed changes

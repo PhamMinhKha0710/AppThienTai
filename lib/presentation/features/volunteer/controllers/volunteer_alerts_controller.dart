@@ -16,6 +16,11 @@ class VolunteerAlertsController extends GetxController {
   final allAlerts = <AlertEntity>[].obs;
   final taskAlerts = <AlertEntity>[].obs;
 
+  // Filter and sort options
+  final selectedSeverityFilter = Rxn<AlertSeverity>();
+  final selectedTypeFilter = Rxn<AlertType>();
+  final sortOption = 'severity'.obs; // 'severity', 'date'
+
   @override
   void onInit() {
     super.onInit();
@@ -79,15 +84,73 @@ class VolunteerAlertsController extends GetxController {
   }
 
   List<AlertEntity> get currentList {
-    final source = selectedTab.value == 0 ? allAlerts : taskAlerts;
-    
-    if (query.value.isEmpty) return source;
-    
-    return source.where((alert) {
+    var source = (selectedTab.value == 0 ? allAlerts : taskAlerts).toList();
+
+    // Apply search filter
+    if (query.value.isNotEmpty) {
       final searchQuery = query.value.toLowerCase();
-      return alert.title.toLowerCase().contains(searchQuery) ||
-             alert.content.toLowerCase().contains(searchQuery);
-    }).toList();
+      source = source.where((alert) {
+        return alert.title.toLowerCase().contains(searchQuery) ||
+               alert.content.toLowerCase().contains(searchQuery);
+      }).toList();
+    }
+
+    // Apply severity filter
+    if (selectedSeverityFilter.value != null) {
+      source = source.where((alert) {
+        return alert.severity == selectedSeverityFilter.value;
+      }).toList();
+    }
+
+    // Apply type filter
+    if (selectedTypeFilter.value != null) {
+      source = source.where((alert) {
+        return alert.alertType == selectedTypeFilter.value;
+      }).toList();
+    }
+
+    // Apply sort
+    source = _applySort(source);
+
+    return source;
+  }
+
+  List<AlertEntity> _applySort(List<AlertEntity> alerts) {
+    final sort = sortOption.value;
+    final sorted = List<AlertEntity>.from(alerts);
+
+    switch (sort) {
+      case 'severity':
+        sorted.sort(_compareAlerts);
+        break;
+      case 'date':
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      default:
+        sorted.sort(_compareAlerts);
+    }
+
+    return sorted;
+  }
+
+  void filterBySeverity(AlertSeverity? severity) {
+    selectedSeverityFilter.value = severity;
+  }
+
+  void filterByType(AlertType? type) {
+    selectedTypeFilter.value = type;
+  }
+
+  void setSortOption(String option) {
+    if (['severity', 'date'].contains(option)) {
+      sortOption.value = option;
+    }
+  }
+
+  void clearFilters() {
+    selectedSeverityFilter.value = null;
+    selectedTypeFilter.value = null;
+    sortOption.value = 'severity';
   }
 
   void search(String text) {
