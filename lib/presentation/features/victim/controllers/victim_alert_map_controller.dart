@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
@@ -30,11 +31,22 @@ class VictimAlertMapController extends GetxController {
   final selectedFilter = 'all'.obs;
   final showShelters = true.obs;
 
+  // Stream subscriptions
+  StreamSubscription<List<AlertEntity>>? _alertsSubscription;
+  StreamSubscription<List<ShelterEntity>>? _sheltersSubscription;
+
   @override
   void onInit() {
     super.onInit();
     _initLocationService();
     _loadData();
+  }
+
+  @override
+  void onClose() {
+    _alertsSubscription?.cancel();
+    _sheltersSubscription?.cancel();
+    super.onClose();
   }
 
   void _initLocationService() {
@@ -53,8 +65,12 @@ class VictimAlertMapController extends GetxController {
       final position = await _locationService?.getCurrentLocation();
       currentPosition.value = position;
 
+      // Cancel existing subscriptions if any
+      _alertsSubscription?.cancel();
+      _sheltersSubscription?.cancel();
+
       // Load alerts
-      _alertRepo.getActiveAlerts().listen((alertList) {
+      _alertsSubscription = _alertRepo.getActiveAlerts().listen((alertList) {
         // Filter alerts relevant to victims
         final relevantAlerts = alertList.where((alert) {
           return alert.targetAudience == TargetAudience.all ||
@@ -63,11 +79,15 @@ class VictimAlertMapController extends GetxController {
         }).toList();
 
         alerts.value = relevantAlerts;
+      }, onError: (error) {
+        debugPrint('Error listening to alerts: $error');
       });
 
       // Load shelters
-      _shelterRepo.getAllShelters().listen((shelterList) {
+      _sheltersSubscription = _shelterRepo.getAllShelters().listen((shelterList) {
         shelters.value = shelterList;
+      }, onError: (error) {
+        debugPrint('Error listening to shelters: $error');
       });
     } catch (e) {
       debugPrint('Error loading map data: $e');
@@ -77,6 +97,9 @@ class VictimAlertMapController extends GetxController {
   }
 
   Future<void> refreshData() async {
+    // Cancel existing subscriptions before reloading
+    _alertsSubscription?.cancel();
+    _sheltersSubscription?.cancel();
     await _loadData();
   }
 

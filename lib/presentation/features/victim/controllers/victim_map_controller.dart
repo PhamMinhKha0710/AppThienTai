@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/routing_service.dart';
 import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
 import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
@@ -22,6 +25,7 @@ class VictimMapController extends GetxController {
   RoutingService? _routingService;
   final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
+  final AlertRepository _alertRepo = getIt<AlertRepository>();
   
   final currentPosition = Rxn<Position>();
   final disasterMarkers = <Marker>[].obs;
@@ -32,6 +36,10 @@ class VictimMapController extends GetxController {
   final selectedRequest = Rxn<domain.HelpRequestEntity>();
   final isLoading = false.obs;
   final routePolylines = <Polyline>[].obs;
+  
+  // Alert-related observables
+  final alerts = <AlertEntity>[].obs;
+  final selectedAlertMarker = Rxn<AlertEntity>();
   // Hazard polygons (e.g., flood, storm, landslide areas)
   final hazardPolygons = <Polygon>[].obs;
   final showHazards = true.obs;
@@ -111,6 +119,7 @@ class VictimMapController extends GetxController {
   }
   
   StreamSubscription? _myRequestsSub;
+  StreamSubscription<List<AlertEntity>>? _alertsSubscription;
   // Map controller
   final mapController = Rxn<MapController>();
 
@@ -123,6 +132,7 @@ class VictimMapController extends GetxController {
     // Load hazard polygons for victim map
     loadDisasterPolygons();
     loadShelterMarkers();
+    loadAlertMarkers();
     _setupMyRequestsListener();
     mapController.value = MapController();
   }
@@ -130,6 +140,7 @@ class VictimMapController extends GetxController {
   @override
   void onClose() {
     _myRequestsSub?.cancel();
+    _alertsSubscription?.cancel();
     super.onClose();
   }
   
@@ -862,9 +873,157 @@ class VictimMapController extends GetxController {
   void refreshMarkers() {
     loadDisasterMarkers();
     loadShelterMarkers();
+    loadAlertMarkers();
     // Refresh hazard polygons as well
     loadDisasterPolygons();
     // My requests will auto-update via stream
+  }
+
+  /// Load alert markers from Firebase
+  Future<void> loadAlertMarkers() async {
+    try {
+      // Cancel existing subscription if any
+      _alertsSubscription?.cancel();
+      
+      _alertsSubscription = _alertRepo.getActiveAlerts().listen((alertList) {
+        // Filter alerts relevant to victims
+        final relevantAlerts = alertList.where((alert) {
+          return alert.targetAudience == TargetAudience.all ||
+              alert.targetAudience == TargetAudience.victims ||
+              alert.targetAudience == TargetAudience.locationBased;
+        }).toList();
+
+        // Sort by severity (critical first)
+        relevantAlerts.sort(_compareAlerts);
+        alerts.value = relevantAlerts;
+      }, onError: (error) {
+        debugPrint('[VICTIM_MAP] Error listening to alerts: $error');
+      });
+    } catch (e) {
+      debugPrint('[VICTIM_MAP] Error loading alerts: $e');
+    }
+  }
+
+  int _compareAlerts(AlertEntity a, AlertEntity b) {
+    // Sort by severity (critical first)
+    final severityCompare = _severityToInt(b.severity)
+        .compareTo(_severityToInt(a.severity));
+    if (severityCompare != 0) return severityCompare;
+
+    // Then by created date (newest first)
+    return b.createdAt.compareTo(a.createdAt);
+  }
+
+  int _severityToInt(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return 4;
+      case AlertSeverity.high:
+        return 3;
+      case AlertSeverity.medium:
+        return 2;
+      case AlertSeverity.low:
+        return 1;
+    }
+  }
+
+  /// Get alert markers for the map
+  List<Marker> get alertMarkers {
+    return alerts
+        .where((alert) => alert.lat != null && alert.lng != null)
+        .map((alert) {
+      return Marker(
+        point: LatLng(alert.lat!, alert.lng!),
+        width: 40,
+        height: 40,
+        child: GestureDetector(
+          onTap: () {
+            selectedAlertMarker.value = alert;
+          },
+          child: _AlertMarkerWidget(alert: alert),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Get alert circles (radius of effect) for the map
+  List<CircleMarker> get alertCircles {
+    return alerts
+        .where((alert) =>
+            alert.lat != null && alert.lng != null && alert.radiusKm != null)
+        .map((alert) {
+      final color = _getAlertSeverityColor(alert.severity);
+      return CircleMarker(
+        point: LatLng(alert.lat!, alert.lng!),
+        radius: alert.radiusKm! * 1000, // Convert km to meters
+        useRadiusInMeter: true,
+        color: color.withOpacity(0.15),
+        borderColor: color.withOpacity(0.5),
+        borderStrokeWidth: 2,
+      );
+    }).toList();
+  }
+
+  /// Calculate distance to alert
+  double? getDistanceToAlert(AlertEntity alert) {
+    if (currentPosition.value == null ||
+        alert.lat == null ||
+        alert.lng == null) {
+      return null;
+    }
+
+    return _calculateDistanceToPoint(
+      currentPosition.value!.latitude,
+      currentPosition.value!.longitude,
+      alert.lat!,
+      alert.lng!,
+    );
+  }
+
+  double _calculateDistanceToPoint(
+      double lat1, double lng1, double lat2, double lng2) {
+    const double earthRadius = 6371; // km
+    final dLat = _toRadians(lat2 - lat1);
+    final dLng = _toRadians(lng2 - lng1);
+
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (math.pi / 180);
+
+  Color _getAlertSeverityColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return Colors.red.shade700;
+      case AlertSeverity.high:
+        return Colors.orange.shade700;
+      case AlertSeverity.medium:
+        return Colors.amber.shade700;
+      case AlertSeverity.low:
+        return Colors.blue.shade700;
+    }
+  }
+
+  IconData _getAlertIcon(AlertType type) {
+    switch (type) {
+      case AlertType.disaster:
+        return Iconsax.danger;
+      case AlertType.weather:
+        return Iconsax.cloud_lightning;
+      case AlertType.evacuation:
+        return Iconsax.routing;
+      case AlertType.resource:
+        return Iconsax.box;
+      case AlertType.general:
+        return Iconsax.warning_2;
+    }
   }
 
   /// Set OpenWeatherMap API key (keep it runtime only)
@@ -1007,5 +1166,66 @@ class _InfoChip extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Alert marker widget for the map
+class _AlertMarkerWidget extends StatelessWidget {
+  final AlertEntity alert;
+
+  const _AlertMarkerWidget({required this.alert});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getSeverityColor(alert.severity);
+    final icon = _getAlertIcon(alert.alertType);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.5),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: 24,
+      ),
+    );
+  }
+
+  Color _getSeverityColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return Colors.red.shade700;
+      case AlertSeverity.high:
+        return Colors.orange.shade700;
+      case AlertSeverity.medium:
+        return Colors.amber.shade700;
+      case AlertSeverity.low:
+        return Colors.blue.shade700;
+    }
+  }
+
+  IconData _getAlertIcon(AlertType type) {
+    switch (type) {
+      case AlertType.disaster:
+        return Iconsax.danger;
+      case AlertType.weather:
+        return Iconsax.cloud_lightning;
+      case AlertType.evacuation:
+        return Iconsax.routing;
+      case AlertType.resource:
+        return Iconsax.box;
+      case AlertType.general:
+        return Iconsax.warning_2;
+    }
   }
 }

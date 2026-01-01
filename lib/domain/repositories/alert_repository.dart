@@ -42,6 +42,9 @@ abstract class AlertRepository {
 
   /// Lấy alert theo ID
   Future<AlertEntity?> getAlertById(String alertId);
+
+  /// Lấy alert theo ID với real-time updates (stream)
+  Stream<AlertEntity?> getAlertByIdStream(String alertId);
 }
 
 

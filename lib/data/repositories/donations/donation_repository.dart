@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../domain/repositories/donation_repository.dart';
 import '../../../domain/entities/donation_entity.dart';
 import '../../models/donation_dto.dart';
+import '../../../core/constants/supply_categories.dart';
 
 class DonationRepositoryImpl implements DonationRepository {
   final FirebaseFirestore _firestore;
@@ -62,6 +63,9 @@ class DonationRepositoryImpl implements DonationRepository {
   Future<String> createMoneyDonation({
     required double amount,
     required String paymentMethod,
+    String? alertId,
+    String? province,
+    String? district,
   }) async {
     try {
       final entity = DonationEntity(
@@ -70,6 +74,9 @@ class DonationRepositoryImpl implements DonationRepository {
         status: DonationStatus.pending,
         userId: _auth.currentUser?.uid,
         createdAt: DateTime.now(),
+        alertId: alertId,
+        province: province,
+        district: district,
         amount: amount,
         paymentMethod: paymentMethod,
       );
@@ -86,6 +93,11 @@ class DonationRepositoryImpl implements DonationRepository {
     required String itemName,
     required int quantity,
     String? description,
+    SupplyCategory? category,
+    String? customCategory,
+    String? alertId,
+    String? province,
+    String? district,
   }) async {
     try {
       final entity = DonationEntity(
@@ -94,9 +106,14 @@ class DonationRepositoryImpl implements DonationRepository {
         status: DonationStatus.pending,
         userId: _auth.currentUser?.uid,
         createdAt: DateTime.now(),
+        alertId: alertId,
+        province: province,
+        district: district,
         itemName: itemName,
         quantity: quantity,
         description: description,
+        category: category,
+        customCategory: customCategory,
       );
       final dto = DonationDto.fromEntity(entity);
       final docRef = await _collection.add(dto.toJson());
@@ -111,6 +128,9 @@ class DonationRepositoryImpl implements DonationRepository {
     required double hours,
     required DateTime date,
     String? description,
+    String? alertId,
+    String? province,
+    String? district,
   }) async {
     try {
       final entity = DonationEntity(
@@ -119,6 +139,9 @@ class DonationRepositoryImpl implements DonationRepository {
         status: DonationStatus.pending,
         userId: _auth.currentUser?.uid,
         createdAt: DateTime.now(),
+        alertId: alertId,
+        province: province,
+        district: district,
         hours: hours,
         date: date,
         description: description,
@@ -140,6 +163,49 @@ class DonationRepositoryImpl implements DonationRepository {
       });
     } catch (e) {
       throw Exception('Failed to update donation: $e');
+    }
+  }
+
+  @override
+  Future<List<DonationEntity>> getDonationsByAlert(String alertId) async {
+    try {
+      final snapshot = await _collection
+          .where('AlertId', isEqualTo: alertId)
+          .orderBy('CreatedAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => DonationDto.fromSnapshot(doc).toEntity())
+          .toList();
+    } catch (e) {
+      print('Error getting donations by alert: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<DonationEntity>> getDonationsByArea(
+    String province,
+    String? district,
+  ) async {
+    try {
+      Query<Map<String, dynamic>> query = _collection
+          .where('Province', isEqualTo: province);
+
+      if (district != null && district.isNotEmpty) {
+        query = query.where('District', isEqualTo: district);
+      }
+
+      final snapshot = await query
+          .orderBy('CreatedAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => DonationDto.fromSnapshot(doc).toEntity())
+          .toList();
+    } catch (e) {
+      print('Error getting donations by area: $e');
+      return [];
     }
   }
 }

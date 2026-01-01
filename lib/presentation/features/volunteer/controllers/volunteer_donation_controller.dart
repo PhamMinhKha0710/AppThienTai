@@ -3,6 +3,7 @@ import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/domain/repositories/donation_repository.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/domain/entities/donation_entity.dart';
+import 'package:cuutrobaolu/core/constants/supply_categories.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +15,16 @@ class VolunteerDonationController extends GetxController {
   final paymentMethod = 'wallet'.obs;
   final totalDonation = 0.0.obs;
   final totalTimeDonated = 0.0.obs;
+
+  // Donation target selection
+  final donationTargetType = 'general'.obs; // 'general', 'alert', 'area'
+  final selectedAlertId = Rxn<String>();
+  final selectedProvince = Rxn<String>();
+  final selectedDistrict = Rxn<String>();
+
+  // Supply category
+  final selectedCategory = Rxn<SupplyCategory>();
+  final customCategoryController = TextEditingController();
 
   final amountController = TextEditingController();
   final itemNameController = TextEditingController();
@@ -38,6 +49,7 @@ class VolunteerDonationController extends GetxController {
     itemNameController.dispose();
     quantityController.dispose();
     itemDescriptionController.dispose();
+    customCategoryController.dispose();
     hoursController.dispose();
     dateController.dispose();
     timeDescriptionController.dispose();
@@ -93,6 +105,9 @@ class VolunteerDonationController extends GetxController {
       final donationId = await _donationRepo.createMoneyDonation(
         amount: amount,
         paymentMethod: paymentMethod.value,
+        alertId: donationTargetType.value == 'alert' ? selectedAlertId.value : null,
+        province: donationTargetType.value == 'area' ? selectedProvince.value : null,
+        district: donationTargetType.value == 'area' ? selectedDistrict.value : null,
       );
 
       // TODO: Process payment with VNPay/Momo
@@ -133,11 +148,37 @@ class VolunteerDonationController extends GetxController {
         throw Exception("Số lượng không hợp lệ");
       }
 
+      // Validate category
+      if (selectedCategory.value == null) {
+        MinhLoaders.errorSnackBar(
+          title: "Lỗi",
+          message: "Vui lòng chọn danh mục vật phẩm",
+        );
+        return;
+      }
+
+      String? customCategory;
+      if (selectedCategory.value == SupplyCategory.other) {
+        if (customCategoryController.text.trim().isEmpty) {
+          MinhLoaders.errorSnackBar(
+            title: "Lỗi",
+            message: "Vui lòng nhập tên danh mục tùy chỉnh",
+          );
+          return;
+        }
+        customCategory = customCategoryController.text.trim();
+      }
+
       // Create donation record
       final donationId = await _donationRepo.createSuppliesDonation(
         itemName: itemNameController.text.trim(),
         quantity: quantity,
         description: itemDescriptionController.text.trim(),
+        category: selectedCategory.value,
+        customCategory: customCategory,
+        alertId: donationTargetType.value == 'alert' ? selectedAlertId.value : null,
+        province: donationTargetType.value == 'area' ? selectedProvince.value : null,
+        district: donationTargetType.value == 'area' ? selectedDistrict.value : null,
       );
 
       // Update status to completed
@@ -152,6 +193,8 @@ class VolunteerDonationController extends GetxController {
       itemNameController.clear();
       quantityController.clear();
       itemDescriptionController.clear();
+      selectedCategory.value = null;
+      customCategoryController.clear();
     } catch (e) {
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
@@ -181,6 +224,9 @@ class VolunteerDonationController extends GetxController {
         hours: hours,
         date: selectedDate.value!,
         description: timeDescriptionController.text.trim(),
+        alertId: donationTargetType.value == 'alert' ? selectedAlertId.value : null,
+        province: donationTargetType.value == 'area' ? selectedProvince.value : null,
+        district: donationTargetType.value == 'area' ? selectedDistrict.value : null,
       );
 
       // Update status to completed

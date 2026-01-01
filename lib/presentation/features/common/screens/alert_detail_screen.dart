@@ -1,13 +1,21 @@
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_badge.dart';
+import 'package:cuutrobaolu/core/widgets/alerts/alert_timer.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
+import 'package:cuutrobaolu/domain/repositories/donation_plan_repository.dart';
+import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/presentation/features/common/screens/alert_location_map_screen.dart';
 import 'package:cuutrobaolu/presentation/features/common/widgets/alert_detail_widgets.dart';
+import 'package:cuutrobaolu/presentation/features/victim/screens/donation/victim_donation_screen.dart';
+import 'package:cuutrobaolu/data/services/engagement_tracker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class AlertDetailScreen extends StatelessWidget {
+class AlertDetailScreen extends StatefulWidget {
   final AlertEntity alert;
 
   const AlertDetailScreen({
@@ -16,41 +24,61 @@ class AlertDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<AlertDetailScreen> createState() => _AlertDetailScreenState();
+}
+
+class _AlertDetailScreenState extends State<AlertDetailScreen> {
+  final _engagementTracker = EngagementTracker();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Track alert view when screen opens
+    _engagementTracker.initialize();
+    _trackView();
+  }
+  
+  void _trackView() {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    _engagementTracker.trackView(widget.alert, userId);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final severityColor = AlertSeverityHelper.getColor(alert.severity);
+    final severityColor = AlertSeverityHelper.getColor(widget.alert.severity);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _AlertDetailAppBar(
-            alert: alert,
-            severityColor: severityColor,
-            onShare: _shareAlert,
-            onReport: () => _reportAlert(context),
-          ),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HeaderSection(alert: alert, severityColor: severityColor),
-                _ContentSection(alert: alert, onShare: _shareAlert),
-              ],
-            ),
-          ),
-        ],
+      appBar: _AlertDetailAppBar(
+        alert: widget.alert,
+        severityColor: severityColor,
+        onShare: _shareAlert,
+        onInfo: () => _reportAlert(context),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HeaderSection(alert: widget.alert, severityColor: severityColor),
+            _ContentSection(alert: widget.alert, onShare: _shareAlert),
+          ],
+        ),
       ),
     );
   }
 
   void _shareAlert() {
+    // Track share engagement
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    _engagementTracker.trackShare(widget.alert, userId);
+    
     final shareText = '''
-🚨 ${alert.title}
+🚨 ${widget.alert.title}
 
-${alert.content}
+${widget.alert.content}
 
-📍 ${alert.location ?? 'Không có vị trí'}
-⚠️ Mức độ: ${alert.severity.viName}
-📅 ${AlertDateTimeHelper.format(alert.createdAt)}
+📍 ${widget.alert.location ?? 'Không có vị trí'}
+⚠️ Mức độ: ${widget.alert.severity.viName}
+📅 ${AlertDateTimeHelper.format(widget.alert.createdAt)}
     ''';
 
     Clipboard.setData(ClipboardData(text: shareText));
@@ -62,6 +90,10 @@ ${alert.content}
   }
 
   void _reportAlert(BuildContext context) {
+    // Track report engagement
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    _engagementTracker.trackReport(widget.alert, userId);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,63 +124,65 @@ ${alert.content}
 }
 
 // Private widget: App Bar
-class _AlertDetailAppBar extends StatelessWidget {
+class _AlertDetailAppBar extends StatelessWidget implements PreferredSizeWidget {
   final AlertEntity alert;
   final Color severityColor;
   final VoidCallback onShare;
-  final VoidCallback onReport;
+  final VoidCallback onInfo;
 
   const _AlertDetailAppBar({
     required this.alert,
     required this.severityColor,
     required this.onShare,
-    required this.onReport,
+    required this.onInfo,
   });
 
   @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
   Widget build(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 120,
-      pinned: true,
+    return AppBar(
       backgroundColor: severityColor,
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          alert.alertType.viName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                severityColor,
-                severityColor.withOpacity(0.8),
-              ],
-            ),
-          ),
-          child: Center(
-            child: Icon(
-              AlertTypeHelper.getIcon(alert.alertType),
-              size: 48,
-              color: Colors.white.withOpacity(0.3),
-            ),
-          ),
-        ),
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Iconsax.arrow_left, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+        tooltip: 'Quay lại',
       ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            AlertTypeHelper.getIcon(alert.alertType),
+            color: Colors.white,
+            size: 24,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              alert.alertType.viName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      centerTitle: false,
       actions: [
         IconButton(
           onPressed: onShare,
-          icon: const Icon(Icons.share, color: Colors.white),
+          icon: const Icon(Iconsax.share, color: Colors.white),
           tooltip: 'Chia sẻ',
         ),
         IconButton(
-          onPressed: onReport,
-          icon: const Icon(Icons.report, color: Colors.white),
-          tooltip: 'Báo cáo',
+          onPressed: onInfo,
+          icon: const Icon(Iconsax.info_circle, color: Colors.white),
+          tooltip: 'Thông tin',
         ),
       ],
     );
@@ -205,60 +239,22 @@ class _BadgesRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Badge(
-          color: severityColor,
-          icon: Icons.warning,
+        AlertBadge(
           label: alert.severity.viName,
+          color: severityColor,
+          icon: Iconsax.danger,
+          size: BadgeSize.medium,
+          variant: BadgeVariant.filled,
         ),
         const SizedBox(width: 12),
-        _Badge(
+        AlertBadge(
+          label: alert.targetAudience.viName,
           color: Colors.blue.shade700,
           icon: Iconsax.people,
-          label: alert.targetAudience.viName,
+          size: BadgeSize.medium,
+          variant: BadgeVariant.filled,
         ),
       ],
-    );
-  }
-}
-
-// Private widget: Single Badge
-class _Badge extends StatelessWidget {
-  final Color color;
-  final IconData icon;
-  final String label;
-
-  const _Badge({
-    required this.color,
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -271,29 +267,47 @@ class _TimeInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Iconsax.clock, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            AlertDateTimeHelper.format(alert.createdAt),
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+        Row(
+          children: [
+            Icon(Iconsax.clock, size: 16, color: Colors.grey[600]),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                AlertDateTimeHelper.format(alert.createdAt),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         if (alert.expiresAt != null) ...[
-          const SizedBox(width: 16),
-          Icon(Iconsax.timer, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              'Hết hạn: ${AlertDateTimeHelper.format(alert.expiresAt!)}',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Iconsax.timer, size: 16, color: Colors.orange.shade700),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  'Hết hạn: ${AlertDateTimeHelper.format(alert.expiresAt!)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          AnimatedAlertTimer(
+            expiresAt: alert.expiresAt!,
+            showIcon: true,
           ),
         ],
       ],
@@ -319,10 +333,22 @@ class _ContentSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AlertSectionTitle(title: 'Nội dung'),
-          const SizedBox(height: 12),
-          Text(
-            alert.content,
-            style: const TextStyle(fontSize: 16, height: 1.5),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              alert.content,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.6,
+                color: Colors.grey.shade800,
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           if (alert.location != null || 
@@ -332,6 +358,8 @@ class _ContentSection extends StatelessWidget {
             _ImagesSection(imageUrls: alert.imageUrls!),
           if (alert.safetyGuide != null && alert.safetyGuide!.isNotEmpty)
             _SafetyGuideSection(safetyGuide: alert.safetyGuide!),
+          _DonationSection(alert: alert),
+          const SizedBox(height: 16),
           _ActionButtonsSection(alert: alert, onShare: onShare),
           const SizedBox(height: 32),
         ],
@@ -348,18 +376,22 @@ class _LocationSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radiusKm = alert.radiusKm;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const AlertSectionTitle(title: 'Vị trí'),
         const SizedBox(height: 12),
+        // Blue card for location
         AlertInfoCard(
           icon: Iconsax.location,
           title: 'Địa điểm',
           content: alert.location ?? 
                    '${alert.lat?.toStringAsFixed(6)}, ${alert.lng?.toStringAsFixed(6)}',
-          color: Colors.blue,
+          color: Colors.blue.shade700,
         ),
+        // Green card for area
         if (alert.province != null || alert.district != null) ...[
           const SizedBox(height: 8),
           AlertInfoCard(
@@ -369,16 +401,17 @@ class _LocationSection extends StatelessWidget {
               if (alert.district != null) alert.district!,
               if (alert.province != null) alert.province!,
             ].join(', '),
-            color: Colors.green,
+            color: Colors.green.shade700,
           ),
         ],
-        if (alert.radiusKm != null) ...[
+        // Orange card for radius
+        if (radiusKm != null) ...[
           const SizedBox(height: 8),
           AlertInfoCard(
-            icon: Iconsax.radar,
+            icon: Iconsax.timer,
             title: 'Bán kính ảnh hưởng',
-            content: '${alert.radiusKm} km',
-            color: Colors.orange,
+            content: '${radiusKm.toStringAsFixed(1)} km',
+            color: Colors.orange.shade700,
           ),
         ],
         const SizedBox(height: 24),
@@ -470,6 +503,98 @@ class _SafetyGuideSection extends StatelessWidget {
   }
 }
 
+// Private widget: Donation Section
+class _DonationSection extends StatefulWidget {
+  final AlertEntity alert;
+
+  const _DonationSection({required this.alert});
+
+  @override
+  State<_DonationSection> createState() => _DonationSectionState();
+}
+
+class _DonationSectionState extends State<_DonationSection> {
+  final DonationPlanRepository _planRepo = getIt<DonationPlanRepository>();
+  bool _isLoading = false;
+  bool _hasPlan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDonationPlan();
+  }
+
+  Future<void> _checkDonationPlan() async {
+    setState(() => _isLoading = true);
+    try {
+      final plans = await _planRepo.getPlansByAlert(widget.alert.id);
+      setState(() {
+        _hasPlan = plans.isNotEmpty;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading || !_hasPlan) {
+      return SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AlertSectionTitle(title: 'Quyên góp'),
+        const SizedBox(height: 12),
+        Card(
+          color: Colors.blue.withOpacity(0.1),
+          child: Padding(
+            padding: EdgeInsets.all(MinhSizes.defaultSpace),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Iconsax.heart, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
+                      "Hỗ trợ khu vực này",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                SizedBox(height: MinhSizes.spaceBtwItems),
+                Text(
+                  "Khu vực này đang cần sự hỗ trợ. Bạn có thể quyên góp tiền, vật phẩm hoặc thời gian để giúp đỡ.",
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                SizedBox(height: MinhSizes.spaceBtwItems),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Get.to(() => VictimDonationScreen());
+                    },
+                    icon: Icon(Iconsax.heart),
+                    label: Text("Quyên góp ngay"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
 // Private widget: Action Buttons Section
 class _ActionButtonsSection extends StatelessWidget {
   final AlertEntity alert;
@@ -521,10 +646,12 @@ class _PrimaryActionButton extends StatelessWidget {
 
   void _handleMapAction() {
     if (alert.lat != null && alert.lng != null) {
-      // TODO: Navigate to map with alert location
+      Get.to(() => AlertLocationMapScreen(alert: alert));
+    } else {
       Get.snackbar(
         'Thông báo',
-        'Chức năng xem trên bản đồ sẽ được cập nhật',
+        'Cảnh báo này không có thông tin vị trí',
+        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }

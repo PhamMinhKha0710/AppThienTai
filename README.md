@@ -669,6 +669,30 @@ lib/
 
 ## 🔌 API Documentation
 
+### **AI Service Integration** 🤖
+
+The app includes an intelligent AI service for alert scoring, duplicate detection, and notification timing optimization.
+
+**Key Features:**
+- **Smart Alert Scoring**: ML-powered priority scoring with automatic fallback to rule-based
+- **Semantic Duplicate Detection**: Identifies duplicate alerts using natural language processing
+- **Optimal Notification Timing**: Learns best times to send notifications based on user engagement
+- **Health Monitoring**: Automatic health checks and metrics tracking
+- **User Engagement Tracking**: Logs interactions for continuous AI improvement
+
+**Documentation:**
+- 📘 **[Complete AI Integration Guide](docs/AI_SERVICE_INTEGRATION.md)**
+- 🚀 **Quick Start**: Set `enableAiScoring = true` in `api_constants.dart`
+- 🏥 **Health Check**: Monitor via `AIServiceMonitor`
+- 📊 **Metrics**: View real-time performance in app logs
+
+**Architecture:**
+- **Hybrid Approach**: AI primary + Rule-based fallback for reliability
+- **Async Processing**: Non-blocking UI with 10s timeout
+- **Continuous Learning**: Improves from user feedback over time
+
+---
+
 ### **Authentication APIs**
 
 #### **POST /auth/login**

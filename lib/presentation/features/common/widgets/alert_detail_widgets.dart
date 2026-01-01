@@ -138,20 +138,38 @@ class AlertExpandableSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Theme(
       data: ThemeData(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        leading: _LeadingIcon(icon: icon, color: color),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
         ),
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: const EdgeInsets.symmetric(vertical: 12),
-        children: [
-          _ExpandedContent(content: content, color: color),
-        ],
+        child: ExpansionTile(
+          leading: _LeadingIcon(icon: icon, color: color),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          trailing: Icon(
+            Iconsax.arrow_right_3,
+            color: Colors.grey.shade600,
+            size: 20,
+          ),
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          childrenPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          children: [
+            _ExpandedContent(content: content, color: color),
+          ],
+        ),
       ),
     );
   }
@@ -170,12 +188,12 @@ class _LeadingIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, color: color),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 }
@@ -193,6 +211,7 @@ class _ExpandedContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
@@ -202,7 +221,7 @@ class _ExpandedContent extends StatelessWidget {
         content,
         style: const TextStyle(
           fontSize: 15,
-          height: 1.5,
+          height: 1.6,
         ),
       ),
     );
@@ -252,8 +271,11 @@ class AlertDateTimeHelper {
   const AlertDateTimeHelper._();
 
   static String format(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} '
-           '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.day.toString().padLeft(2, '0')}/'
+           '${dateTime.month.toString().padLeft(2, '0')}/'
+           '${dateTime.year} '
+           '${dateTime.hour.toString().padLeft(2, '0')}:'
+           '${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   static String formatTimeAgo(DateTime dateTime) {

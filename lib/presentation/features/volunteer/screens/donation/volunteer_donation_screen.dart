@@ -3,6 +3,7 @@ import 'package:cuutrobaolu/core/widgets/tabs/MinhTabButton.dart';
 import 'package:cuutrobaolu/core/widgets/cards/MinhPaymentMethodTile.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
+import 'package:cuutrobaolu/core/constants/supply_categories.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_donation_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -169,6 +170,46 @@ class _SuppliesDonationTab extends StatelessWidget {
             "Quyên góp nhu yếu phẩm",
             style: Theme.of(context).textTheme.headlineSmall,
           ),
+          SizedBox(height: MinhSizes.spaceBtwItems),
+          Text(
+            "Danh mục vật phẩm",
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          SizedBox(height: MinhSizes.spaceBtwItems / 2),
+          Obx(() => DropdownButtonFormField<SupplyCategory>(
+                value: controller.selectedCategory.value,
+                decoration: InputDecoration(
+                  labelText: "Chọn danh mục",
+                  prefixIcon: Icon(Iconsax.category),
+                  border: OutlineInputBorder(),
+                ),
+                items: SupplyCategory.values.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Row(
+                      children: [
+                        Icon(category.icon, color: category.color),
+                        SizedBox(width: 8),
+                        Text(category.viName),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  controller.selectedCategory.value = value;
+                },
+              )),
+          if (controller.selectedCategory.value == SupplyCategory.other) ...[
+            SizedBox(height: MinhSizes.spaceBtwItems),
+            TextField(
+              controller: controller.customCategoryController,
+              decoration: InputDecoration(
+                labelText: "Tên danh mục tùy chỉnh",
+                prefixIcon: Icon(Iconsax.edit),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
           SizedBox(height: MinhSizes.spaceBtwItems),
           TextField(
             controller: controller.itemNameController,

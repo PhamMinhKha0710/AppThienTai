@@ -1,3 +1,5 @@
+import '../../core/constants/supply_categories.dart';
+
 /// Donation Entity - Pure business object
 class DonationEntity {
   final String id;
@@ -7,6 +9,11 @@ class DonationEntity {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  // Linking fields
+  final String? alertId;
+  final String? province;
+  final String? district;
+
   // Money donation fields
   final double? amount;
   final String? paymentMethod;
@@ -15,6 +22,8 @@ class DonationEntity {
   final String? itemName;
   final int? quantity;
   final String? description;
+  final SupplyCategory? category;
+  final String? customCategory;
 
   // Time donation fields
   final double? hours;
@@ -27,11 +36,16 @@ class DonationEntity {
     this.userId,
     required this.createdAt,
     this.updatedAt,
+    this.alertId,
+    this.province,
+    this.district,
     this.amount,
     this.paymentMethod,
     this.itemName,
     this.quantity,
     this.description,
+    this.category,
+    this.customCategory,
     this.hours,
     this.date,
   });
@@ -43,11 +57,16 @@ class DonationEntity {
     String? userId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? alertId,
+    String? province,
+    String? district,
     double? amount,
     String? paymentMethod,
     String? itemName,
     int? quantity,
     String? description,
+    SupplyCategory? category,
+    String? customCategory,
     double? hours,
     DateTime? date,
   }) {
@@ -58,11 +77,16 @@ class DonationEntity {
       userId: userId ?? this.userId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      alertId: alertId ?? this.alertId,
+      province: province ?? this.province,
+      district: district ?? this.district,
       amount: amount ?? this.amount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       itemName: itemName ?? this.itemName,
       quantity: quantity ?? this.quantity,
       description: description ?? this.description,
+      category: category ?? this.category,
+      customCategory: customCategory ?? this.customCategory,
       hours: hours ?? this.hours,
       date: date ?? this.date,
     );
