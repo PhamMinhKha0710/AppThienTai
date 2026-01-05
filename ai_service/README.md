@@ -14,7 +14,7 @@ Python-based AI service providing intelligent alert scoring, duplicate detection
 ### 1. Create virtual environment
 
 ```bash
-python -m venv venv
+python -3.10 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
@@ -205,6 +205,20 @@ pytest tests/
 ## License
 
 MIT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

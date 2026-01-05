@@ -44,3 +44,17 @@ abstract class AreaCoordinatorRepository {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

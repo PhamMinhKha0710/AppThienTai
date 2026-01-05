@@ -10,7 +10,7 @@ import 'package:cuutrobaolu/data/repositories/chat_repository.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/presentation/utils/help_request_mapper.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:cuutrobaolu/domain/usecases/create_help_request_usecase.dart';
 
 import '../../../../data/repositories/help/help_request_repository.dart';

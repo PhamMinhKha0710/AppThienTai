@@ -2,7 +2,7 @@ import 'package:cuutrobaolu/core/widgets/appbar/MinhAppbar.dart';
 import 'package:cuutrobaolu/core/widgets/images/MinhRoundedImage.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/upload_data/UpLoadBanner.dart';
-import 'package:cuutrobaolu/presentation/features/shop/controllers/banner_controller.dart';
+import 'package:cuutrobaolu/presentation/features/home/controllers/banner_controller.dart';
 
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';

@@ -169,3 +169,17 @@ class AreaCoordinatorRepositoryImpl implements AreaCoordinatorRepository {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

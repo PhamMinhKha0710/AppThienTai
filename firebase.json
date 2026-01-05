@@ -19,5 +19,22 @@
                 }
             }
         }
+    },
+    "functions": [
+        {
+            "source": "functions",
+            "codebase": "ai-service",
+            "runtime": "python312",
+            "ignore": [
+                "venv",
+                ".git",
+                "firebase-debug.log",
+                "firebase-debug.*.log",
+                "*.local"
+            ]
+        }
+    ],
+    "storage": {
+        "rules": "storage.rules"
     }
 }

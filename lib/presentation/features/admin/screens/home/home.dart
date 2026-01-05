@@ -3,9 +3,9 @@ import 'package:cuutrobaolu/core/widgets/custom_shapes/containers/MinhPrimaryHea
 import 'package:cuutrobaolu/core/widgets/shimmers/MinhShimmerEffect.dart';
 import 'package:cuutrobaolu/core/widgets/shimmers/MinhVerticalProductShimmer.dart';
 import 'package:cuutrobaolu/core/widgets/texts/MinhSectionHeading.dart';
-import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhHomeAppbar.dart';
-import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhHomeCategory.dart';
-import 'package:cuutrobaolu/presentation/features/shop/screens/home/widgets/MinhPromoSlider.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/home/widgets/MinhHomeAppbar.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/home/widgets/MinhHomeCategory.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/home/widgets/MinhPromoSlider.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';

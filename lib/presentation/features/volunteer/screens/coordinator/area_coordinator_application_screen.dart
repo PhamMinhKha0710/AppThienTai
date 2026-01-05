@@ -168,3 +168,17 @@ class AreaCoordinatorApplicationScreen extends StatelessWidget {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

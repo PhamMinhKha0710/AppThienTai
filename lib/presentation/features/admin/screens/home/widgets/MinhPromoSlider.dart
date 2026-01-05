@@ -1,8 +1,8 @@
 import 'package:cuutrobaolu/core/widgets/custom_shapes/containers/MinhCircularContainer.dart';
 import 'package:cuutrobaolu/core/widgets/images/MinhRoundedImage.dart';
 import 'package:cuutrobaolu/core/widgets/shimmers/MinhShimmerEffect.dart';
-import 'package:cuutrobaolu/presentation/features/shop/controllers/banner_controller.dart';
-import 'package:cuutrobaolu/presentation/features/shop/controllers/home_controller.dart';
+import 'package:cuutrobaolu/presentation/features/home/controllers/banner_controller.dart';
+import 'package:cuutrobaolu/presentation/features/home/controllers/home_controller.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:carousel_slider/carousel_slider.dart';

@@ -1,7 +1,7 @@
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/presentation/features/admin/controllers/admin_sos_controller.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';

@@ -1,5 +1,5 @@
 import 'package:cuutrobaolu/presentation/features/admin/controllers/help_controller.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/supporter_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/supporter_modal.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

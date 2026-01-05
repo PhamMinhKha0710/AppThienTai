@@ -70,3 +70,17 @@ class AreaCoordinatorEntity {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -64,10 +64,11 @@ Future<void> init() async {
     () => const AlertScoringService(),
   );
   
-  // AI Service Client - Connection to Python AI Service
+  // AI Service Client - Connection to AI Service (Firebase Functions or Python)
   getIt.registerLazySingleton<AIServiceClient>(
     () => AIServiceClient(
-      baseUrl: aiServiceBaseUrl,
+      baseUrl: aiServiceUrl,  // Uses Firebase or local based on config
+      useFirebase: useFirebaseFunctions,
     ),
   );
   

@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // AI Models - read only for authenticated users, write only for admin
+    match /ai_models/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only upload via Admin SDK
+    }
+    
+    // Default rule for other files
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+

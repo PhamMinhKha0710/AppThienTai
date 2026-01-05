@@ -1,6 +1,6 @@
 import '../../domain/entities/banner_entity.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/supporter_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/supporter_modal.dart';
 
 import 'package:cuutrobaolu/presentation/routes/routes.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';

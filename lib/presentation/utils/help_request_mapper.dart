@@ -1,5 +1,5 @@
 import '../../domain/entities/help_request_entity.dart' as domain;
-import '../features/shop/models/help_request_modal.dart';
+import '../features/home/models/help_request_modal.dart';
 import '../../core/constants/enums.dart' as core;
 
 /// Mapper để convert giữa HelpRequestEntity (domain) và HelpRequest (presentation)

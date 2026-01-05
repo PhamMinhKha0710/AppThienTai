@@ -5,8 +5,8 @@ import 'package:cuutrobaolu/domain/usecases/get_help_requests_by_user_usecase.da
 import 'package:cuutrobaolu/domain/usecases/update_help_request_status_usecase.dart';
 import 'package:cuutrobaolu/presentation/utils/help_request_mapper.dart';
 import 'package:cuutrobaolu/data/repositories/help/help_repository_inmemory.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/supporter_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/supporter_modal.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart' as core;
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
 import 'package:cuutrobaolu/core/popups/exports.dart';
@@ -78,7 +78,7 @@ class HelpController extends GetxController {
       (entities) {
         print('Help requests stream: received ${entities.length} requests');
         final models = entities.map((e) => HelpRequestMapper.toModel(e)).toList();
-        requests.assignAll(models);
+        requests.assignAll(models.cast<HelpRequest>());
         print('Updated requests list: ${requests.length} items');
       },
       onError: (error) {
@@ -153,7 +153,7 @@ class HelpController extends GetxController {
       _userReqSub = _getHelpRequestsByUserUseCase(userCurrent.uid).listen(
         (entities) {
           final models = entities.map((e) => HelpRequestMapper.toModel(e)).toList();
-          requestsUserCurrent.assignAll(models);
+          requestsUserCurrent.assignAll(models.cast<HelpRequest>());
         },
         onError: (error) {
           if (error is Failure) {

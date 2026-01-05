@@ -1,29 +1,41 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
+import 'package:cuutrobaolu/core/constants/api_constants.dart';
 
-/// Client for connecting to Python AI Service
+/// Client for connecting to AI Service (Firebase Cloud Functions or Python Server)
 ///
 /// Provides:
 /// - AI-powered alert scoring
 /// - Semantic duplicate detection
 /// - Notification timing optimization
+/// - Hazard zone prediction
+///
+/// Supports two modes:
+/// - Firebase Cloud Functions (production)
+/// - Local Python server (development)
 class AIServiceClient {
   final Dio _dio;
   final String baseUrl;
+  final bool useFirebase;
 
   AIServiceClient({
-    required this.baseUrl, // e.g., "http://localhost:8000" or your server
+    required this.baseUrl,
+    this.useFirebase = useFirebaseFunctions,
   }) : _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
+          connectTimeout: Duration(milliseconds: aiServiceConnectTimeout),
+          receiveTimeout: Duration(milliseconds: aiServiceReceiveTimeout),
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
         ));
+
+  /// Get endpoint path based on service type
+  String _getEndpoint(String firebaseEndpoint, String pythonEndpoint) {
+    return useFirebase ? firebaseEndpoint : pythonEndpoint;
+  }
 
   /// Get AI-powered priority score for an alert
   Future<AIScoreResult> getAlertScore(
@@ -33,8 +45,11 @@ class AIServiceClient {
     required String userRole,
   }) async {
     try {
+      // Firebase: /score_alert, Python: /api/v1/score
+      final endpoint = _getEndpoint('/score_alert', '/api/v1/score');
+      
       final response = await _dio.post(
-        '/api/v1/score',
+        endpoint,
         data: {
           'alert_id': alert.id,
           'severity': alert.severity.name,
@@ -97,8 +112,11 @@ class AIServiceClient {
     Map<String, dynamic>? userContext,
   }) async {
     try {
+      // Firebase: /recommend_timing, Python: /api/v1/timing/recommend
+      final endpoint = _getEndpoint('/recommend_timing', '/api/v1/timing/recommend');
+      
       final response = await _dio.post(
-        '/api/v1/timing/recommend',
+        endpoint,
         data: {
           'alert_severity': alertSeverity,
           'user_id': userId,
@@ -125,8 +143,11 @@ class AIServiceClient {
     double? actualScore,
   }) async {
     try {
+      // Firebase: /log_engagement, Python: /api/v1/feedback/engagement
+      final endpoint = _getEndpoint('/log_engagement', '/api/v1/feedback/engagement');
+      
       await _dio.post(
-        '/api/v1/feedback/engagement',
+        endpoint,
         data: {
           'alert_id': alertId,
           'user_id': userId,
@@ -186,12 +207,71 @@ class AIServiceClient {
   /// Health check
   Future<bool> healthCheck() async {
     try {
-      final response = await _dio.get('/api/v1/health');
+      // Firebase: /health_check, Python: /api/v1/health
+      final endpoint = _getEndpoint('/health_check', '/api/v1/health');
+      
+      final response = await _dio.get(endpoint);
       return response.statusCode == 200 &&
           response.data['status'] == 'healthy';
     } catch (e) {
       debugPrint('[AIService] Health check failed: $e');
       return false;
+    }
+  }
+
+  /// Get predicted hazard zones for map display
+  Future<HazardZonesResult> getHazardZones({
+    String? province,
+    int? month,
+    String? hazardType,
+    int minRisk = 2,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/hazard/zones',
+        queryParameters: {
+          if (province != null) 'province': province,
+          if (month != null) 'month': month,
+          if (hazardType != null) 'hazard_type': hazardType,
+          'min_risk': minRisk,
+        },
+      );
+
+      return HazardZonesResult.fromJson(response.data);
+    } on DioException catch (e) {
+      debugPrint('[AIService] DioException in getHazardZones: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('[AIService] Error getting hazard zones: $e');
+      rethrow;
+    }
+  }
+
+  /// Predict hazard risk for a specific location
+  Future<HazardPrediction> predictHazardRisk({
+    required double lat,
+    required double lng,
+    int? month,
+    String hazardType = 'flood',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/hazard/predict',
+        data: {
+          'lat': lat,
+          'lng': lng,
+          if (month != null) 'month': month,
+          'hazard_type': hazardType,
+        },
+      );
+
+      return HazardPrediction.fromJson(response.data);
+    } on DioException catch (e) {
+      debugPrint('[AIService] DioException in predictHazardRisk: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('[AIService] Error predicting hazard: $e');
+      rethrow;
     }
   }
 
@@ -327,3 +407,97 @@ class TimeSlotInfo {
   }
 }
 
+/// Result from hazard zones API
+class HazardZonesResult {
+  final int total;
+  final int? month;
+  final List<HazardZone> zones;
+
+  HazardZonesResult({
+    required this.total,
+    this.month,
+    required this.zones,
+  });
+
+  factory HazardZonesResult.fromJson(Map<String, dynamic> json) {
+    return HazardZonesResult(
+      total: json['total'] ?? 0,
+      month: json['month'],
+      zones: (json['zones'] as List)
+          .map((z) => HazardZone.fromJson(z))
+          .toList(),
+    );
+  }
+}
+
+/// Hazard zone for map display
+class HazardZone {
+  final String id;
+  final double lat;
+  final double lng;
+  final double radiusKm;
+  final String hazardType;
+  final int riskLevel;
+  final String description;
+
+  HazardZone({
+    required this.id,
+    required this.lat,
+    required this.lng,
+    required this.radiusKm,
+    required this.hazardType,
+    required this.riskLevel,
+    required this.description,
+  });
+
+  factory HazardZone.fromJson(Map<String, dynamic> json) {
+    return HazardZone(
+      id: json['id'] ?? '',
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      radiusKm: (json['radius_km'] as num).toDouble(),
+      hazardType: json['hazard_type'] ?? 'unknown',
+      riskLevel: json['risk_level'] ?? 1,
+      description: json['description'] ?? '',
+    );
+  }
+}
+
+/// Hazard prediction result
+class HazardPrediction {
+  final double lat;
+  final double lng;
+  final int riskLevel;
+  final String riskLabel;
+  final double confidence;
+  final String hazardType;
+  final int month;
+  final String province;
+  final String explanation;
+
+  HazardPrediction({
+    required this.lat,
+    required this.lng,
+    required this.riskLevel,
+    required this.riskLabel,
+    required this.confidence,
+    required this.hazardType,
+    required this.month,
+    required this.province,
+    required this.explanation,
+  });
+
+  factory HazardPrediction.fromJson(Map<String, dynamic> json) {
+    return HazardPrediction(
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      riskLevel: json['risk_level'] ?? 1,
+      riskLabel: json['risk_label'] ?? 'unknown',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
+      hazardType: json['hazard_type'] ?? 'unknown',
+      month: json['month'] ?? DateTime.now().month,
+      province: json['province'] ?? 'Unknown',
+      explanation: json['explanation'] ?? '',
+    );
+  }
+}

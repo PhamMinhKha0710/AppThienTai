@@ -16,11 +16,22 @@ class VolunteerDonationController extends GetxController {
   final totalDonation = 0.0.obs;
   final totalTimeDonated = 0.0.obs;
 
+  // Quick Amount logic
+  final quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
+  final selectedQuickAmount = Rxn<int>();
+  
+  // QR Code logic
+  final showQrCode = false.obs;
+  final isProcessingPayment = false.obs;
+
   // Donation target selection
   final donationTargetType = 'general'.obs; // 'general', 'alert', 'area'
   final selectedAlertId = Rxn<String>();
   final selectedProvince = Rxn<String>();
   final selectedDistrict = Rxn<String>();
+  
+  // Selected campaign (for UI)
+  final selectedCampaignId = Rxn<String>();
 
   // Supply category
   final selectedCategory = Rxn<SupplyCategory>();
@@ -31,16 +42,47 @@ class VolunteerDonationController extends GetxController {
   final quantityController = TextEditingController();
   final itemDescriptionController = TextEditingController();
   
-  // Time donation fields
-  final hoursController = TextEditingController();
+  // Time/Effort donation fields
+  final hoursController = TextEditingController(); 
+  // We keep hoursController for backward compatibility or backend requirement, 
+  // but logically we might send a fixed value or calculated value
+  
   final dateController = TextEditingController();
   final timeDescriptionController = TextEditingController();
   final selectedDate = Rxn<DateTime>();
+  
+  // Volunteer Skills
+  final selectedSkills = <String>[].obs;
+  final availableSkills = [
+    'Vận chuyển', 
+    'Y tế/Sơ cấp cứu', 
+    'Dọn dẹp/Vệ sinh', 
+    'Nấu ăn/Hậu cần', 
+    'Cứu hộ/Bơi lội',
+    'Phân phát nhu yếu phẩm'
+  ];
+  
+  void toggleSkill(String skill) {
+    if (selectedSkills.contains(skill)) {
+      selectedSkills.remove(skill);
+    } else {
+      selectedSkills.add(skill);
+    }
+  }
 
   @override
   void onInit() {
     super.onInit();
     loadDonationData();
+    // Listen to amount changes to clear quick select if manual input
+    amountController.addListener(() {
+      if (selectedQuickAmount.value != null) {
+        final textVal = double.tryParse(amountController.text.replaceAll(',', ''));
+        if (textVal != null && textVal != selectedQuickAmount.value!.toDouble()) {
+          selectedQuickAmount.value = null;
+        }
+      }
+    });
   }
 
   @override
@@ -86,7 +128,47 @@ class VolunteerDonationController extends GetxController {
     }
   }
 
-  Future<void> submitMoneyDonation() async {
+  /// Select a quick amount chip
+  void selectQuickAmount(int amount) {
+    selectedQuickAmount.value = amount;
+    amountController.text = amount.toStringAsFixed(0);
+  }
+
+  /// Start mock payment flow
+  Future<void> processQrPayment(BuildContext context) async {
+    if (amountController.text.trim().isEmpty) {
+      MinhLoaders.errorSnackBar(title: "Lỗi", message: "Vui lòng nhập số tiền");
+      return;
+    }
+    
+    final amount = double.tryParse(amountController.text.replaceAll(',', ''));
+    if (amount == null || amount <= 0) {
+      MinhLoaders.errorSnackBar(title: "Lỗi", message: "Số tiền không hợp lệ");
+      return;
+    }
+    
+    // Show QR Dialog
+    showQrCode.value = true;
+    
+    // In a real app, we would listen to payment socket/webhook here
+    // For now, we wait for user to click "I have paid"
+  }
+
+  /// Verification call (Mock)
+  Future<void> verifyPayment() async {
+    isProcessingPayment.value = true;
+    
+    // Simulate API call delay
+    await Future.delayed(Duration(seconds: 2));
+    
+    isProcessingPayment.value = false;
+    showQrCode.value = false;
+    
+    // Proceed to submit donation
+    await submitMoneyDonation(bypassPayment: true);
+  }
+
+  Future<void> submitMoneyDonation({bool bypassPayment = false}) async {
     if (amountController.text.trim().isEmpty) {
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
@@ -96,9 +178,16 @@ class VolunteerDonationController extends GetxController {
     }
 
     try {
-      final amount = double.tryParse(amountController.text);
+      final amount = double.tryParse(amountController.text.replaceAll(',', ''));
       if (amount == null || amount <= 0) {
         throw Exception("Số tiền không hợp lệ");
+      }
+      
+      // If payment not verified yet and method is wallet/bank, verify first
+      if (!bypassPayment && (paymentMethod.value == 'wallet' || paymentMethod.value == 'bank')) {
+        // Trigger verification UI flow
+         // Ideally controlled from UI, but here we can just return
+         return;
       }
 
       // Create donation record
@@ -110,8 +199,7 @@ class VolunteerDonationController extends GetxController {
         district: donationTargetType.value == 'area' ? selectedDistrict.value : null,
       );
 
-      // TODO: Process payment with VNPay/Momo
-      // After payment success, update status to 'completed'
+      // Status is completed because we verified payment (mock)
       await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
 
       // Reload totals
@@ -124,6 +212,7 @@ class VolunteerDonationController extends GetxController {
 
       // Clear form
       amountController.clear();
+      selectedQuickAmount.value = null;
     } catch (e) {
       MinhLoaders.errorSnackBar(
         title: "Lỗi",

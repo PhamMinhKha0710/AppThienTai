@@ -14,7 +14,7 @@ import 'package:get/get.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/NavigationVolunteerController.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_map_controller.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:latlong2/latlong.dart';
 
 class VolunteerTasksController extends GetxController {
