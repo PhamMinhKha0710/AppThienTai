@@ -9,7 +9,7 @@ import '../features/victim/navigation_victim_menu.dart';
 import '../features/authentication/screens/login/login.dart';
 import '../features/authentication/screens/onboarding/onboarding.dart';
 // TẮT XÁC THỰC EMAIL: Không cần import VerifyEmailScreen nữa
-// import '../features/authentication/screens/singup/verifi_email.dart';
+// import '../features/authentication/screens/signup/verifi_email.dart';
 import 'package:flutter/foundation.dart';
 
 /// Helper để xử lý navigation logic sau authentication

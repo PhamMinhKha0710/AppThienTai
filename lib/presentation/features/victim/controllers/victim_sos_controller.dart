@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cuutrobaolu/core/utils/network_manager.dart';
 import 'package:cuutrobaolu/data/services/sos_queue_service.dart';
+import 'package:cuutrobaolu/service/CloudinaryService.dart';
 import 'package:flutter/material.dart';
 
 class VictimSosController extends GetxController {
@@ -237,11 +238,11 @@ class VictimSosController extends GetxController {
         return;
       }
 
-      // TODO: Upload images to Firebase Storage
+      // TODO: Upload images to Cloudinary
       String? imageUrl;
       if (selectedImages.isNotEmpty) {
         // Upload first image as example
-        // imageUrl = await uploadImage(selectedImages.first);
+         imageUrl = await CloudinaryService.uploadImage(XFile(selectedImages.first.path));
       }
 
       

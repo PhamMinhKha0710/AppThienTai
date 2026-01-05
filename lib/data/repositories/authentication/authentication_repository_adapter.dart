@@ -7,7 +7,8 @@ import '../../../core/storage/storage_utility.dart';
 import '../../../presentation/features/admin/navigation_admin_menu.dart';
 import '../../../presentation/features/authentication/screens/login/login.dart';
 import '../../../presentation/features/authentication/screens/onboarding/onboarding.dart';
-import '../../../presentation/features/authentication/screens/singup/verifi_email.dart';
+import '../../../presentation/features/authentication/screens/signup/verifi_email.dart';
+import '../../../presentation/features/authentication/screens/welcome/welcome_screen.dart';
 import '../../../presentation/features/shop/navigation_menu.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -70,7 +71,7 @@ class AuthenticationRepositoryAdapter extends GetxController {
       bool isFirstTime = deviceStorage.read("IsFirstTime");
 
       if (isFirstTime) {
-        Get.offAll(() => OnboardingScreen());
+        Get.offAll(() => WelcomeScreen());
       } else {
         Get.offAll(() => LoginScreen());
       }

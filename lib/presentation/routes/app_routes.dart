@@ -2,8 +2,8 @@ import 'package:cuutrobaolu/core/widgets/success_screen/SuccessScreen.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/password_configuration/forget_password.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/password_configuration/reset_password.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/singup.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/signup.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/verifi_email.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/welcome/welcome_screen.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/settings.dart';
 

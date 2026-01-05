@@ -9,7 +9,7 @@ import 'package:get/get.dart';
 
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import '../login/login.dart';
-import '../singup/singup.dart';
+import '../signup/signup.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

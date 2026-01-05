@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:cuutrobaolu/core/constants/auth_theme.dart';
 import 'package:cuutrobaolu/core/widgets/login_singup/MinhFromButtonSocial.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/widget/SingUpFrom.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/widget/SignupForm.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/constants/text_strings.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
@@ -111,7 +111,7 @@ class SignupScreen extends StatelessWidget {
                             child: Column(
                               children: [
                                 // Form
-                                SingUpFrom(isDark: isDark),
+                                SignupForm(isDark: isDark),
 
                                 const SizedBox(height: 20),
 
