@@ -137,6 +137,14 @@ class VictimMapScreen extends StatelessWidget {
                   }
                   return PolygonLayer(polygons: controller.hazardPolygons);
                 }),
+                // Hazard zone markers (tap to view details)
+                Obx(() {
+                  if (!controller.showPredictedHazards.value ||
+                      controller.hazardMarkers.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return MarkerLayer(markers: controller.hazardMarkers);
+                }),
               ],
             );
           }),
@@ -271,12 +279,13 @@ class VictimMapScreen extends StatelessWidget {
             );
           }),
 
-          // Controls ở trên
+          // Controls ở trên - Search and Filter
           Positioned(
             top: 10,
             left: 10,
             right: 10,
             child: Card(
+              elevation: 4,
               child: Padding(
                 padding: EdgeInsets.all(MinhSizes.sm),
                 child: Row(
@@ -284,31 +293,106 @@ class VictimMapScreen extends StatelessWidget {
                     Expanded(
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: "Tìm điểm trú ẩn...",
+                          hintText: "Tìm kiếm (lũ lụt, bão, sạt lở...)",
                           prefixIcon: Icon(Iconsax.search_normal),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              MinhSizes.borderRadiusMd,
-                            ),
+                            borderRadius: BorderRadius.circular(MinhSizes.borderRadiusMd),
                           ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        onChanged: (value) => controller.searchShelter(value),
+                        onChanged: (value) => controller.searchAndFilter(value),
+                        onSubmitted: (value) => controller.searchAndFilter(value),
                       ),
                     ),
                     SizedBox(width: MinhSizes.spaceBtwItems),
-                    PopupMenuButton<String>(
-                      icon: Icon(Iconsax.filter),
-                      onSelected: (value) =>
-                          controller.filterDisasterType(value),
+                    // Filter dropdown
+                    Obx(() => PopupMenuButton<String>(
+                      icon: Icon(
+                        Iconsax.filter,
+                        color: controller.hasActiveFilters ? Colors.blue : null,
+                      ),
+                      tooltip: 'Lọc theo loại',
+                      onSelected: (value) {
+                        if (value == 'all') {
+                          controller.setHazardTypeFilter(null);
+                        } else if (value == 'shelters_only') {
+                          controller.toggleSheltersOnly();
+                        } else {
+                          controller.setHazardTypeFilter(value);
+                        }
+                      },
                       itemBuilder: (context) => [
-                        PopupMenuItem(value: 'all', child: Text('Tất cả')),
-                        PopupMenuItem(value: 'flood', child: Text('Lũ lụt')),
-                        PopupMenuItem(value: 'storm', child: Text('Bão')),
                         PopupMenuItem(
-                          value: 'landslide',
-                          child: Text('Sạt lở'),
+                          value: 'all', 
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all, color: controller.hazardTypeFilter.value == null ? Colors.blue : Colors.grey),
+                              const SizedBox(width: 8),
+                              Text('Tất cả', style: TextStyle(
+                                fontWeight: controller.hazardTypeFilter.value == null ? FontWeight.bold : FontWeight.normal,
+                              )),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'flood', 
+                          child: Row(
+                            children: [
+                              Icon(Icons.water_drop, color: controller.hazardTypeFilter.value == 'flood' ? Colors.blue : Colors.grey),
+                              const SizedBox(width: 8),
+                              Text('Lũ lụt', style: TextStyle(
+                                fontWeight: controller.hazardTypeFilter.value == 'flood' ? FontWeight.bold : FontWeight.normal,
+                              )),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'storm', 
+                          child: Row(
+                            children: [
+                              Icon(Icons.storm, color: controller.hazardTypeFilter.value == 'storm' ? Colors.purple : Colors.grey),
+                              const SizedBox(width: 8),
+                              Text('Bão', style: TextStyle(
+                                fontWeight: controller.hazardTypeFilter.value == 'storm' ? FontWeight.bold : FontWeight.normal,
+                              )),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'landslide', 
+                          child: Row(
+                            children: [
+                              Icon(Icons.landscape, color: controller.hazardTypeFilter.value == 'landslide' ? Colors.brown : Colors.grey),
+                              const SizedBox(width: 8),
+                              Text('Sạt lở', style: TextStyle(
+                                fontWeight: controller.hazardTypeFilter.value == 'landslide' ? FontWeight.bold : FontWeight.normal,
+                              )),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'shelters_only', 
+                          child: Row(
+                            children: [
+                              Icon(Icons.home, color: controller.showSheltersOnly.value ? Colors.green : Colors.grey),
+                              const SizedBox(width: 8),
+                              Text('Chỉ điểm trú ẩn', style: TextStyle(
+                                fontWeight: controller.showSheltersOnly.value ? FontWeight.bold : FontWeight.normal,
+                              )),
+                            ],
+                          ),
                         ),
                       ],
+                    )),
+                    // Clear filter button
+                    Obx(() => controller.hasActiveFilters
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.red),
+                          tooltip: 'Xóa lọc',
+                          onPressed: () => controller.clearFilters(),
+                        )
+                      : const SizedBox.shrink()
                     ),
                     const SizedBox(width: 8),
                     // Distribution list toggle
