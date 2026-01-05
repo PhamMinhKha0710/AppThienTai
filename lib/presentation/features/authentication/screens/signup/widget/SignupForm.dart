@@ -1,5 +1,5 @@
 import 'package:cuutrobaolu/core/constants/auth_theme.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/widget/SingUpForm_Checkbox.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/widget/SignupForm_Checkbox.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
@@ -12,8 +12,8 @@ import 'package:iconsax/iconsax.dart';
 import '../../../controllers/signup/signup_controller.dart';
 import '../verifi_email.dart';
 
-class SingUpFrom extends StatelessWidget {
-  const SingUpFrom({
+class SignupForm extends StatelessWidget {
+  const SignupForm({
     super.key,
     this.isDark = false,
   });

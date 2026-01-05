@@ -1,7 +1,7 @@
 import 'package:cuutrobaolu/presentation/features/admin/navigation_admin_menu.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/onboarding/onboarding.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/verifi_email.dart';
 import 'package:cuutrobaolu/presentation/features/home/navigation_menu.dart';
 import 'package:cuutrobaolu/data/services/notification_service.dart';
 import 'package:cuutrobaolu/core/exceptions/exports.dart';

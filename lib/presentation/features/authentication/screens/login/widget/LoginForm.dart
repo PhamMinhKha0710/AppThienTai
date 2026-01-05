@@ -1,6 +1,6 @@
 import 'package:cuutrobaolu/core/constants/auth_theme.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/password_configuration/forget_password.dart';
-import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/singup.dart';
+import 'package:cuutrobaolu/presentation/features/authentication/screens/signup/signup.dart';
 import 'package:cuutrobaolu/core/utils/validation.dart';
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/core/constants/text_strings.dart';
