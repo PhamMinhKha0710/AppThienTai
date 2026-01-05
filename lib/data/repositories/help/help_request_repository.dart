@@ -1,6 +1,6 @@
 // lib/repositories/help_request_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 
 class HelpRequestRepository {

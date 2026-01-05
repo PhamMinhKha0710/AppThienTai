@@ -8,6 +8,8 @@ import 'package:cuutrobaolu/presentation/features/personalization/screens/profil
 import 'package:cuutrobaolu/presentation/features/personalization/screens/profile/widgets/ChangePassword.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/controllers/volunteer_profile_controller.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/donation/volunteer_donation_screen.dart';
+import 'package:cuutrobaolu/presentation/features/volunteer/screens/donation/donation_plan_screen.dart';
+import 'package:cuutrobaolu/presentation/features/volunteer/screens/coordinator/area_coordinator_application_screen.dart';
 import 'package:cuutrobaolu/presentation/features/common/screens/notification_settings_screen.dart';
 import 'package:cuutrobaolu/presentation/features/common/screens/support/support_hub_screen.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
@@ -197,6 +199,22 @@ class VolunteerProfileScreen extends StatelessWidget {
                     subtitle: "Quyên góp tiền, vật phẩm hoặc thời gian",
                     onTap: () {
                       Get.to(() => VolunteerDonationScreen());
+                    },
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.document,
+                    title: "Kế hoạch quyên góp",
+                    subtitle: "Quản lý kế hoạch quyên góp khu vực",
+                    onTap: () {
+                      Get.to(() => const DonationPlanScreen());
+                    },
+                  ),
+                  MinhSettingsMenuTitle(
+                    icon: Iconsax.user_square,
+                    title: "Đăng ký điều phối",
+                    subtitle: "Đăng ký làm điều phối khu vực",
+                    onTap: () {
+                      Get.to(() => const AreaCoordinatorApplicationScreen());
                     },
                   ),
                   MinhSettingsMenuTitle(

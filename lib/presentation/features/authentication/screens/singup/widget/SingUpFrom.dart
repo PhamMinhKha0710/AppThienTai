@@ -1,3 +1,4 @@
+import 'package:cuutrobaolu/core/constants/auth_theme.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/widget/SingUpForm_Checkbox.dart';
 import 'package:cuutrobaolu/core/constants/colors.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
@@ -12,7 +13,12 @@ import '../../../controllers/signup/signup_controller.dart';
 import '../verifi_email.dart';
 
 class SingUpFrom extends StatelessWidget {
-  const SingUpFrom({super.key});
+  const SingUpFrom({
+    super.key,
+    this.isDark = false,
+  });
+
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -20,207 +26,235 @@ class SingUpFrom extends StatelessWidget {
 
     return Form(
       key: controller.signUpFormKey,
-      child: Padding(
-        padding: EdgeInsetsGeometry.symmetric(
-          vertical: MinhSizes.spaceBtwSections,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Obx(
-              () => controller.error.isNotEmpty
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(MinhSizes.md),
-                      margin: const EdgeInsets.only(bottom: MinhSizes.md),
-                      decoration: BoxDecoration(
-                        color: MinhColors.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(MinhSizes.md),
-                        border: Border.all(color: MinhColors.error),
-                      ),
-                      child: Text(
-                        controller.error.value,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: MinhColors.error,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          // Error message
+          Obx(
+            () => controller.error.isNotEmpty
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(MinhSizes.md),
+                    margin: const EdgeInsets.only(bottom: MinhSizes.md),
+                    decoration: BoxDecoration(
+                      color: MinhColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: MinhColors.error.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.warning_2, color: MinhColors.error, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            controller.error.value,
+                            style: TextStyle(
+                              color: MinhColors.error,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : const SizedBox(),
-            ),
+                      ],
+                    ),
+                  )
+                : const SizedBox(),
+          ),
 
-            // name
-            Row(
-              children: [
-                // Name
-                Expanded(
-                  child: TextFormField(
-                    controller: controller.firstName,
-                    validator: (value) {
-                      return MinhValidator.validateEmptyText(
-                        "First Name",
-                        value,
-                      );
-                    },
-                    expands: false,
-                    decoration: InputDecoration(
-                      labelText: MinhTexts.firstName,
-                      prefixIcon: Icon(Iconsax.user),
+          // Name Row
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: controller.firstName,
+                  validator: (value) => MinhValidator.validateEmptyText("Họ", value),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.grey.shade800,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: AuthTheme.glassInputDecoration(
+                    labelText: MinhTexts.firstName,
+                    prefixIcon: Iconsax.user,
+                    isDark: isDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: controller.lastName,
+                  validator: (value) => MinhValidator.validateEmptyText("Tên", value),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.grey.shade800,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: AuthTheme.glassInputDecoration(
+                    labelText: MinhTexts.lastName,
+                    prefixIcon: Iconsax.user,
+                    isDark: isDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // User Type Dropdown
+          Obx(
+            () => DropdownButtonFormField<UserType>(
+              value: controller.selectedUserType.value,
+              onChanged: (UserType? newValue) {
+                controller.selectedUserType.value = newValue!;
+              },
+              dropdownColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.grey.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: AuthTheme.glassInputDecoration(
+                labelText: 'Loại người dùng',
+                prefixIcon: Iconsax.profile_2user,
+                isDark: isDark,
+              ),
+              items: UserType.values.map((UserType type) {
+                return DropdownMenuItem<UserType>(
+                  value: type,
+                  child: Text(
+                    type.viName,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.grey.shade800,
                     ),
                   ),
-                ),
-                SizedBox(width: MinhSizes.spaceBtwInputFields),
-                Expanded(
-                  child: TextFormField(
-                    controller: controller.lastName,
-                    validator: (value) {
-                      return MinhValidator.validateEmptyText(
-                        "Last Name",
-                        value,
-                      );
-                    },
-                    expands: false,
-                    decoration: InputDecoration(
-                      labelText: MinhTexts.lastName,
-                      prefixIcon: Icon(Iconsax.user),
-                    ),
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
+          ),
 
-            // User Type Selection - TRƯỜNG MỚI THÊM
-            Obx(
-                  () => DropdownButtonFormField<UserType>(
-                value: controller.selectedUserType.value,
-                onChanged: (UserType? newValue) {
-                  controller.selectedUserType.value = newValue!;
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Loại người dùng',
-                  prefixIcon: Icon(Iconsax.profile_2user),
-                ),
-                items: UserType.values.map((UserType type) {
-                  return DropdownMenuItem<UserType>(
-                    value: type,
-                    child: Text(type.viName), // Sử dụng viName từ enum
-                  );
-                }).toList(),
+          const SizedBox(height: 16),
+
+          // Username
+          TextFormField(
+            controller: controller.userName,
+            validator: (value) => MinhValidator.validateUsername(value),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.grey.shade800,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: AuthTheme.glassInputDecoration(
+              labelText: MinhTexts.username,
+              prefixIcon: Iconsax.user_edit,
+              isDark: isDark,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Email
+          TextFormField(
+            controller: controller.email,
+            validator: (value) => MinhValidator.validateEmail(value),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.grey.shade800,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: AuthTheme.glassInputDecoration(
+              labelText: MinhTexts.email,
+              prefixIcon: Iconsax.sms,
+              isDark: isDark,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Phone
+          TextFormField(
+            controller: controller.phoneNumber,
+            validator: (value) => MinhValidator.validatePhoneNumber(value),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.grey.shade800,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: AuthTheme.glassInputDecoration(
+              labelText: MinhTexts.phoneNo,
+              prefixIcon: Iconsax.call,
+              isDark: isDark,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Password
+          Obx(
+            () => TextFormField(
+              controller: controller.password,
+              validator: (value) => MinhValidator.validatePassword(value),
+              obscureText: controller.hiddenPassword.value,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.grey.shade800,
+                fontWeight: FontWeight.w500,
               ),
-            ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
-
-            // Username
-            TextFormField(
-              controller: controller.userName,
-              validator: (value) {
-                return MinhValidator.validateUsername(value);
-              },
-              expands: false,
-              decoration: InputDecoration(
-                labelText: MinhTexts.username,
-                prefixIcon: Icon(Iconsax.user_edit),
-              ),
-            ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
-
-            // Email
-            TextFormField(
-              controller: controller.email,
-              validator: (value) {
-                return MinhValidator.validateEmail(value);
-              },
-              expands: false,
-              decoration: InputDecoration(
-                labelText: MinhTexts.email,
-                prefixIcon: Icon(Iconsax.direct),
-              ),
-            ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
-
-            // Phone
-            TextFormField(
-              controller: controller.phoneNumber,
-              validator: (value) {
-                return MinhValidator.validatePhoneNumber(value);
-              },
-              expands: false,
-              decoration: InputDecoration(
-                labelText: MinhTexts.phoneNo,
-                prefixIcon: Icon(Iconsax.call),
-              ),
-            ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
-
-            // Password
-            Obx(
-              () => TextFormField(
-                controller: controller.password,
-                validator: (value) {
-                  return MinhValidator.validatePassword(value);
-                },
-                obscureText: controller.hiddenPassword.value,
-                decoration: InputDecoration(
-                  labelText: MinhTexts.password,
-                  prefixIcon: Icon(Iconsax.password_check),
-                  suffixIcon: GestureDetector(
-                    onTap: () {
-                      controller.hiddenPassword.value =
-                          !controller.hiddenPassword.value;
-                    },
-                    child: controller.hiddenPassword.value == true
-                        ? Icon(Iconsax.eye_slash)
-                        : Icon(Iconsax.eye),
+              decoration: AuthTheme.glassInputDecoration(
+                labelText: MinhTexts.password,
+                prefixIcon: Iconsax.lock,
+                isDark: isDark,
+                suffixIcon: GestureDetector(
+                  onTap: () {
+                    controller.hiddenPassword.value = !controller.hiddenPassword.value;
+                  },
+                  child: Icon(
+                    controller.hiddenPassword.value ? Iconsax.eye_slash : Iconsax.eye,
+                    color: isDark ? Colors.white60 : Colors.grey.shade500,
                   ),
                 ),
               ),
             ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
+          ),
 
-            // Confirm Password
-            Obx(
-                  () => TextFormField(
-                controller: controller.confirmPassword,
-                validator: (value) => MinhValidator.validateConfirmPassword(
-                  controller.password.text,
-                  value,
-                ),
-                obscureText: controller.hiddenConfirmPassword.value,
-                decoration: InputDecoration(
-                  labelText: 'Xác nhận mật khẩu',
-                  prefixIcon: const Icon(Iconsax.password_check),
-                  suffixIcon: IconButton(
-                    onPressed: controller.toggleConfirmPasswordVisibility,
-                    icon: Icon(
-                      controller.hiddenConfirmPassword.value
-                          ? Iconsax.eye_slash
-                          : Iconsax.eye,
-                    ),
+          const SizedBox(height: 16),
+
+          // Confirm Password
+          Obx(
+            () => TextFormField(
+              controller: controller.confirmPassword,
+              validator: (value) => MinhValidator.validateConfirmPassword(
+                controller.password.text,
+                value,
+              ),
+              obscureText: controller.hiddenConfirmPassword.value,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.grey.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: AuthTheme.glassInputDecoration(
+                labelText: 'Xác nhận mật khẩu',
+                prefixIcon: Iconsax.lock_1,
+                isDark: isDark,
+                suffixIcon: GestureDetector(
+                  onTap: controller.toggleConfirmPasswordVisibility,
+                  child: Icon(
+                    controller.hiddenConfirmPassword.value ? Iconsax.eye_slash : Iconsax.eye,
+                    color: isDark ? Colors.white60 : Colors.grey.shade500,
                   ),
                 ),
               ),
             ),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
+          ),
 
-            // checkbox
-            SignupForm_Checkbox(),
-            SizedBox(height: MinhSizes.spaceBtwInputFields),
+          const SizedBox(height: 16),
 
-            // button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  controller.signup();
-                },
-                child: Text(MinhTexts.createAccount),
-              ),
-            ),
-          ],
-        ),
+          // Checkbox
+          SignupForm_Checkbox(isDark: isDark),
+
+          const SizedBox(height: 24),
+
+          // Submit Button
+          AuthTheme.gradientButton(
+            onPressed: () => controller.signup(),
+            text: MinhTexts.createAccount,
+          ),
+        ],
       ),
     );
   }
 }
-

@@ -126,6 +126,12 @@ class AlertEntity {
   final String? volunteerId; // For task-related alerts
   final String? safetyGuide;
   final List<String>? imageUrls;
+  
+  /// Điểm ưu tiên đã tính (0-100) - được cập nhật bởi AlertScoringService
+  final double? priorityScore;
+  
+  /// Khoảng cách đến người dùng (km) - được cập nhật khi tính điểm
+  final double? distanceKm;
 
   const AlertEntity({
     required this.id,
@@ -147,6 +153,8 @@ class AlertEntity {
     this.volunteerId,
     this.safetyGuide,
     this.imageUrls,
+    this.priorityScore,
+    this.distanceKm,
   });
 
   AlertEntity copyWith({
@@ -169,6 +177,8 @@ class AlertEntity {
     String? volunteerId,
     String? safetyGuide,
     List<String>? imageUrls,
+    double? priorityScore,
+    double? distanceKm,
   }) {
     return AlertEntity(
       id: id ?? this.id,
@@ -190,8 +200,9 @@ class AlertEntity {
       volunteerId: volunteerId ?? this.volunteerId,
       safetyGuide: safetyGuide ?? this.safetyGuide,
       imageUrls: imageUrls ?? this.imageUrls,
+      priorityScore: priorityScore ?? this.priorityScore,
+      distanceKm: distanceKm ?? this.distanceKm,
     );
   }
 }
-
 

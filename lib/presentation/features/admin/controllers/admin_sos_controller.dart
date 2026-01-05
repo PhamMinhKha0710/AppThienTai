@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:cuutrobaolu/data/repositories/help/help_request_repository.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/core/popups/loaders.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

@@ -7,11 +7,11 @@ import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/
 import 'package:cuutrobaolu/presentation/features/authentication/screens/welcome/welcome_screen.dart';
 import 'package:cuutrobaolu/presentation/features/personalization/screens/settings/settings.dart';
 
-import 'package:cuutrobaolu/presentation/features/shop/screens/home/home.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/home/home.dart';
 
-import 'package:cuutrobaolu/presentation/features/shop/screens/help/help.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/help/help.dart';
 
-import 'package:cuutrobaolu/presentation/features/shop/screens/wishlist/wishlist.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/wishlist/wishlist.dart';
 import 'package:cuutrobaolu/presentation/routes/routes.dart';
 import 'package:cuutrobaolu/core/constants/image_strings.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';

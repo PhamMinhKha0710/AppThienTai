@@ -3,8 +3,13 @@ import 'dart:math' as math;
 
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/data/services/notification_service.dart';
+import 'package:cuutrobaolu/data/services/smart_notification_service.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
+import 'package:cuutrobaolu/domain/entities/scored_alert_entity.dart';
 import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
+import 'package:cuutrobaolu/domain/services/alert_scoring_service.dart';
+import 'package:cuutrobaolu/domain/services/hybrid_alert_scoring_service.dart';
+import 'package:cuutrobaolu/domain/services/alert_deduplication_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -15,7 +20,13 @@ class GeofencingService extends GetxService {
   static GeofencingService get instance => Get.find<GeofencingService>();
 
   final AlertRepository _alertRepo = getIt<AlertRepository>();
+  final AlertScoringService _ruleBasedScoringService = getIt<AlertScoringService>();
+  final HybridAlertScoringService _hybridScoringService = getIt<HybridAlertScoringService>();
+  final AlertDeduplicationService _deduplicationService = getIt<AlertDeduplicationService>();
   final GetStorage _storage = GetStorage();
+  
+  // Danh sách alerts gần đây để check duplicate
+  final List<AlertEntity> _recentAlerts = [];
 
   // Stream subscription for location updates
   StreamSubscription<Position>? _positionSubscription;
@@ -174,42 +185,81 @@ class GeofencingService extends GetxService {
     }
   }
 
-  /// Trigger alert notification
+  /// Trigger alert notification với Smart Notification Service
   Future<void> _triggerAlert(AlertEntity alert, double distance) async {
     debugPrint(
         '[GeofencingService] Triggering alert: ${alert.title} (${distance.toStringAsFixed(1)}km away)');
+
+    // Check deduplication
+    if (_deduplicationService.isDuplicate(alert, _recentAlerts)) {
+      debugPrint('[GeofencingService] Alert is duplicate, skipping');
+      return;
+    }
 
     // Mark as triggered
     triggeredAlertIds.add(alert.id);
     _saveTriggeredAlerts();
 
-    // Send notification
+    // Add to recent alerts for deduplication
+    _recentAlerts.add(alert);
+    if (_recentAlerts.length > 50) {
+      _recentAlerts.removeAt(0); // Keep only last 50
+    }
+
+    // Send notification using Smart Notification Service
     try {
-      final notificationService = Get.find<NotificationService>();
-
-      // Determine notification channel based on severity
-      String channelId;
-      switch (alert.severity) {
-        case AlertSeverity.critical:
-          channelId = NotificationChannels.criticalAlert;
-          break;
-        case AlertSeverity.high:
-          channelId = NotificationChannels.highAlert;
-          break;
-        default:
-          channelId = NotificationChannels.normalAlert;
-      }
-
-      await notificationService.showNotification(
-        id: alert.hashCode,
-        title: '⚠️ ${alert.title}',
-        body:
-            'Bạn đang cách vùng cảnh báo ${distance.toStringAsFixed(1)}km. ${alert.content}',
-        channelId: channelId,
-        payload: '{"alertId": "${alert.id}", "type": "geofence"}',
+      // Tính điểm ưu tiên using rule-based for sync operation
+      // TODO: Implement background AI scoring with hybrid service
+      final position = currentPosition.value;
+      final score = _ruleBasedScoringService.calculatePriorityScore(
+        alert: alert,
+        userLat: position?.latitude,
+        userLng: position?.longitude,
+        userRole: 'victim', // Default to victim for geofencing
       );
+
+      final scoredAlert = ScoredAlert.now(
+        alert: alert,
+        score: score,
+        distanceKm: distance,
+      );
+
+      // Schedule với SmartNotificationService
+      final smartNotificationService = Get.find<SmartNotificationService>();
+      await smartNotificationService.scheduleNotification(scoredAlert);
+
+      debugPrint('[GeofencingService] Scheduled smart notification '
+          '(score: ${score.toStringAsFixed(1)})');
     } catch (e) {
-      debugPrint('[GeofencingService] Error sending notification: $e');
+      debugPrint('[GeofencingService] Error with smart notification, '
+          'falling back to direct notification: $e');
+      
+      // Fallback to direct notification
+      try {
+        final notificationService = Get.find<NotificationService>();
+        String channelId;
+        switch (alert.severity) {
+          case AlertSeverity.critical:
+            channelId = NotificationChannels.criticalAlert;
+            break;
+          case AlertSeverity.high:
+            channelId = NotificationChannels.highAlert;
+            break;
+          default:
+            channelId = NotificationChannels.normalAlert;
+        }
+
+        await notificationService.showNotification(
+          id: alert.hashCode,
+          title: '⚠️ ${alert.title}',
+          body:
+              'Bạn đang cách vùng cảnh báo ${distance.toStringAsFixed(1)}km. ${alert.content}',
+          channelId: channelId,
+          payload: '{"alertId": "${alert.id}", "type": "geofence"}',
+        );
+      } catch (fallbackError) {
+        debugPrint('[GeofencingService] Fallback notification also failed: $fallbackError');
+      }
     }
   }
 
@@ -292,9 +342,3 @@ class GeofencingService extends GetxService {
     super.onClose();
   }
 }
-
-
-
-
-
-

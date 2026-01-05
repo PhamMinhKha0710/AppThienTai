@@ -16,6 +16,7 @@ import 'package:cuutrobaolu/presentation/features/victim/NavigationVictimControl
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cuutrobaolu/presentation/features/home/screens/guide/survival_guide_screen.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -374,8 +375,7 @@ class VictimHomeScreen extends StatelessWidget {
                             label: "Hướng dẫn",
                             color: Colors.green,
                             onTap: () {
-                              NavigationVictimController.selectedIndex.value =
-                                  3;
+                              Get.to(() => const SurvivalGuideScreen());
                             },
                           ),
                         ),

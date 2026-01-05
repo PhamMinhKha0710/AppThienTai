@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/routing_service.dart';
+import 'package:cuutrobaolu/data/services/ai_service_client.dart';
 import 'package:cuutrobaolu/domain/repositories/help_request_repository.dart';
 import 'package:cuutrobaolu/domain/repositories/shelter_repository.dart';
+import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
 import 'package:cuutrobaolu/domain/entities/help_request_entity.dart' as domain;
+import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
+import 'package:cuutrobaolu/core/constants/api_constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -22,6 +27,7 @@ class VictimMapController extends GetxController {
   RoutingService? _routingService;
   final HelpRequestRepository _helpRequestRepo = getIt<HelpRequestRepository>();
   final ShelterRepository _shelterRepo = getIt<ShelterRepository>();
+  final AlertRepository _alertRepo = getIt<AlertRepository>();
   
   final currentPosition = Rxn<Position>();
   final disasterMarkers = <Marker>[].obs;
@@ -32,9 +38,19 @@ class VictimMapController extends GetxController {
   final selectedRequest = Rxn<domain.HelpRequestEntity>();
   final isLoading = false.obs;
   final routePolylines = <Polyline>[].obs;
+  
+  // Alert-related observables
+  final alerts = <AlertEntity>[].obs;
+  final selectedAlertMarker = Rxn<AlertEntity>();
   // Hazard polygons (e.g., flood, storm, landslide areas)
   final hazardPolygons = <Polygon>[].obs;
   final showHazards = true.obs;
+  // AI-predicted hazard zones
+  final showPredictedHazards = true.obs;
+  final predictedHazardZones = <HazardZone>[].obs;
+  final hazardMarkers = <Marker>[].obs; // NEW: Markers for hazard zones
+  final isLoadingHazards = false.obs;
+  late final AIServiceClient _aiService;
   // Radar overlay support
   final radarImageUrl = Rxn<String>();
   final radarBounds = Rxn<LatLngBounds>();
@@ -62,6 +78,11 @@ class VictimMapController extends GetxController {
   // Hazard alert infor
   final showHazardBanner = false.obs;
   final hazardSummary = Rxn<String>();
+  
+  // Filter state - NEW
+  final hazardTypeFilter = RxnString(); // null = all, 'flood', 'landslide', 'storm'
+  final searchQuery = ''.obs;
+  final showSheltersOnly = false.obs;
   final hazardDistanceKm = Rxn<double>();
 
   /// Evaluate nearby hazards based on disasterMarkers and current position
@@ -111,6 +132,7 @@ class VictimMapController extends GetxController {
   }
   
   StreamSubscription? _myRequestsSub;
+  StreamSubscription<List<AlertEntity>>? _alertsSubscription;
   // Map controller
   final mapController = Rxn<MapController>();
 
@@ -118,18 +140,25 @@ class VictimMapController extends GetxController {
   void onInit() {
     super.onInit();
     _initLocationService();
+    _initAIService();
     getCurrentLocation();
     loadDisasterMarkers();
-    // Load hazard polygons for victim map
-    loadDisasterPolygons();
+    // Load AI-predicted hazard zones (replaces old loadDisasterPolygons)
+    loadPredictedHazardZones();
     loadShelterMarkers();
+    loadAlertMarkers();
     _setupMyRequestsListener();
     mapController.value = MapController();
+  }
+
+  void _initAIService() {
+    _aiService = AIServiceClient(baseUrl: aiServiceUrl);
   }
   
   @override
   void onClose() {
     _myRequestsSub?.cancel();
+    _alertsSubscription?.cancel();
     super.onClose();
   }
   
@@ -404,7 +433,537 @@ class VictimMapController extends GetxController {
     }
   }
 
-  /// Load hazard polygons based on high severity requests.
+  /// Load hazard polygons from AI service (primary) or fallback to rule-based
+  Future<void> loadPredictedHazardZones() async {
+    if (!showPredictedHazards.value) {
+      hazardPolygons.clear();
+      hazardMarkers.clear();
+      return;
+    }
+
+    isLoadingHazards.value = true;
+    debugPrint('[MAP] Loading hazard zones from: $aiServiceUrl');
+    try {
+      // DEMO: Use October (month 10 - high risk info) instead of current month
+      // to demonstrate hazard zones when testing in dry season.
+      final demoMonth = 10; 
+      debugPrint('[MAP] DEMO MODE: Showing hazard zones for Month $demoMonth');
+      
+      final result = await _aiService.getHazardZones(
+        month: demoMonth,
+        minRisk: 3, // Chỉ lấy rủi ro Trung bình trở lên (3,4,5)
+      );
+
+      debugPrint('[MAP] ✓ Got ${result.zones.length} zones from AI');
+      
+      // Filter top 30 highest risk zones to avoid clutter
+      final sortedZones = List.of(result.zones)
+        ..sort((a, b) => b.riskLevel.compareTo(a.riskLevel));
+      
+      final displayZones = sortedZones.take(30).toList();
+      
+      predictedHazardZones.value = displayZones;
+      
+      final polygons = <Polygon>[];
+      final markers = <Marker>[];
+      
+      for (final zone in displayZones) {
+        final center = LatLng(zone.lat, zone.lng);
+        
+        // Color and icon based on hazard type
+        Color fillColor;
+        Color borderColor;
+        IconData icon;
+        String typeLabel;
+        
+        switch (zone.hazardType) {
+          case 'flood':
+            fillColor = _getHazardFillColor(zone.riskLevel, Colors.blue);
+            borderColor = Colors.blue.shade700;
+            icon = Icons.water_drop;
+            typeLabel = 'Lũ lụt';
+            break;
+          case 'landslide':
+            fillColor = _getHazardFillColor(zone.riskLevel, Colors.brown);
+            borderColor = Colors.brown.shade700;
+            icon = Icons.landscape;
+            typeLabel = 'Sạt lở';
+            break;
+          case 'storm':
+            fillColor = _getHazardFillColor(zone.riskLevel, Colors.purple);
+            borderColor = Colors.purple.shade700;
+            icon = Icons.storm;
+            typeLabel = 'Bão';
+            break;
+          default:
+            fillColor = _getHazardFillColor(zone.riskLevel, Colors.red);
+            borderColor = Colors.red.shade700;
+            icon = Icons.warning_amber;
+            typeLabel = 'Nguy hiểm';
+        }
+        
+        // Create polygon for zone area
+        final points = circlePolygon(center, zone.radiusKm, points: 48);
+        polygons.add(Polygon(
+          points: points,
+          color: fillColor,
+          borderColor: borderColor,
+          borderStrokeWidth: 2.5,
+          label: _getRiskLabel(zone.riskLevel),
+          labelStyle: TextStyle(
+            color: borderColor,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ));
+        
+        // Create marker at center for tap interaction - Enhanced Design
+        markers.add(Marker(
+          key: Key('hazard_${zone.id}'),
+          point: center,
+          width: 60,
+          height: 70,
+          child: GestureDetector(
+            onTap: () => showHazardZoneDetail(zone),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Main icon container with gradient
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        borderColor,
+                        borderColor.withOpacity(0.7),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: borderColor.withOpacity(0.5),
+                        blurRadius: 12,
+                        spreadRadius: 3,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: _getHazardEmoji(zone.hazardType),
+                  ),
+                ),
+                // Risk level badge
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getRiskBadgeColor(zone.riskLevel),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Cấp ${zone.riskLevel}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ));
+      }
+      
+      hazardPolygons.value = polygons;
+      hazardMarkers.value = markers;
+      debugPrint('[MAP] ✓ Displayed ${polygons.length} hazard polygons and ${markers.length} markers');
+      
+    } catch (e) {
+      debugPrint('[MAP] ✗ AI failed: $e');
+      debugPrint('[MAP] → Falling back to rule-based');
+      // Fallback to rule-based method
+      await loadDisasterPolygons();
+    } finally {
+      isLoadingHazards.value = false;
+    }
+  }
+  
+  /// Get risk label from level
+  String _getRiskLabel(int riskLevel) {
+    switch (riskLevel) {
+      case 1: return 'Rất thấp';
+      case 2: return 'Thấp';
+      case 3: return 'Trung bình';
+      case 4: return 'Cao';
+      case 5: return 'Rất cao';
+      default: return 'Không rõ';
+    }
+  }
+  
+  /// Get fill color with enhanced opacity based on risk level
+  Color _getHazardFillColor(int riskLevel, Color baseColor) {
+    // More prominent opacity for higher risk
+    final opacity = 0.10 + (riskLevel * 0.05); // 0.15 to 0.35
+    return baseColor.withOpacity(opacity.clamp(0.10, 0.40));
+  }
+  
+  /// Get hazard emoji widget based on type
+  Widget _getHazardEmoji(String hazardType) {
+    String emoji;
+    switch (hazardType) {
+      case 'flood':
+        emoji = '🌊';
+        break;
+      case 'landslide':
+        emoji = '⛰️';
+        break;
+      case 'storm':
+        emoji = '🌀';
+        break;
+      default:
+        emoji = '⚠️';
+    }
+    return Text(
+      emoji,
+      style: const TextStyle(fontSize: 24),
+    );
+  }
+  
+  /// Get risk badge color based on level
+  Color _getRiskBadgeColor(int riskLevel) {
+    switch (riskLevel) {
+      case 1: return Colors.green.shade600;
+      case 2: return Colors.lime.shade700;
+      case 3: return Colors.orange.shade700;
+      case 4: return Colors.deepOrange.shade600;
+      case 5: return Colors.red.shade700;
+      default: return Colors.grey.shade600;
+    }
+  }
+
+  /// Get color based on risk level (1-5)
+  Color _getRiskColor(int riskLevel, Color baseColor) {
+    // Reduced opacity for better visibility of underlying map features
+    final opacity = 0.05 + (riskLevel * 0.03); // 0.08 to 0.20
+    return baseColor.withOpacity(opacity.clamp(0.05, 0.25));
+  }
+
+  /// Toggle predicted hazards visibility
+  void togglePredictedHazards() {
+    showPredictedHazards.value = !showPredictedHazards.value;
+    loadPredictedHazardZones();
+  }
+
+  /// Show hazard zone details
+  void showHazardZoneDetail(HazardZone zone) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getHazardIcon(zone.hazardType),
+                  color: _getHazardColor(zone.hazardType),
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Vùng cảnh báo ${_getHazardTypeName(zone.hazardType)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildRiskBadge(zone.riskLevel),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              zone.description,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Iconsax.location, size: 16),
+                const SizedBox(width: 8),
+                Text('Bán kính: ${zone.radiusKm.toStringAsFixed(1)} km'),
+              ],
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildRiskBadge(int riskLevel) {
+    final colors = {
+      1: Colors.green,
+      2: Colors.lime,
+      3: Colors.orange,
+      4: Colors.deepOrange,
+      5: Colors.red,
+    };
+    final labels = {
+      1: 'Rất thấp',
+      2: 'Thấp',
+      3: 'Trung bình',
+      4: 'Cao',
+      5: 'Rất cao',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors[riskLevel]?.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Nguy cơ: ${labels[riskLevel]}',
+        style: TextStyle(
+          color: colors[riskLevel],
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  IconData _getHazardIcon(String hazardType) {
+    switch (hazardType) {
+      case 'flood':
+        return Iconsax.cloud_drizzle;
+      case 'landslide':
+        return Iconsax.warning_2;
+      case 'storm':
+        return Iconsax.wind;
+      default:
+        return Iconsax.danger;
+    }
+  }
+
+  Color _getHazardColor(String hazardType) {
+    switch (hazardType) {
+      case 'flood':
+        return Colors.blue;
+      case 'landslide':
+        return Colors.brown;
+      case 'storm':
+        return Colors.purple;
+      default:
+        return Colors.red;
+    }
+  }
+
+  String _getHazardTypeName(String hazardType) {
+    switch (hazardType) {
+      case 'flood':
+        return 'Ngập lụt';
+      case 'landslide':
+        return 'Sạt lở';
+      case 'storm':
+        return 'Bão';
+      default:
+        return 'Thiên tai';
+    }
+  }
+
+  // ===================== FILTER METHODS =====================
+  
+  /// Set hazard type filter and apply
+  void setHazardTypeFilter(String? type) {
+    hazardTypeFilter.value = type;
+    applyFilters();
+  }
+  
+  /// Search and filter by query
+  void searchAndFilter(String query) {
+    searchQuery.value = query.toLowerCase();
+    applyFilters();
+  }
+  
+  /// Toggle show shelters only
+  void toggleSheltersOnly() {
+    showSheltersOnly.value = !showSheltersOnly.value;
+    applyFilters();
+  }
+  
+  /// Clear all filters
+  void clearFilters() {
+    hazardTypeFilter.value = null;
+    searchQuery.value = '';
+    showSheltersOnly.value = false;
+    applyFilters();
+  }
+  
+  /// Check if any filter is active
+  bool get hasActiveFilters => 
+      hazardTypeFilter.value != null || 
+      searchQuery.value.isNotEmpty ||
+      showSheltersOnly.value;
+  
+  /// Apply filters to hazard zones and rebuild markers/polygons
+  void applyFilters() {
+    // If showing shelters only, clear hazard zones
+    if (showSheltersOnly.value) {
+      hazardPolygons.clear();
+      hazardMarkers.clear();
+      debugPrint('[FILTER] Showing shelters only - hazards hidden');
+      return;
+    }
+    
+    if (predictedHazardZones.isEmpty) {
+      loadPredictedHazardZones();
+      return;
+    }
+    
+    var filtered = predictedHazardZones.toList();
+    
+    // Filter by hazard type
+    if (hazardTypeFilter.value != null) {
+      filtered = filtered.where((z) => z.hazardType == hazardTypeFilter.value).toList();
+    }
+    
+    // Filter by search query (match type name or description)
+    if (searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((z) {
+        final typeName = _getHazardTypeName(z.hazardType).toLowerCase();
+        final desc = z.description.toLowerCase();
+        return typeName.contains(searchQuery.value) || desc.contains(searchQuery.value);
+      }).toList();
+    }
+    
+    _buildFilteredHazardMarkers(filtered);
+    
+    debugPrint('[FILTER] Applied filters: ${filtered.length} zones shown');
+  }
+  
+  void _updateShelterVisibility() {
+    // Shelters are always visible, but we can highlight if showSheltersOnly is true
+    // This doesn't hide markers but can be used for UI feedback
+  }
+  
+  void _buildFilteredHazardMarkers(List<HazardZone> zones) {
+    final polygons = <Polygon>[];
+    final markers = <Marker>[];
+    
+    for (final zone in zones) {
+      final center = LatLng(zone.lat, zone.lng);
+      
+      Color fillColor;
+      Color borderColor;
+      
+      switch (zone.hazardType) {
+        case 'flood':
+          fillColor = _getHazardFillColor(zone.riskLevel, Colors.blue);
+          borderColor = Colors.blue.shade700;
+          break;
+        case 'landslide':
+          fillColor = _getHazardFillColor(zone.riskLevel, Colors.brown);
+          borderColor = Colors.brown.shade700;
+          break;
+        case 'storm':
+          fillColor = _getHazardFillColor(zone.riskLevel, Colors.purple);
+          borderColor = Colors.purple.shade700;
+          break;
+        default:
+          fillColor = _getHazardFillColor(zone.riskLevel, Colors.red);
+          borderColor = Colors.red.shade700;
+      }
+      
+      final points = circlePolygon(center, zone.radiusKm, points: 48);
+      polygons.add(Polygon(
+        points: points,
+        color: fillColor,
+        borderColor: borderColor,
+        borderStrokeWidth: 2.5,
+        label: '${_getRiskLabel(zone.riskLevel)}',
+        labelStyle: TextStyle(color: borderColor, fontSize: 10, fontWeight: FontWeight.bold),
+      ));
+      
+      markers.add(Marker(
+        key: Key('hazard_${zone.id}'),
+        point: center,
+        width: 60,
+        height: 70,
+        child: GestureDetector(
+          onTap: () => showHazardZoneDetail(zone),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [borderColor, borderColor.withOpacity(0.7)],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: 12, spreadRadius: 3),
+                  ],
+                ),
+                child: Center(child: _getHazardEmoji(zone.hazardType)),
+              ),
+              Container(
+                margin: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _getRiskBadgeColor(zone.riskLevel),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Text(
+                  'Cấp ${zone.riskLevel}',
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    
+    hazardPolygons.value = polygons;
+    hazardMarkers.value = markers;
+  }
+
+  /// Load hazard polygons based on high severity requests (fallback method).
   /// For now we create circular polygons around each high-severity point.
   Future<void> loadDisasterPolygons() async {
     try {
@@ -862,9 +1421,157 @@ class VictimMapController extends GetxController {
   void refreshMarkers() {
     loadDisasterMarkers();
     loadShelterMarkers();
+    loadAlertMarkers();
     // Refresh hazard polygons as well
     loadDisasterPolygons();
     // My requests will auto-update via stream
+  }
+
+  /// Load alert markers from Firebase
+  Future<void> loadAlertMarkers() async {
+    try {
+      // Cancel existing subscription if any
+      _alertsSubscription?.cancel();
+      
+      _alertsSubscription = _alertRepo.getActiveAlerts().listen((alertList) {
+        // Filter alerts relevant to victims
+        final relevantAlerts = alertList.where((alert) {
+          return alert.targetAudience == TargetAudience.all ||
+              alert.targetAudience == TargetAudience.victims ||
+              alert.targetAudience == TargetAudience.locationBased;
+        }).toList();
+
+        // Sort by severity (critical first)
+        relevantAlerts.sort(_compareAlerts);
+        alerts.value = relevantAlerts;
+      }, onError: (error) {
+        debugPrint('[VICTIM_MAP] Error listening to alerts: $error');
+      });
+    } catch (e) {
+      debugPrint('[VICTIM_MAP] Error loading alerts: $e');
+    }
+  }
+
+  int _compareAlerts(AlertEntity a, AlertEntity b) {
+    // Sort by severity (critical first)
+    final severityCompare = _severityToInt(b.severity)
+        .compareTo(_severityToInt(a.severity));
+    if (severityCompare != 0) return severityCompare;
+
+    // Then by created date (newest first)
+    return b.createdAt.compareTo(a.createdAt);
+  }
+
+  int _severityToInt(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return 4;
+      case AlertSeverity.high:
+        return 3;
+      case AlertSeverity.medium:
+        return 2;
+      case AlertSeverity.low:
+        return 1;
+    }
+  }
+
+  /// Get alert markers for the map
+  List<Marker> get alertMarkers {
+    return alerts
+        .where((alert) => alert.lat != null && alert.lng != null)
+        .map((alert) {
+      return Marker(
+        point: LatLng(alert.lat!, alert.lng!),
+        width: 40,
+        height: 40,
+        child: GestureDetector(
+          onTap: () {
+            selectedAlertMarker.value = alert;
+          },
+          child: _AlertMarkerWidget(alert: alert),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Get alert circles (radius of effect) for the map
+  List<CircleMarker> get alertCircles {
+    return alerts
+        .where((alert) =>
+            alert.lat != null && alert.lng != null && alert.radiusKm != null)
+        .map((alert) {
+      final color = _getAlertSeverityColor(alert.severity);
+      return CircleMarker(
+        point: LatLng(alert.lat!, alert.lng!),
+        radius: alert.radiusKm! * 1000, // Convert km to meters
+        useRadiusInMeter: true,
+        color: color.withOpacity(0.15),
+        borderColor: color.withOpacity(0.5),
+        borderStrokeWidth: 2,
+      );
+    }).toList();
+  }
+
+  /// Calculate distance to alert
+  double? getDistanceToAlert(AlertEntity alert) {
+    if (currentPosition.value == null ||
+        alert.lat == null ||
+        alert.lng == null) {
+      return null;
+    }
+
+    return _calculateDistanceToPoint(
+      currentPosition.value!.latitude,
+      currentPosition.value!.longitude,
+      alert.lat!,
+      alert.lng!,
+    );
+  }
+
+  double _calculateDistanceToPoint(
+      double lat1, double lng1, double lat2, double lng2) {
+    const double earthRadius = 6371; // km
+    final dLat = _toRadians(lat2 - lat1);
+    final dLng = _toRadians(lng2 - lng1);
+
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (math.pi / 180);
+
+  Color _getAlertSeverityColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return Colors.red.shade700;
+      case AlertSeverity.high:
+        return Colors.orange.shade700;
+      case AlertSeverity.medium:
+        return Colors.amber.shade700;
+      case AlertSeverity.low:
+        return Colors.blue.shade700;
+    }
+  }
+
+  IconData _getAlertIcon(AlertType type) {
+    switch (type) {
+      case AlertType.disaster:
+        return Iconsax.danger;
+      case AlertType.weather:
+        return Iconsax.cloud_lightning;
+      case AlertType.evacuation:
+        return Iconsax.routing;
+      case AlertType.resource:
+        return Iconsax.box;
+      case AlertType.general:
+        return Iconsax.warning_2;
+    }
   }
 
   /// Set OpenWeatherMap API key (keep it runtime only)
@@ -1007,5 +1714,66 @@ class _InfoChip extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Alert marker widget for the map
+class _AlertMarkerWidget extends StatelessWidget {
+  final AlertEntity alert;
+
+  const _AlertMarkerWidget({required this.alert});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getSeverityColor(alert.severity);
+    final icon = _getAlertIcon(alert.alertType);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.5),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: 24,
+      ),
+    );
+  }
+
+  Color _getSeverityColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return Colors.red.shade700;
+      case AlertSeverity.high:
+        return Colors.orange.shade700;
+      case AlertSeverity.medium:
+        return Colors.amber.shade700;
+      case AlertSeverity.low:
+        return Colors.blue.shade700;
+    }
+  }
+
+  IconData _getAlertIcon(AlertType type) {
+    switch (type) {
+      case AlertType.disaster:
+        return Iconsax.danger;
+      case AlertType.weather:
+        return Iconsax.cloud_lightning;
+      case AlertType.evacuation:
+        return Iconsax.routing;
+      case AlertType.resource:
+        return Iconsax.box;
+      case AlertType.general:
+        return Iconsax.warning_2;
+    }
   }
 }

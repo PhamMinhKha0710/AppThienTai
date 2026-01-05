@@ -4,7 +4,7 @@ import 'package:cuutrobaolu/domain/usecases/create_help_request_usecase.dart';
 import 'package:cuutrobaolu/domain/failures/failures.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/presentation/utils/help_request_mapper.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';

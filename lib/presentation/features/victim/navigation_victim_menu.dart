@@ -16,7 +16,7 @@ class NavigationVictimMenu extends StatelessWidget {
 
     return Scaffold(
       floatingActionButton: const QuickSOSButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Obx(
         () => NavigationBar(
           selectedIndex: NavigationVictimController.selectedIndex.value,
@@ -33,7 +33,7 @@ class NavigationVictimMenu extends StatelessWidget {
             NavigationDestination(icon: Icon(Iconsax.home), label: "Trang chủ"),
             NavigationDestination(icon: Icon(Iconsax.map), label: "Bản đồ"),
             NavigationDestination(icon: Icon(Iconsax.notification), label: "Cảnh báo"),
-            NavigationDestination(icon: Icon(Iconsax.document), label: "Tin tức"),
+            NavigationDestination(icon: Icon(Iconsax.message), label: "Tin nhắn"),
             NavigationDestination(icon: Icon(Iconsax.user), label: "Cá nhân"),
           ],
         ),

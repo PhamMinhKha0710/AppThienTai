@@ -1,4 +1,4 @@
-import 'package:cuutrobaolu/presentation/features/chat/screens/volunteer/volunteer_support_screen.dart';
+import 'package:cuutrobaolu/presentation/features/chat/screens/conversation_list_screen.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/home/volunteer_home_screen.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/tasks/volunteer_tasks_screen.dart';
 import 'package:cuutrobaolu/presentation/features/volunteer/screens/map/volunteer_map_screen.dart';
@@ -13,9 +13,9 @@ class NavigationVolunteerController extends GetxController {
   List<Widget> get screen => [
     VolunteerHomeScreen(),
     VolunteerTasksScreen(),
-    VolunteerMapScreen(),
+    const VolunteerMapScreen(),
     VolunteerAlertsScreen(),
-    VolunteerSupportScreen(),
+    const ConversationListScreen(),
     VolunteerProfileScreen(),
   ];
 }

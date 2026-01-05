@@ -125,9 +125,9 @@ class HelpRequestDto {
       lat: (json['Lat'] as num?)?.toDouble() ?? 0.0,
       lng: (json['Lng'] as num?)?.toDouble() ?? 0.0,
       contact: json['Contact'] ?? "",
-      severity: json['Severity'] ?? 'medium',
-      status: json['Status'] ?? 'pending',
-      type: json['Type'] ?? 'other',
+      severity: _toStringSafe(json['Severity'], 'medium'),
+      status: _toStringSafe(json['Status'], 'pending'),
+      type: _toStringSafe(json['Type'], 'other'),
       address: json['Address'] ?? "",
       userId: json['UserId'],
       imageUrl: json['ImageUrl'],
@@ -212,25 +212,50 @@ class HelpRequestDto {
     );
   }
 
+  // Helper method to safely convert enum or string to string
+  /// Handles both String and enum types from Firebase
+  /// Ensures backward compatibility with existing string data
+  static String _toStringSafe(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is String) return value;
+    if (value is RequestSeverity) return value.name;
+    if (value is RequestStatus) return value.name;
+    if (value is RequestType) return value.name;
+    // Fallback: try to convert to string
+    return value.toString();
+  }
+
   RequestSeverity _parseSeverity(String value) {
-    return RequestSeverity.values.firstWhere(
-      (severity) => severity.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => RequestSeverity.medium,
-    );
+    try {
+      return RequestSeverity.values.firstWhere(
+        (severity) => severity.name.toLowerCase() == value.toLowerCase(),
+        orElse: () => RequestSeverity.medium,
+      );
+    } catch (e) {
+      return RequestSeverity.medium;
+    }
   }
 
   RequestStatus _parseStatus(String value) {
-    return RequestStatus.values.firstWhere(
-      (status) => status.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => RequestStatus.pending,
-    );
+    try {
+      return RequestStatus.values.firstWhere(
+        (status) => status.name.toLowerCase() == value.toLowerCase(),
+        orElse: () => RequestStatus.pending,
+      );
+    } catch (e) {
+      return RequestStatus.pending;
+    }
   }
 
   RequestType _parseType(String value) {
-    return RequestType.values.firstWhere(
-      (type) => type.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => RequestType.other,
-    );
+    try {
+      return RequestType.values.firstWhere(
+        (type) => type.name.toLowerCase() == value.toLowerCase(),
+        orElse: () => RequestType.other,
+      );
+    } catch (e) {
+      return RequestType.other;
+    }
   }
 }
 

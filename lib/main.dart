@@ -2,6 +2,9 @@ import 'package:cuutrobaolu/app.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart' as di;
 import 'package:cuutrobaolu/data/services/notification_service.dart';
 import 'package:cuutrobaolu/data/services/geofencing_service.dart';
+import 'package:cuutrobaolu/data/services/engagement_tracker.dart';
+import 'package:cuutrobaolu/data/services/offline_service.dart';
+import 'package:cuutrobaolu/data/services/realtime_chat_service.dart';
 import 'package:cuutrobaolu/core/services/emergency_sound_service.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'firebase_options.dart';
 
@@ -24,10 +28,14 @@ Future<void> main() async {
   await Future.wait([
     GetStorage.init(),
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+    Hive.initFlutter(),
   ]);
 
   // Khởi tạo dependency injection (get_it)
   await di.init();
+
+  // Khởi tạo EngagementTracker for AI learning
+  EngagementTracker().initialize();
 
   // Khởi tạo NotificationService
   await Get.putAsync<NotificationService>(() async {
@@ -49,6 +57,18 @@ Future<void> main() async {
     await service.init();
     return service;
   }, permanent: true);
+
+  // Khởi tạo OfflineService (Mới)
+  await Get.putAsync<OfflineService>(() async {
+    final service = OfflineService();
+    // onInit will be called automatically by GetX
+    return service;
+  }, permanent: true);
+
+  // Khởi tạo RealtimeChatService
+  await Get.putAsync<RealtimeChatService>(() async {
+    return RealtimeChatService();
+  });
 
   // Firebase App Check chạy async, không chặn main thread
   // Chỉ kích hoạt trong production mode để tránh chậm khi debug

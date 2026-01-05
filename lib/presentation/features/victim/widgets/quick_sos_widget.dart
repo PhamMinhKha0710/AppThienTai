@@ -4,7 +4,7 @@ import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/data/services/sos_queue_service.dart';
 import 'package:cuutrobaolu/core/constants/enums.dart';
 import 'package:cuutrobaolu/domain/usecases/create_help_request_usecase.dart';
-import 'package:cuutrobaolu/presentation/features/shop/models/help_request_modal.dart';
+import 'package:cuutrobaolu/presentation/features/home/models/help_request_modal.dart';
 import 'package:cuutrobaolu/presentation/utils/help_request_mapper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,34 +13,70 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Quick SOS FAB Button - Always visible red SOS button
-class QuickSOSButton extends StatelessWidget {
+/// Quick SOS FAB Button - Collapsible version
+class QuickSOSButton extends StatefulWidget {
   const QuickSOSButton({super.key});
 
   @override
+  State<QuickSOSButton> createState() => _QuickSOSButtonState();
+}
+
+class _QuickSOSButtonState extends State<QuickSOSButton> {
+  bool _isExpanded = false;
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      onPressed: () => _showQuickSOSBottomSheet(context),
-      backgroundColor: Colors.red.shade700,
-      heroTag: 'quick_sos_fab',
-      elevation: 8,
-      icon: const Icon(
-        Icons.sos,
-        color: Colors.white,
-        size: 24,
-      ),
-      label: const Text(
-        'SOS',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Expanded SOS button - uses AnimatedOpacity for smooth transition
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _isExpanded ? 1.0 : 0.0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: _isExpanded ? 48 : 0,
+            margin: EdgeInsets.only(bottom: _isExpanded ? 8 : 0),
+            child: _isExpanded
+                ? FloatingActionButton.extended(
+                    heroTag: 'sos_extended',
+                    onPressed: () => _showQuickSOSBottomSheet(context),
+                    backgroundColor: Colors.red.shade700,
+                    elevation: 8,
+                    icon: const Icon(Icons.sos, color: Colors.white),
+                    label: const Text(
+                      'Gửi SOS',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ),
-      ),
+        // Main toggle button - small circle
+        FloatingActionButton.small(
+          heroTag: 'sos_toggle',
+          onPressed: _toggleExpanded,
+          backgroundColor: _isExpanded ? Colors.grey.shade600 : Colors.red.shade700,
+          elevation: 6,
+          child: Icon(
+            _isExpanded ? Icons.close : Icons.sos,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+      ],
     );
   }
 
   void _showQuickSOSBottomSheet(BuildContext context) {
+    setState(() => _isExpanded = false); // Collapse button when opening sheet
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -49,6 +85,7 @@ class QuickSOSButton extends StatelessWidget {
     );
   }
 }
+
 
 /// Quick SOS Bottom Sheet Widget
 class QuickSOSBottomSheet extends StatefulWidget {

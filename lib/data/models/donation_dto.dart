@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/donation_entity.dart';
+import '../../core/constants/supply_categories.dart';
 
 /// Donation DTO (Data Transfer Object) - Dùng để serialize/deserialize từ Firebase
 class DonationDto {
@@ -10,6 +11,11 @@ class DonationDto {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  // Linking fields
+  final String? alertId;
+  final String? province;
+  final String? district;
+
   // Money donation fields
   final double? amount;
   final String? paymentMethod;
@@ -18,6 +24,8 @@ class DonationDto {
   final String? itemName;
   final int? quantity;
   final String? description;
+  final String? category;
+  final String? customCategory;
 
   // Time donation fields
   final double? hours;
@@ -30,11 +38,16 @@ class DonationDto {
     this.userId,
     required this.createdAt,
     this.updatedAt,
+    this.alertId,
+    this.province,
+    this.district,
     this.amount,
     this.paymentMethod,
     this.itemName,
     this.quantity,
     this.description,
+    this.category,
+    this.customCategory,
     this.hours,
     this.date,
   });
@@ -46,11 +59,16 @@ class DonationDto {
       'UserId': userId,
       'CreatedAt': Timestamp.fromDate(createdAt),
       'UpdatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'AlertId': alertId,
+      'Province': province,
+      'District': district,
       'Amount': amount,
       'PaymentMethod': paymentMethod,
       'ItemName': itemName,
       'Quantity': quantity,
       'Description': description,
+      'Category': category,
+      'CustomCategory': customCategory,
       'Hours': hours,
       'Date': date != null ? Timestamp.fromDate(date!) : null,
     };
@@ -64,11 +82,16 @@ class DonationDto {
       userId: json['UserId'],
       createdAt: (json['CreatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (json['UpdatedAt'] as Timestamp?)?.toDate(),
+      alertId: json['AlertId'],
+      province: json['Province'],
+      district: json['District'],
       amount: (json['Amount'] as num?)?.toDouble(),
       paymentMethod: json['PaymentMethod'],
       itemName: json['ItemName'],
       quantity: (json['Quantity'] as num?)?.toInt(),
       description: json['Description'],
+      category: json['Category'],
+      customCategory: json['CustomCategory'],
       hours: (json['Hours'] as num?)?.toDouble(),
       date: (json['Date'] as Timestamp?)?.toDate(),
     );
@@ -92,11 +115,16 @@ class DonationDto {
       userId: userId,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      alertId: alertId,
+      province: province,
+      district: district,
       amount: amount,
       paymentMethod: paymentMethod,
       itemName: itemName,
       quantity: quantity,
       description: description,
+      category: SupplyCategory.fromString(category),
+      customCategory: customCategory,
       hours: hours,
       date: date,
     );
@@ -111,11 +139,16 @@ class DonationDto {
       userId: entity.userId,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      alertId: entity.alertId,
+      province: entity.province,
+      district: entity.district,
       amount: entity.amount,
       paymentMethod: entity.paymentMethod,
       itemName: entity.itemName,
       quantity: entity.quantity,
       description: entity.description,
+      category: entity.category?.name,
+      customCategory: entity.customCategory,
       hours: entity.hours,
       date: entity.date,
     );

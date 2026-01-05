@@ -73,9 +73,9 @@ class AlertDto {
       id: id,
       title: json['Title'] ?? "",
       content: json['Content'] ?? "",
-      severity: json['Severity'] ?? 'medium',
-      alertType: json['AlertType'] ?? 'general',
-      targetAudience: json['TargetAudience'] ?? 'all',
+      severity: _toStringSafe(json['Severity'], 'medium'),
+      alertType: _toStringSafe(json['AlertType'], 'general'),
+      targetAudience: _toStringSafe(json['TargetAudience'], 'all'),
       lat: (json['Lat'] as num?)?.toDouble(),
       lng: (json['Lng'] as num?)?.toDouble(),
       location: json['Location'],
@@ -151,11 +151,24 @@ class AlertDto {
     );
   }
 
+  // Helper method to safely convert enum or string to string
+  /// Handles both String and enum types from Firebase
+  /// Ensures backward compatibility with existing string data
+  static String _toStringSafe(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is String) return value;
+    if (value is AlertSeverity) return value.name;
+    if (value is AlertType) return value.name;
+    if (value is TargetAudience) return value.name;
+    // Fallback: try to convert to string
+    return value.toString();
+  }
+
   // Helper methods to parse enums from strings
   AlertSeverity _parseSeverity(String value) {
     try {
       return AlertSeverity.values.firstWhere(
-        (e) => e.name == value,
+        (e) => e.name.toLowerCase() == value.toLowerCase(),
         orElse: () => AlertSeverity.medium,
       );
     } catch (e) {
@@ -166,7 +179,7 @@ class AlertDto {
   AlertType _parseAlertType(String value) {
     try {
       return AlertType.values.firstWhere(
-        (e) => e.name == value,
+        (e) => e.name.toLowerCase() == value.toLowerCase(),
         orElse: () => AlertType.general,
       );
     } catch (e) {
@@ -177,7 +190,7 @@ class AlertDto {
   TargetAudience _parseTargetAudience(String value) {
     try {
       return TargetAudience.values.firstWhere(
-        (e) => e.name == value,
+        (e) => e.name.toLowerCase() == value.toLowerCase(),
         orElse: () => TargetAudience.all,
       );
     } catch (e) {

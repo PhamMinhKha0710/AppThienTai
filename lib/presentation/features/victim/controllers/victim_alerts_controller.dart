@@ -3,11 +3,16 @@ import 'package:cuutrobaolu/data/services/location_service.dart';
 import 'package:cuutrobaolu/domain/repositories/alert_repository.dart';
 import 'package:cuutrobaolu/core/injection/injection_container.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
+import 'package:cuutrobaolu/domain/entities/scored_alert_entity.dart';
+import 'package:cuutrobaolu/domain/services/alert_scoring_service.dart';
+import 'package:cuutrobaolu/domain/services/hybrid_alert_scoring_service.dart';
 import 'package:cuutrobaolu/presentation/features/common/screens/alert_detail_screen.dart';
 import 'package:get/get.dart';
 
 class VictimAlertsController extends GetxController {
   final AlertRepository _alertRepo = getIt<AlertRepository>();
+  final AlertScoringService _ruleBasedScoringService = getIt<AlertScoringService>();
+  final HybridAlertScoringService _hybridScoringService = getIt<HybridAlertScoringService>();
   LocationService? _locationService;
 
   final selectedTab = 0.obs; // 0: Active, 1: History
@@ -21,7 +26,7 @@ class VictimAlertsController extends GetxController {
   // Filter and sort options
   final selectedSeverityFilter = Rxn<AlertSeverity>();
   final selectedTypeFilter = Rxn<AlertType>();
-  final sortOption = 'severity'.obs; // 'severity', 'date', 'distance'
+  final sortOption = 'smart'.obs; // 'smart', 'severity', 'date', 'distance'
 
   @override
   void onInit() {
@@ -255,11 +260,63 @@ class VictimAlertsController extends GetxController {
           sorted.sort(_compareAlerts);
         }
         break;
+      case 'smart':
+        // Smart sorting using Multi-factor Scoring Algorithm
+        return _applySmartSort(sorted);
       default:
         sorted.sort(_compareAlerts);
     }
 
     return sorted;
+  }
+
+  /// Sắp xếp thông minh sử dụng Multi-factor Scoring Algorithm
+  /// 
+  /// Tính điểm ưu tiên cho mỗi alert dựa trên:
+  /// - Severity (35%)
+  /// - Type (20%)
+  /// - Time Decay (15%)
+  /// - Distance (20%)
+  /// - Audience (10%)
+  List<AlertEntity> _applySmartSort(List<AlertEntity> alerts) {
+    // Tính điểm cho tất cả alerts using rule-based for sync display
+    // TODO: Implement background AI scoring with hybrid service
+    final scoredAlerts = alerts.map((alert) {
+      final score = _ruleBasedScoringService.calculatePriorityScore(
+        alert: alert,
+        userLat: currentPosition.value?.lat,
+        userLng: currentPosition.value?.lng,
+        userRole: 'victim',
+      );
+      return ScoredAlert.now(
+        alert: alert,
+        score: score,
+        distanceKm: _getDistanceForAlert(alert),
+      );
+    }).toList();
+
+    // Sắp xếp theo điểm giảm dần
+    scoredAlerts.sort((a, b) => b.score.compareTo(a.score));
+
+    // Cập nhật alertsWithDistance để UI có thể hiển thị khoảng cách
+    alertsWithDistance.value = scoredAlerts.map((scored) {
+      return AlertEntityWithDistance(scored.alert, scored.distanceKm);
+    }).toList();
+
+    return scoredAlerts.map((s) => s.alert).toList();
+  }
+
+  /// Lấy khoảng cách cho một alert
+  double? _getDistanceForAlert(AlertEntity alert) {
+    if (currentPosition.value == null) return null;
+    if (alert.lat == null || alert.lng == null) return null;
+
+    return _calculateDistance(
+      currentPosition.value!.lat,
+      currentPosition.value!.lng,
+      alert.lat!,
+      alert.lng!,
+    );
   }
 
   void filterBySeverity(AlertSeverity? severity) {
@@ -271,7 +328,7 @@ class VictimAlertsController extends GetxController {
   }
 
   void setSortOption(String option) {
-    if (['severity', 'date', 'distance'].contains(option)) {
+    if (['smart', 'severity', 'date', 'distance'].contains(option)) {
       sortOption.value = option;
     }
   }
@@ -279,7 +336,7 @@ class VictimAlertsController extends GetxController {
   void clearFilters() {
     selectedSeverityFilter.value = null;
     selectedTypeFilter.value = null;
-    sortOption.value = 'severity';
+    sortOption.value = 'smart';
   }
 
   void searchAlerts(String query) {

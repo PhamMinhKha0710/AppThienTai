@@ -14,6 +14,8 @@ import '../../data/repositories/support_repository_impl.dart';
 import '../../data/repositories/alerts/alert_repository.dart' as alert_impl;
 import '../../data/repositories/shelters/shelter_repository.dart' as shelter_impl;
 import '../../data/repositories/donations/donation_repository.dart' as donation_impl;
+import '../../data/repositories/donations/donation_plan_repository.dart' as donation_plan_impl;
+import '../../data/repositories/area_coordinators/area_coordinator_repository.dart' as area_coordinator_impl;
 import '../../data/repositories/news/news_repository.dart' as news_impl;
 import '../../domain/repositories/user_repository.dart';
 import '../../domain/repositories/authentication_repository.dart';
@@ -23,12 +25,21 @@ import '../../domain/repositories/support_repository.dart';
 import '../../domain/repositories/alert_repository.dart';
 import '../../domain/repositories/shelter_repository.dart';
 import '../../domain/repositories/donation_repository.dart';
+import '../../domain/repositories/donation_plan_repository.dart';
+import '../../domain/repositories/area_coordinator_repository.dart';
 import '../../domain/repositories/news_repository.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/routing_service.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/smart_notification_service.dart';
 import '../../data/services/alert_seed_service.dart';
+import '../../data/services/ai_service_client.dart';
+import '../../data/services/ai_service_monitor.dart';
+import '../../domain/services/alert_scoring_service.dart';
+import '../../domain/services/alert_deduplication_service.dart';
+import '../../domain/services/hybrid_alert_scoring_service.dart';
 import '../../core/utils/network_manager.dart';
+import '../../core/constants/api_constants.dart';
 import '../../data/repositories/user/user_repository_adapter.dart';
 import '../../presentation/features/admin/controllers/admin_alerts_controller.dart';
 
@@ -44,6 +55,48 @@ Future<void> init() async {
   getIt.registerLazySingleton<RoutingService>(() => RoutingService());
   getIt.registerLazySingleton<NetworkManager>(() => NetworkManager());
   getIt.registerLazySingleton<NotificationService>(() => NotificationService());
+  
+  // ============================
+  // Smart Alert System Services
+  // ============================
+  // AlertScoringService - Multi-factor Severity Scoring (Fallback)
+  getIt.registerLazySingleton<AlertScoringService>(
+    () => const AlertScoringService(),
+  );
+  
+  // AI Service Client - Connection to AI Service (Firebase Functions or Python)
+  getIt.registerLazySingleton<AIServiceClient>(
+    () => AIServiceClient(
+      baseUrl: aiServiceUrl,  // Uses Firebase or local based on config
+      useFirebase: useFirebaseFunctions,
+    ),
+  );
+  
+  // AI Service Monitor - Health checking and metrics
+  getIt.registerLazySingleton<AIServiceMonitor>(
+    () => AIServiceMonitor(
+      aiService: getIt<AIServiceClient>(),
+    )..startMonitoring(), // Auto-start monitoring
+  );
+  
+  // Hybrid Alert Scoring Service - AI Primary + Rule-based Fallback
+  getIt.registerLazySingleton<HybridAlertScoringService>(
+    () => HybridAlertScoringService(
+      ruleBasedService: getIt<AlertScoringService>(),
+      aiService: getIt<AIServiceClient>(),
+      useAI: enableAiScoring,
+    ),
+  );
+  
+  // AlertDeduplicationService - Jaccard Similarity
+  getIt.registerLazySingleton<AlertDeduplicationService>(
+    () => const AlertDeduplicationService(),
+  );
+  
+  // SmartNotificationService - Batching & Cooldown
+  getIt.registerLazySingleton<SmartNotificationService>(
+    () => SmartNotificationService(),
+  );
   
   // ============================
   // Adapters (for backward compatibility)
@@ -95,6 +148,12 @@ Future<void> init() async {
   );
   getIt.registerLazySingleton<DonationRepository>(
     () => donation_impl.DonationRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<DonationPlanRepository>(
+    () => donation_plan_impl.DonationPlanRepositoryImpl(),
+  );
+  getIt.registerLazySingleton<AreaCoordinatorRepository>(
+    () => area_coordinator_impl.AreaCoordinatorRepositoryImpl(),
   );
   getIt.registerLazySingleton<NewsRepository>(
     () => news_impl.NewsRepositoryImpl(),

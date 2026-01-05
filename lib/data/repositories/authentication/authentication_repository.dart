@@ -2,7 +2,8 @@ import 'package:cuutrobaolu/presentation/features/admin/navigation_admin_menu.da
 import 'package:cuutrobaolu/presentation/features/authentication/screens/login/login.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/onboarding/onboarding.dart';
 import 'package:cuutrobaolu/presentation/features/authentication/screens/singup/verifi_email.dart';
-import 'package:cuutrobaolu/presentation/features/shop/navigation_menu.dart';
+import 'package:cuutrobaolu/presentation/features/home/navigation_menu.dart';
+import 'package:cuutrobaolu/data/services/notification_service.dart';
 import 'package:cuutrobaolu/core/exceptions/exports.dart';
 import 'package:cuutrobaolu/core/storage/storage_utility.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -71,8 +72,58 @@ class AuthenticationRepositoryLegacy extends GetxController {
         if (userTypeName != null &&
             (userTypeName.toString().toLowerCase() == 'admin' ||
                 userTypeMap is Map && userTypeMap['viName']?.toString().toLowerCase() == 'quản trị viên')) {
+          
+          // Subscribe to notifications
+          try {
+            final notificationService = Get.find<NotificationService>();
+            // Try to get address if available
+            String? province;
+            if (userData != null && userData['address'] is Map) {
+              province = userData['address']['ProvinceName'];
+            } else if (userData != null && userData['ProvinceName'] != null) {
+              province = userData['ProvinceName'];
+            }
+            
+            await notificationService.subscribeToDefaultTopics(
+              userRole: 'admin',
+              province: province,
+            );
+          } catch (e) {
+            print('Error subscribing to notifications: $e');
+          }
+
           Get.offAll(() => NavigationAdminMenu());
         } else {
+          // Subscribe to notifications
+          try {
+            final notificationService = Get.find<NotificationService>();
+            
+            // Determine role string
+            String role = 'user'; // Default
+            if (userTypeName != null) {
+              if (userTypeName.toString().toLowerCase().contains('victim') || 
+                  (userTypeMap is Map && userTypeMap['viName'].toString().toLowerCase().contains('nạn nhân'))) {
+                role = 'victim';
+              } else if (userTypeName.toString().toLowerCase().contains('volunteer') || 
+                  (userTypeMap is Map && userTypeMap['viName'].toString().toLowerCase().contains('tình nguyện'))) {
+                role = 'volunteer';
+              }
+            }
+
+            // Try to get address
+            String? province;
+            if (userData != null && userData['address'] is Map) {
+              province = userData['address']['ProvinceName'];
+            }
+            
+            await notificationService.subscribeToDefaultTopics(
+              userRole: role,
+              province: province,
+            );
+          } catch (e) {
+            print('Error subscribing to notifications: $e');
+          }
+
           Get.offAll(() => NavigationMenu()); // Vào trang chính user/supporter
         }
       } else {
