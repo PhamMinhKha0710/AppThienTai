@@ -49,3 +49,7 @@ logs/
 .env.local
 
 
+
+# Large generated data
+data/*.json
+data/*.csv
