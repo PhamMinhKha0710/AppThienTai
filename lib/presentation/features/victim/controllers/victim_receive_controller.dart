@@ -77,11 +77,17 @@ class VictimReceiveController extends GetxController {
       final position = currentPosition.value;
       if (position != null) {
         // Load shelters within 20km as distribution points
-        final nearby = await _shelterRepo.getNearbyShelters(
+        var nearby = await _shelterRepo.getNearbyShelters(
           position.latitude,
           position.longitude,
           20.0,
         );
+        
+        // If no data nearby, try loading all shelters
+        if (nearby.isEmpty) {
+          final allShelters = await _shelterRepo.getAllShelters().first;
+          nearby = allShelters;
+        }
 
         nearbyDistributionPoints.value = await Future.wait(
           nearby.map((shelter) async {
