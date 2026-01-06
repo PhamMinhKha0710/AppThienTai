@@ -1,6 +1,7 @@
 import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/presentation/features/admin/controllers/admin_dashboard_controller.dart';
 import 'package:cuutrobaolu/presentation/features/admin/screens/alerts/admin_alerts_screen.dart';
+import 'package:cuutrobaolu/presentation/features/admin/screens/distribution/admin_distribution_points_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -569,6 +570,12 @@ class AdminDashboardScreen extends StatelessWidget {
               label: 'Quản lý cảnh báo',
               color: Colors.red,
               onTap: () => Get.to(() => const AdminAlertsScreen()),
+            ),
+            _ActionButton(
+              icon: Iconsax.home_2,
+              label: 'Điểm phân phối',
+              color: Colors.teal,
+              onTap: () => Get.to(() => const AdminDistributionPointsScreen()),
             ),
             _ActionButton(
               icon: Iconsax.task_square,
