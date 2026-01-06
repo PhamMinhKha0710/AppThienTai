@@ -277,6 +277,38 @@ class AIServiceClient {
     }
   }
 
+  /// Predict weather for next day using AI model
+  Future<WeatherPrediction> predictWeather({
+    required String date, // YYYY-MM-DD
+    required int provinceId,
+    int regionId = 1,
+    double currentTemp = 30.0,
+    double currentHumid = 75.0,
+    double currentRain = 0.0,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/weather/predict',
+        data: {
+          'date': date,
+          'province_id': provinceId,
+          'region_id': regionId,
+          'current_temp': currentTemp,
+          'current_humid': currentHumid,
+          'current_rain': currentRain,
+        },
+      );
+
+      return WeatherPrediction.fromJson(response.data);
+    } on DioException catch (e) {
+      debugPrint('[AIService] DioException in predictWeather: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('[AIService] Error predicting weather: $e');
+      rethrow;
+    }
+  }
+
   /// Convert AlertEntity to dictionary for API
   Map<String, dynamic> _alertToDict(AlertEntity alert) {
     return {
@@ -573,6 +605,43 @@ class ForecastData {
       maxTemperature: (json['max_temperature'] as num?)?.toDouble() ?? 0,
       minTemperature: (json['min_temperature'] as num?)?.toDouble() ?? 0,
       maxWind: (json['max_wind'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+/// AI weather prediction for next day
+class WeatherPrediction {
+  final String date;
+  final double temperature;
+  final double humidity;
+  final double rainfall;
+  final String? note;
+
+  WeatherPrediction({
+    required this.date,
+    required this.temperature,
+    required this.humidity,
+    required this.rainfall,
+    this.note,
+  });
+
+  factory WeatherPrediction.fromJson(Map<String, dynamic> json) {
+    return WeatherPrediction(
+      date: json['date'] ?? '',
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 30.0,
+      humidity: (json['humidity'] as num?)?.toDouble() ?? 75.0,
+      rainfall: (json['rainfall'] as num?)?.toDouble() ?? 0.0,
+      note: json['note'],
+    );
+  }
+
+  /// Convert to WeatherData format for display
+  WeatherData toWeatherData() {
+    return WeatherData(
+      temperature: temperature,
+      humidity: humidity,
+      precipitation: rainfall,
+      rain: rainfall,
     );
   }
 }

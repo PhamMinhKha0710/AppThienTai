@@ -818,14 +818,41 @@ class VictimMapController extends GetxController {
 
     isLoadingPrediction.value = true;
     try {
-      final prediction = await _aiService.predictHazardRisk(
-        lat: pos.latitude,
-        lng: pos.longitude,
-        hazardType: selectedHazardTypeForWeather.value,
-        includeWeather: true,
+      // Get tomorrow's date
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final dateStr = '${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
+
+      // Call AI weather prediction
+      final prediction = await _aiService.predictWeather(
+        date: dateStr,
+        provinceId: 0, // TODO: Map lat/lng to province ID
+        regionId: 1,
+        currentTemp: 30.0,
+        currentHumid: 75.0,
+        currentRain: 0.0,
       );
 
-      currentHazardPrediction.value = prediction;
+      debugPrint('[MAP] AI Weather Prediction: temp=${prediction.temperature}°C, rain=${prediction.rainfall}mm');
+
+      // Convert to WeatherData for display
+      final weatherData = prediction.toWeatherData();
+
+      // Create HazardPrediction wrapper for display
+      // Reuse existing HazardPrediction model structure
+      currentHazardPrediction.value = HazardPrediction(
+        lat: pos.latitude,
+        lng: pos.longitude,
+        riskLevel: 1, // Default or derived risk
+        riskLabel: 'AI Forecast',
+        confidence: 0.8,
+        hazardType: selectedHazardTypeForWeather.value,
+        month: tomorrow.month,
+        province: 'Unknown',
+        explanation: 'Dự báo AI: ${prediction.temperature}°C, ${prediction.rainfall}mm mưa',
+        currentWeather: weatherData,
+        forecast: null,
+      );
+      
       debugPrint('[MAP] ✓ Loaded prediction with weather for current location');
     } catch (e) {
       debugPrint('[MAP] ✗ Error loading prediction: $e');

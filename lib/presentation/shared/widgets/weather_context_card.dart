@@ -8,6 +8,7 @@ class WeatherContextCard extends StatelessWidget {
   final ForecastData? forecast;
   final String hazardType;
   final bool isLoading;
+  final bool isForecast; // NEW: Flag to indicate if this is a forecast
   final VoidCallback? onRefresh;
   final VoidCallback? onDismiss;
   final Function(String)? onHazardTypeChanged;
@@ -18,6 +19,7 @@ class WeatherContextCard extends StatelessWidget {
     this.forecast,
     required this.hazardType,
     this.isLoading = false,
+    this.isForecast = false, // Default to false
     this.onRefresh,
     this.onDismiss,
     this.onHazardTypeChanged,
@@ -45,8 +47,33 @@ class WeatherContextCard extends StatelessWidget {
             _buildHeader(context),
             const SizedBox(height: 12),
 
-            // Current Weather
+            // Current Weather or AI Forecast
             if (currentWeather != null) ...[
+              if (isForecast)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome, size: 16, color: Colors.blue),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Dự báo bởi AI cho ngày mai',
+                        style: TextStyle(
+                          color: Colors.blue.shade700, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               _buildCurrentWeather(context),
               if (forecast != null) const Divider(height: 24),
             ],
@@ -313,9 +340,10 @@ class WeatherContextCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Thời Tiết Hiện Tại',
+                isForecast ? 'Dự Báo Thời Tiết (AI)' : 'Thời Tiết Hiện Tại',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: isForecast ? Colors.blue.shade800 : null,
                 ),
               ),
               // Hazard type selector
