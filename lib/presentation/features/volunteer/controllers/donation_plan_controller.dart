@@ -44,11 +44,22 @@ class DonationPlanController extends GetxController {
     try {
       isLoading.value = true;
       final userId = _auth.currentUser?.uid;
+      print('=== LOAD DONATION PLANS ===');
+      print('User ID: $userId');
+      
       if (userId != null) {
-        plans.value = await _planRepo.getPlansByCoordinator(userId);
+        final loadedPlans = await _planRepo.getPlansByCoordinator(userId);
+        print('Loaded ${loadedPlans.length} plans');
+        loadedPlans.forEach((p) {
+          print('  - Plan: ${p.id} | ${p.title} | Status: ${p.status.name}');
+        });
+        plans.value = loadedPlans;
+      } else {
+        print('No user ID - clearing plans');
+        plans.value = [];
       }
     } catch (e) {
-      print('Error loading plans: $e');
+      print('ERROR loading plans: $e');
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
         message: "Không thể tải danh sách kế hoạch: $e",
@@ -59,6 +70,8 @@ class DonationPlanController extends GetxController {
   }
 
   Future<void> createPlan() async {
+    print('=== CREATE DONATION PLAN ===');
+    
     if (titleController.text.trim().isEmpty ||
         provinceController.text.trim().isEmpty) {
       MinhLoaders.errorSnackBar(
@@ -81,6 +94,11 @@ class DonationPlanController extends GetxController {
       if (userId == null) {
         throw Exception("Người dùng chưa đăng nhập");
       }
+      
+      print('Creating plan for user: $userId');
+      print('Title: ${titleController.text.trim()}');
+      print('Province: ${provinceController.text.trim()}');
+      print('Required items: ${requiredItems.length}');
 
       final plan = DonationPlanEntity(
         id: '',
@@ -99,8 +117,13 @@ class DonationPlanController extends GetxController {
         expiresAt: expiresAt.value,
       );
 
-      await _planRepo.createPlan(plan);
+      print('Calling repository createPlan...');
+      final createdPlanId = await _planRepo.createPlan(plan);
+      print('Plan created with ID: $createdPlanId');
+      
+      print('Reloading plans...');
       await loadPlans();
+      print('Plans reloaded. Total: ${plans.length}');
 
       MinhLoaders.successSnackBar(
         title: "Thành công",
@@ -109,7 +132,9 @@ class DonationPlanController extends GetxController {
 
       // Clear form
       clearForm();
+      print('Form cleared');
     } catch (e) {
+      print('ERROR creating plan: $e');
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
         message: "Không thể tạo kế hoạch: $e",

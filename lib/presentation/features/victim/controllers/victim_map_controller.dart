@@ -84,6 +84,12 @@ class VictimMapController extends GetxController {
   final searchQuery = ''.obs;
   final showSheltersOnly = false.obs;
   final hazardDistanceKm = Rxn<double>();
+  
+  // Current location hazard prediction with weather - NEW
+  final currentHazardPrediction = Rxn<HazardPrediction>();
+  final isLoadingPrediction = false.obs;
+  final selectedHazardTypeForWeather = 'flood'.obs;
+  final showWeatherCard = true.obs;
 
   /// Evaluate nearby hazards based on disasterMarkers and current position
   void evaluateNearbyHazards() {
@@ -149,6 +155,8 @@ class VictimMapController extends GetxController {
     loadAlertMarkers();
     _setupMyRequestsListener();
     mapController.value = MapController();
+    // Load current location prediction with weather
+    loadCurrentLocationPrediction();
   }
 
   void _initAIService() {
@@ -798,6 +806,54 @@ class VictimMapController extends GetxController {
       default:
         return 'Thiên tai';
     }
+  }
+
+  /// Load hazard prediction for current location with real-time weather
+  Future<void> loadCurrentLocationPrediction() async {
+    final pos = currentPosition.value;
+    if (pos == null) {
+      debugPrint('[MAP] No current position for prediction');
+      return;
+    }
+
+    isLoadingPrediction.value = true;
+    try {
+      final prediction = await _aiService.predictHazardRisk(
+        lat: pos.latitude,
+        lng: pos.longitude,
+        hazardType: selectedHazardTypeForWeather.value,
+        includeWeather: true,
+      );
+
+      currentHazardPrediction.value = prediction;
+      debugPrint('[MAP] ✓ Loaded prediction with weather for current location');
+    } catch (e) {
+      debugPrint('[MAP] ✗ Error loading prediction: $e');
+    } finally {
+      isLoadingPrediction.value = false;
+    }
+  }
+
+  /// Change hazard type and reload prediction
+  Future<void> changeHazardTypeForWeather(String hazardType) async {
+    selectedHazardTypeForWeather.value = hazardType;
+    await loadCurrentLocationPrediction();
+  }
+
+  /// Refresh weather prediction
+  Future<void> refreshWeatherPrediction() async {
+    await loadCurrentLocationPrediction();
+  }
+
+  /// Dismiss weather card
+  void dismissWeatherCard() {
+    showWeatherCard.value = false;
+  }
+
+  /// Show weather card again
+  void showWeatherCardAgain() {
+    showWeatherCard.value = true;
+    loadCurrentLocationPrediction();
   }
 
   // ===================== FILTER METHODS =====================

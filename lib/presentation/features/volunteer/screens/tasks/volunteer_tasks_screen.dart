@@ -110,14 +110,73 @@ class VolunteerTasksScreen extends StatelessWidget {
             // List tasks
             Expanded(
               child: Obx(() {
-                final list = controller.filteredTasks;
-                if (list.isEmpty) {
-                  return const Center(child: Text('Không có nhiệm vụ.'));
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
-                if(controller.isLoading.value)
-                {
-                  return const Center(child: CircularProgressIndicator());
+                final list = controller.filteredTasks;
+                final currentTab = controller.tabs[controller.selectedTab.value];
+                
+                if (list.isEmpty) {
+                  // Tab-specific empty states
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentTab == 'pending'
+                                ? Iconsax.task_square
+                                : currentTab == 'accepted'
+                                    ? Iconsax.document
+                                    : Iconsax.tick_circle,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _getEmptyTitle(currentTab),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _getEmptyMessage(currentTab),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          // Action button
+                          if (currentTab == 'accepted')
+                            ElevatedButton.icon(
+                              onPressed: () => controller.onTabChanged(0),
+                              icon: const Icon(Iconsax.add_square),
+                              label: const Text('Xem nhiệm vụ chờ nhận'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: MinhColors.primary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                            )
+                          else if (currentTab == 'completed')
+                            OutlinedButton.icon(
+                              onPressed: () => controller.onTabChanged(0),
+                              icon: const Icon(Iconsax.task_square),
+                              label: const Text('Bắt đầu nhận nhiệm vụ'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
@@ -135,6 +194,31 @@ class VolunteerTasksScreen extends StatelessWidget {
       ),
     );
   }
-}
 
+  String _getEmptyTitle(String tab) {
+    switch (tab) {
+      case 'pending':
+        return 'Chưa có nhiệm vụ mới';
+      case 'accepted':
+        return 'Bạn chưa nhận nhiệm vụ nào';
+      case 'completed':
+        return 'Chưa có nhiệm vụ hoàn thành';
+      default:
+        return 'Không có dữ liệu';
+    }
+  }
+
+  String _getEmptyMessage(String tab) {
+    switch (tab) {
+      case 'pending':
+        return 'Hiện tại không có yêu cầu hỗ trợ nào.\nHãy quay lại sau hoặc thử mở rộng bán kính tìm kiếm.';
+      case 'accepted':
+        return 'Bạn chưa nhận nhiệm vụ nào để thực hiện.\nHãy chuyển sang tab "Chờ nhận" để xem các yêu cầu cần hỗ trợ.';
+      case 'completed':
+        return 'Bạn chưa hoàn thành nhiệm vụ nào.\nHãy nhận và hoàn thành nhiệm vụ để xây dựng hồ sơ tình nguyện!';
+      default:
+        return 'Không có thông tin';
+    }
+  }
+}
 

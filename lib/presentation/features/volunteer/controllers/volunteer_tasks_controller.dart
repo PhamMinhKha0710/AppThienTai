@@ -99,63 +99,89 @@ class VolunteerTasksController extends GetxController {
   }
 
   void listenTasksRealtime() {
-    _taskSub?.cancel(); // huỷ stream cũ khi đổi tab
+    _taskSub?.cancel(); // hủy stream cũ khi đổi tab
     isLoading.value = true;
 
     final tabKey = tabs[selectedTab.value];
     final userId = _auth.currentUser?.uid;
+    
+    debugPrint('=== LISTEN TASKS REALTIME ===');
+    debugPrint('Tab: $tabKey');
+    debugPrint('User ID: $userId');
 
     Stream<List<HelpRequest>> stream;
 
     if (tabKey == 'pending') {
+      debugPrint('Query: Status = pending');
       stream = FirebaseFirestore.instance
           .collection('help_requests')
           .where('Status', isEqualTo: 'pending')
           .snapshots()
-          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+          .map((s) {
+            debugPrint('Pending snapshot: ${s.docs.length} docs');
+            return s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList();
+          });
     } else if (tabKey == 'accepted') {
       if (userId == null) {
+        debugPrint('ERROR: No user ID for accepted tab');
         tasks.clear();
         isLoading.value = false;
         return;
       }
 
+      debugPrint('Query: Status = inProgress AND VolunteerId = $userId');
       stream = FirebaseFirestore.instance
           .collection('help_requests')
           .where('Status', isEqualTo: 'inProgress')
           .where('VolunteerId', isEqualTo: userId)
           .snapshots()
-          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+          .map((s) {
+            debugPrint('Accepted snapshot: ${s.docs.length} docs');
+            s.docs.forEach((d) {
+              debugPrint('  - Task ${d.id}: VolunteerId=${d.data()['VolunteerId']}');
+            });
+            return s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList();
+          });
     } else {
       if (userId == null) {
+        debugPrint('ERROR: No user ID for completed tab');
         tasks.clear();
         isLoading.value = false;
         return;
       }
 
+      debugPrint('Query: Status = completed AND VolunteerId = $userId');
       stream = FirebaseFirestore.instance
           .collection('help_requests')
           .where('Status', isEqualTo: 'completed')
           .where('VolunteerId', isEqualTo: userId)
           .snapshots()
-          .map((s) => s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList());
+          .map((s) {
+            debugPrint('Completed snapshot: ${s.docs.length} docs');
+            return s.docs.map((d) => HelpRequest.fromSnapshot(d)).toList();
+          });
     }
 
     _taskSub = stream.listen(
       (requests) async {
+        debugPrint('Stream received: ${requests.length} requests');
         await _handleIncomingTasks(requests);
         isLoading.value = false;
       },
       onError: (e) {
+        debugPrint('Stream ERROR: $e');
         isLoading.value = false;
-        debugPrint('Realtime error: $e');
       },
     );
   }
 
   Future<void> _handleIncomingTasks(List<HelpRequest> requests) async {
+    debugPrint('=== HANDLE INCOMING TASKS ===');
+    debugPrint('Requests count: ${requests.length}');
+    
     // 1. Convert sang map trước
     final list = requests.map((req) {
+      debugPrint('  - Task ${req.id}: ${req.title} (${req.status.toJson()})');
       return {
         'id': req.id,
         'status': req.status.toJson(),
@@ -172,14 +198,17 @@ class VolunteerTasksController extends GetxController {
       };
     }).toList();
 
+    debugPrint('Tasks list created: ${list.length} items');
     tasks.value = list; // update UI NGAY
 
     // 2. Use CACHED location - avoid slow location fetch on every stream emit
     final currentPos = await _getCachedPosition();
+    debugPrint('Current position: ${currentPos != null ? "${currentPos.latitude}, ${currentPos.longitude}" : "NULL"}');
 
     if (currentPos != null && _routingService != null) {
       _calculateDistancesInBackground(currentPos, list);
     } else {
+      debugPrint('Cannot calculate distances: pos=${currentPos != null}, routing=${_routingService != null}');
       for (var t in list) {
         t['distanceText'] = 'Chưa có vị trí';
       }

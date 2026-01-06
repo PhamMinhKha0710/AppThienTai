@@ -293,30 +293,58 @@ class VolunteerDonationController extends GetxController {
   }
 
   Future<void> submitTimeDonation() async {
-    if (hoursController.text.trim().isEmpty ||
-        selectedDate.value == null) {
+    print('=== SUBMIT TIME DONATION ===');
+    print('Selected skills: ${selectedSkills.length}');
+    print('Skills: $selectedSkills');
+    print('Selected date: ${selectedDate.value}');
+    print('Description: ${timeDescriptionController.text}');
+    
+    // Validate required fields
+    if (selectedSkills.isEmpty) {
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
-        message: "Vui lòng điền đầy đủ thông tin",
+        message: "Vui lòng chọn ít nhất một kỹ năng",
+      );
+      return;
+    }
+    
+    if (selectedDate.value == null) {
+      MinhLoaders.errorSnackBar(
+        title: "Lỗi",
+        message: "Vui lòng chọn ngày bắt đầu",
       );
       return;
     }
 
     try {
-      final hours = double.tryParse(hoursController.text);
-      if (hours == null || hours <= 0) {
-        throw Exception("Số giờ không hợp lệ");
+      // Default hours to 8 if not specified (for volunteer registration)
+      double hours = 8.0;
+      if (hoursController.text.trim().isNotEmpty) {
+        final parsedHours = double.tryParse(hoursController.text);
+        if (parsedHours != null && parsedHours > 0) {
+          hours = parsedHours;
+        }
       }
+      
+      print('Using hours: $hours');
 
-      // Create time donation record
+      // Create time donation/volunteer registration record with skills
+      final description = timeDescriptionController.text.trim().isEmpty
+          ? 'Kỹ năng: ${selectedSkills.join(', ')}'
+          : '${timeDescriptionController.text.trim()} | Kỹ năng: ${selectedSkills.join(', ')}';
+      
+      print('Final description: $description');
+
       final donationId = await _donationRepo.createTimeDonation(
         hours: hours,
         date: selectedDate.value!,
-        description: timeDescriptionController.text.trim(),
+        description: description,
         alertId: donationTargetType.value == 'alert' ? selectedAlertId.value : null,
         province: donationTargetType.value == 'area' ? selectedProvince.value : null,
         district: donationTargetType.value == 'area' ? selectedDistrict.value : null,
       );
+      
+      print('Donation created with ID: $donationId');
 
       // Update status to completed
       await _donationRepo.updateDonationStatus(donationId, DonationStatus.completed);
@@ -326,7 +354,7 @@ class VolunteerDonationController extends GetxController {
 
       MinhLoaders.successSnackBar(
         title: "Thành công",
-        message: "Đăng ký quyên góp thời gian của bạn đã được ghi nhận. Cảm ơn bạn!",
+        message: "Đăng ký tình nguyện của bạn đã được ghi nhận. Cảm ơn bạn!",
       );
 
       // Clear form
@@ -334,7 +362,10 @@ class VolunteerDonationController extends GetxController {
       dateController.clear();
       timeDescriptionController.clear();
       selectedDate.value = null;
+      selectedSkills.clear();
+      print('Form cleared');
     } catch (e) {
+      print('ERROR submitting time donation: $e');
       MinhLoaders.errorSnackBar(
         title: "Lỗi",
         message: "Không thể đăng ký: $e",

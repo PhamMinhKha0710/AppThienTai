@@ -17,6 +17,7 @@ from models.alert_scorer import AlertScoringModel
 from models.duplicate_detector import SemanticDuplicateDetector
 from models.notification_timing import NotificationTimingModel
 from models.hazard_predictor import HazardZonePredictor
+from data_collectors.openmeteo_collector import OpenMeteoCollector  # NEW: Weather data
 from services.data_collector import DataCollector
 from services.model_trainer import ModelRetrainer
 from utils.features import FeatureExtractor
@@ -46,6 +47,7 @@ scorer = AlertScoringModel(cold_start=True)
 duplicate_detector = SemanticDuplicateDetector()
 timing_model = NotificationTimingModel()
 hazard_predictor = HazardZonePredictor(cold_start=True)
+weather_collector = OpenMeteoCollector(cache_enabled=True)  # NEW: Weather collector
 data_collector = DataCollector()
 model_retrainer = ModelRetrainer(data_collector)
 feature_extractor = FeatureExtractor()
@@ -267,6 +269,7 @@ class HazardPredictRequest(BaseModel):
     lng: float = Field(..., description="Longitude")
     month: Optional[int] = Field(default=None, description="Month (1-12), defaults to current")
     hazard_type: str = Field(default="flood", description="Hazard type: flood, landslide, storm")
+    include_weather: bool = Field(default=True, description="Include real-time weather data")
 
 
 class HazardPredictResponse(BaseModel):
@@ -280,6 +283,8 @@ class HazardPredictResponse(BaseModel):
     month: int
     province: str
     explanation: str
+    current_weather: Optional[Dict] = Field(default=None, description="Current weather conditions")
+    forecast: Optional[Dict] = Field(default=None, description="Weather forecast")
 
 
 class HazardZone(BaseModel):
@@ -302,14 +307,79 @@ async def predict_hazard_risk(request: HazardPredictRequest):
     - Geographic location
     - Historical hazard patterns
     - Seasonal factors
+    - Real-time weather data (if requested)
     """
     try:
+        # Get base prediction
         result = hazard_predictor.predict_risk(
             lat=request.lat,
             lng=request.lng,
             month=request.month,
             hazard_type=request.hazard_type
         )
+        
+        # Enrich with real-time weather if requested
+        if request.include_weather:
+            try:
+                # Get current weather
+                current_weather_data = weather_collector.get_current_weather(
+                    lat=request.lat,
+                    lng=request.lng
+                )
+                
+                # Get 7-day forecast
+                forecast_data = weather_collector.get_forecast(
+                    lat=request.lat,
+                    lng=request.lng,
+                    days=7
+                )
+                
+                # Format weather for response
+                if current_weather_data and 'current' in current_weather_data:
+                    current = current_weather_data['current']
+                    result['current_weather'] = {
+                        'temperature': current.get('temperature_2m'),
+                        'precipitation': current.get('precipitation', 0),
+                        'rain': current.get('rain', 0),
+                        'wind_speed': current.get('wind_speed_10m'),
+                        'wind_gusts': current.get('wind_gusts_10m'),
+                        'humidity': current.get('relative_humidity_2m'),
+                        'cloud_cover': current.get('cloud_cover'),
+                        'pressure': current.get('pressure_msl'),
+                    }
+                
+                # Format forecast
+                if forecast_data and 'daily' in forecast_data:
+                    daily = forecast_data['daily']
+                    result['forecast'] = {
+                        'days': len(daily.get('time', [])),
+                        'total_precipitation': sum(daily.get('precipitation_sum', [])),
+                        'max_temperature': max(daily.get('temperature_2m_max', [20])),
+                        'min_temperature': min(daily.get('temperature_2m_min', [15])),
+                        'max_wind': max(daily.get('wind_speed_10m_max', [0])),
+                    }
+                    
+                    # Adjust risk based on forecast
+                    total_precip = sum(daily.get('precipitation_sum', []))
+                    max_wind = max(daily.get('wind_speed_10m_max', [0]))
+                    
+                    # Increase risk if heavy rain forecast for flood/landslide
+                    if request.hazard_type in ['flood', 'landslide']:
+                        if total_precip > 200:  # >200mm in 7 days
+                            result['risk_level'] = min(5, result['risk_level'] + 1)
+                            result['explanation'] += f" ⚠️ Dự báo mưa lớn: {total_precip:.0f}mm trong 7 ngày tới!"
+                        elif total_precip > 100:
+                            result['explanation'] += f" Dự báo mưa: {total_precip:.0f}mm trong 7 ngày tới."
+                    
+                    # Increase risk if strong wind forecast for storm
+                    if request.hazard_type == 'storm' and max_wind > 60:
+                        result['risk_level'] = min(5, result['risk_level'] + 1)
+                        result['explanation'] += f" ⚠️ Dự báo gió mạnh: {max_wind:.0f} km/h!"
+                        
+            except Exception as weather_error:
+                print(f"[API] Warning: Could not fetch weather data: {weather_error}")
+                # Continue without weather data
+                pass
         
         return HazardPredictResponse(**result)
     

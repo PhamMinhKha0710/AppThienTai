@@ -253,6 +253,7 @@ class AIServiceClient {
     required double lng,
     int? month,
     String hazardType = 'flood',
+    bool includeWeather = true, // NEW: Include real-time weather
   }) async {
     try {
       final response = await _dio.post(
@@ -262,6 +263,7 @@ class AIServiceClient {
           'lng': lng,
           if (month != null) 'month': month,
           'hazard_type': hazardType,
+          'include_weather': includeWeather, // NEW
         },
       );
 
@@ -474,6 +476,8 @@ class HazardPrediction {
   final int month;
   final String province;
   final String explanation;
+  final WeatherData? currentWeather; // NEW
+  final ForecastData? forecast; // NEW
 
   HazardPrediction({
     required this.lat,
@@ -485,6 +489,8 @@ class HazardPrediction {
     required this.month,
     required this.province,
     required this.explanation,
+    this.currentWeather,
+    this.forecast,
   });
 
   factory HazardPrediction.fromJson(Map<String, dynamic> json) {
@@ -498,6 +504,75 @@ class HazardPrediction {
       month: json['month'] ?? DateTime.now().month,
       province: json['province'] ?? 'Unknown',
       explanation: json['explanation'] ?? '',
+      currentWeather: json['current_weather'] != null
+          ? WeatherData.fromJson(json['current_weather'])
+          : null,
+      forecast: json['forecast'] != null
+          ? ForecastData.fromJson(json['forecast'])
+          : null,
+    );
+  }
+}
+
+/// Current weather data
+class WeatherData {
+  final double? temperature;
+  final double? precipitation;
+  final double? rain;
+  final double? windSpeed;
+  final double? windGusts;
+  final double? humidity;
+  final double? cloudCover;
+  final double? pressure;
+
+  WeatherData({
+    this.temperature,
+    this.precipitation,
+    this.rain,
+    this.windSpeed,
+    this.windGusts,
+    this.humidity,
+    this.cloudCover,
+    this.pressure,
+  });
+
+  factory WeatherData.fromJson(Map<String, dynamic> json) {
+    return WeatherData(
+      temperature: (json['temperature'] as num?)?.toDouble(),
+      precipitation: (json['precipitation'] as num?)?.toDouble(),
+      rain: (json['rain'] as num?)?.toDouble(),
+      windSpeed: (json['wind_speed'] as num?)?.toDouble(),
+      windGusts: (json['wind_gusts'] as num?)?.toDouble(),
+      humidity: (json['humidity'] as num?)?.toDouble(),
+      cloudCover: (json['cloud_cover'] as num?)?.toDouble(),
+      pressure: (json['pressure'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// Weather forecast data
+class ForecastData {
+  final int days;
+  final double totalPrecipitation;
+  final double maxTemperature;
+  final double minTemperature;
+  final double maxWind;
+
+  ForecastData({
+    required this.days,
+    required this.totalPrecipitation,
+    required this.maxTemperature,
+    required this.minTemperature,
+    required this.maxWind,
+  });
+
+  factory ForecastData.fromJson(Map<String, dynamic> json) {
+    return ForecastData(
+      days: json['days'] ?? 7,
+      totalPrecipitation: (json['total_precipitation'] as num?)?.toDouble() ?? 0,
+      maxTemperature: (json['max_temperature'] as num?)?.toDouble() ?? 0,
+      minTemperature: (json['min_temperature'] as num?)?.toDouble() ?? 0,
+      maxWind: (json['max_wind'] as num?)?.toDouble() ?? 0,
     );
   }
 }

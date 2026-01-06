@@ -4,6 +4,7 @@ import 'package:cuutrobaolu/core/constants/sizes.dart';
 import 'package:cuutrobaolu/domain/entities/alert_entity.dart';
 import 'package:cuutrobaolu/presentation/features/common/screens/alert_detail_screen.dart';
 import 'package:cuutrobaolu/presentation/features/victim/controllers/victim_map_controller.dart';
+import 'package:cuutrobaolu/presentation/shared/widgets/weather_context_card.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -395,142 +396,109 @@ class VictimMapScreen extends StatelessWidget {
                       : const SizedBox.shrink()
                     ),
                     const SizedBox(width: 8),
+                    // Weather button - NEW
+                    Obx(() {
+                      final isLoading = controller.isLoadingPrediction.value;
+                      final hasData = controller.currentHazardPrediction.value != null;
+                      
+                      return Stack(
+                        children: [
+                          IconButton(
+                            tooltip: 'Thời tiết & Dự báo',
+                            icon: Icon(
+                              Icons.cloud,
+                              color: hasData ? Colors.blue : Colors.grey,
+                            ),
+                            onPressed: () {
+                              // Show weather in bottom sheet
+                              Get.bottomSheet(
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Handle bar
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 8),
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade300,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      // Weather card
+                                      if (isLoading)
+                                        WeatherContextCard(
+                                          hazardType: controller.selectedHazardTypeForWeather.value,
+                                          isLoading: true,
+                                        )
+                                      else if (hasData)
+                                        WeatherContextCard(
+                                          currentWeather: controller.currentHazardPrediction.value!.currentWeather,
+                                          forecast: controller.currentHazardPrediction.value!.forecast,
+                                          hazardType: controller.selectedHazardTypeForWeather.value,
+                                          isLoading: false,
+                                          onRefresh: () => controller.refreshWeatherPrediction(),
+                                          onDismiss: () => Get.back(),
+                                          onHazardTypeChanged: (type) => controller.changeHazardTypeForWeather(type),
+                                        )
+                                      else
+                                        Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                                              const SizedBox(height: 12),
+                                              const Text(
+                                                'Đang tải dữ liệu thời tiết...',
+                                                style: TextStyle(color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              ElevatedButton.icon(
+                                                onPressed: () => controller.loadCurrentLocationPrediction(),
+                                                icon: const Icon(Icons.refresh),
+                                                label: const Text('Tải lại'),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  ),
+                                ),
+                                isScrollControlled: true,
+                              );
+                            },
+                          ),
+                          // Loading indicator
+                          if (isLoading)
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                    const SizedBox(width: 8),
                     // Distribution list toggle
                     IconButton(
                       tooltip: 'Danh sách điểm phân phối',
                       icon: const Icon(Icons.list),
                       onPressed: () => controller.toggleDistributionPanel(),
-                    ),
-                    const SizedBox(width: 8),
-                    // Weather/Overlay settings button
-                    IconButton(
-                      tooltip: 'Radar / Thời tiết',
-                      icon: const Icon(Icons.cloud),
-                      onPressed: () {
-                        final apiController = TextEditingController(
-                          text: controller.owmApiKey.value,
-                        );
-                        String selectedLayer =
-                            controller.selectedOwmLayer.value;
-                        double opacity = controller.owmTileOpacity.value;
-                        bool showTiles = controller.showOwmTiles.value;
-
-                        Get.dialog(
-                          Dialog(
-                            child: StatefulBuilder(
-                              builder: (context, setState) {
-                                return Container(
-                                  padding: const EdgeInsets.all(16),
-                                  width: 360,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'Cấu hình Overlay thời tiết',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextField(
-                                        controller: apiController,
-                                        decoration: const InputDecoration(
-                                          labelText: 'OpenWeatherMap API key',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          const Text('Layer: '),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: DropdownButton<String>(
-                                              isExpanded: true,
-                                              value: selectedLayer,
-                                              items: controller
-                                                  .availableOwmLayers
-                                                  .map((layer) {
-                                                    return DropdownMenuItem(
-                                                      value: layer,
-                                                      child: Text(layer),
-                                                    );
-                                                  })
-                                                  .toList(),
-                                              onChanged: (v) {
-                                                if (v == null) return;
-                                                setState(
-                                                  () => selectedLayer = v,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          const Text('Hiển thị'),
-                                          const Spacer(),
-                                          Switch.adaptive(
-                                            value: showTiles,
-                                            onChanged: (v) =>
-                                                setState(() => showTiles = v),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          const Text('Độ mờ'),
-                                          Expanded(
-                                            child: Slider(
-                                              value: opacity,
-                                              min: 0.0,
-                                              max: 1.0,
-                                              divisions: 10,
-                                              onChanged: (v) =>
-                                                  setState(() => opacity = v),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () => Get.back(),
-                                            child: const Text('Hủy'),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              controller.setOwmApiKey(
-                                                apiController.text.trim(),
-                                              );
-                                              controller.setSelectedOwmLayer(
-                                                selectedLayer,
-                                              );
-                                              controller.setOwmOpacity(opacity);
-                                              controller.toggleShowOwmTiles(
-                                                showTiles,
-                                              );
-                                              Get.back();
-                                            },
-                                            child: const Text('Lưu'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
                     ),
                   ],
                 ),
@@ -636,6 +604,213 @@ class VictimMapScreen extends StatelessWidget {
               );
             }),
           ),
+
+          // Weather Context Card - NEW
+          Positioned(
+            bottom: 80,
+            right: 10,
+            left: 10,
+            child: Obx(() {
+              // Don't show if dismissed
+              if (!controller.showWeatherCard.value) {
+                return const SizedBox.shrink();
+              }
+
+              // Show loading skeleton
+              if (controller.isLoadingPrediction.value) {
+                return WeatherContextCard(
+                  hazardType: controller.selectedHazardTypeForWeather.value,
+                  isLoading: true,
+                );
+              }
+
+              final prediction = controller.currentHazardPrediction.value;
+              if (prediction == null) return const SizedBox.shrink();
+              
+              return WeatherContextCard(
+                currentWeather: prediction.currentWeather,
+                forecast: prediction.forecast,
+                hazardType: controller.selectedHazardTypeForWeather.value,
+                isLoading: false,
+                onRefresh: () => controller.refreshWeatherPrediction(),
+                onDismiss: () => controller.dismissWeatherCard(),
+                onHazardTypeChanged: (type) => controller.changeHazardTypeForWeather(type),
+              );
+            }),
+          ),
+
+          // Shelter Distribution Panel - NEW
+          Obx(() {
+            if (!controller.showDistributionPanel.value) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned(
+              top: 70,
+              right: 0,
+              bottom: 0,
+              width: 280,
+              child: Material(
+                elevation: 8,
+                child: Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.home, color: Colors.green.shade700),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Điểm trú ẩn',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              onPressed: () => controller.toggleDistributionPanel(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Shelter count
+                      if (controller.shelterMarkers.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          color: Colors.blue.shade50,
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${controller.shelterMarkers.length} điểm gần bạn',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // List
+                      Expanded(
+                        child: controller.shelterMarkers.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.home_outlined, size: 48, color: Colors.grey.shade400),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Chưa có điểm trú ẩn',
+                                      style: TextStyle(color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.all(8),
+                                itemCount: controller.shelterMarkers.length,
+                                itemBuilder: (context, index) {
+                                  final marker = controller.shelterMarkers[index];
+                                  
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: InkWell(
+                                      onTap: () {
+                                        // TODO: Show shelter details
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(6),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green.shade100,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.home,
+                                                    color: Colors.green.shade700,
+                                                    size: 18,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                   'Trú ẩn #${index + 1}',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Lat: ${marker.point.latitude.toStringAsFixed(4)}, Lng: ${marker.point.longitude.toStringAsFixed(4)}',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: ElevatedButton.icon(
+                                                onPressed: () {
+                                                  // Navigate to shelter
+                                                  controller.findRouteTo(marker.point);
+                                                },
+                                                icon: const Icon(Icons.directions, size: 16),
+                                                label: const Text('Chỉ đường', style: TextStyle(fontSize: 12)),
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                                  backgroundColor: Colors.green,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

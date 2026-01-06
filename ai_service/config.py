@@ -40,3 +40,14 @@ MIN_SAMPLES_FOR_RETRAIN = 100
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8000"))
 
+# Open-Meteo API Configuration (100% FREE)
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+WEATHER_CACHE_DIR = CACHE_DIR / "weather"
+WEATHER_CACHE_ENABLED = True
+
+# Weather data collection settings
+HISTORICAL_WEATHER_LOOKBACK_DAYS = 30  # Days of historical weather to fetch
+WEATHER_API_TIMEOUT = 30  # seconds
+
+
