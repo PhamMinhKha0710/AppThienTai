@@ -285,6 +285,41 @@ def train_all(
     except Exception as e:
         results['models']['notification_timing'] = {'status': 'error', 'error': str(e)}
         print(f"\nError training Notification Timing: {e}")
+
+    # Train Hazard Predictor
+    try:
+        if verbose:
+            print("\n" + "=" * 60)
+            print("Training Hazard Prediction Model (XGBoost/GradientBoosting)")
+            print("=" * 60)
+        
+        # Import dynamically to avoid top-level dependency issues
+        from train_hazard_model import train_model as train_hazard
+        model, scaler, accuracy = train_hazard()
+        
+        results['models']['hazard_predictor'] = {
+            'status': 'success',
+            'model': 'HazardPredictor',
+            'accuracy': float(accuracy)
+        }
+    except Exception as e:
+        results['models']['hazard_predictor'] = {'status': 'error', 'error': str(e)}
+        print(f"\nError training Hazard Predictor: {e}")
+
+    # Train Weather Model
+    try:
+        from models.weather_forecaster import WeatherForecaster
+        if verbose:
+            print("\n" + "=" * 60)
+            print("Training Weather Forecasting Model (Random Forest)")
+            print("=" * 60)
+        
+        weather_model = WeatherForecaster()
+        weather_result = weather_model.train()
+        results['models']['weather_forecaster'] = weather_result
+    except Exception as e:
+        results['models']['weather_forecaster'] = {'status': 'error', 'error': str(e)}
+        print(f"\nError training Weather Forecaster: {e}")
     
     total_elapsed = time.time() - total_start
     results['total_time'] = total_elapsed

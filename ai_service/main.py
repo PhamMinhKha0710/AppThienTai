@@ -17,7 +17,8 @@ from models.alert_scorer import AlertScoringModel
 from models.duplicate_detector import SemanticDuplicateDetector
 from models.notification_timing import NotificationTimingModel
 from models.hazard_predictor import HazardZonePredictor
-from data_collectors.openmeteo_collector import OpenMeteoCollector  # NEW: Weather data
+from models.weather_forecaster import WeatherForecaster  # NEW
+from data_collectors.openmeteo_collector import OpenMeteoCollector
 from services.data_collector import DataCollector
 from services.model_trainer import ModelRetrainer
 from utils.features import FeatureExtractor
@@ -35,7 +36,7 @@ app = FastAPI(
 # CORS middleware for Flutter app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +48,8 @@ scorer = AlertScoringModel(cold_start=True)
 duplicate_detector = SemanticDuplicateDetector()
 timing_model = NotificationTimingModel()
 hazard_predictor = HazardZonePredictor(cold_start=True)
-weather_collector = OpenMeteoCollector(cache_enabled=True)  # NEW: Weather collector
+weather_forecaster = WeatherForecaster()  # NEW
+weather_collector = OpenMeteoCollector(cache_enabled=True)
 data_collector = DataCollector()
 model_retrainer = ModelRetrainer(data_collector)
 feature_extractor = FeatureExtractor()
@@ -136,6 +138,26 @@ class FeedbackRequest(BaseModel):
     actual_score: Optional[float] = None
 
 
+# Weather Schemas
+class WeatherPredictRequest(BaseModel):
+    """Request for weather prediction"""
+    date: str = Field(..., description="YYYY-MM-DD")
+    province_id: int = Field(..., description="Province ID (0-63)")
+    region_id: int = Field(default=1, description="Region ID (0-3)")
+    current_temp: Optional[float] = Field(default=30.0, description="Current temperature")
+    current_humid: Optional[float] = Field(default=75.0, description="Current humidity")
+    current_rain: Optional[float] = Field(default=0.0, description="Current rainfall mm")
+
+
+class WeatherPredictResponse(BaseModel):
+    """Response for weather prediction"""
+    date: str
+    temperature: float
+    humidity: float
+    rainfall: float
+    note: Optional[str] = None
+
+
 # ===================== API Endpoints =====================
 
 @app.get("/")
@@ -151,7 +173,8 @@ async def root():
             "score": "/api/v1/score",
             "duplicate": "/api/v1/duplicate/check",
             "timing": "/api/v1/timing/recommend",
-            "feedback": "/api/v1/feedback/engagement"
+            "hazard": "/api/v1/hazard/predict",
+            "weather": "/api/v1/weather/predict"  # NEW
         }
     }
 
@@ -164,7 +187,8 @@ async def health_check():
         "models": {
             "scorer": "loaded" if scorer.is_trained else "not_trained",
             "duplicate_detector": "loaded",
-            "timing_model": "loaded"
+            "timing_model": "loaded",
+            "weather_forecaster": "loaded" if weather_forecaster.is_trained else "not_trained"
         },
         "database": "connected"
     }
@@ -174,12 +198,6 @@ async def health_check():
 async def score_alert(request: AlertScoreRequest):
     """
     Score alert priority using ML model
-    
-    Returns priority score (0-100) based on multiple factors:
-    - Alert severity and type
-    - Distance from user
-    - Time decay
-    - User context
     """
     try:
         # Extract features
@@ -214,9 +232,6 @@ async def score_alert(request: AlertScoreRequest):
 async def check_duplicate(request: DuplicateCheckRequest):
     """
     Check if alert is duplicate using semantic similarity
-    
-    Uses Sentence Transformers to understand semantic meaning,
-    providing much better duplicate detection than text matching.
     """
     try:
         # Find duplicates
@@ -248,17 +263,36 @@ async def check_duplicate(request: DuplicateCheckRequest):
         print(f"[API] Error in check_duplicate: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ===================== REMOVED UNUSED ENDPOINTS =====================
-# The following endpoints have been removed to simplify the API:
-# - POST /api/v1/timing/recommend (notification timing)
-# - POST /api/v1/feedback/engagement (engagement logging)
-# - GET /api/v1/stats/engagement (engagement stats)
-# - GET /api/v1/stats/duplicate (duplicate stats)
-# - GET /api/v1/stats/timing (timing stats)
-# - GET /api/v1/model/feature-importance (feature importance)
-# - POST /api/v1/model/retrain (manual retraining)
-# - GET /api/v1/model/retraining-status (retraining status)
-# ====================================================================
+
+# ===================== Weather Prediction Endpoint =====================
+
+@app.post("/api/v1/weather/predict", response_model=WeatherPredictResponse)
+async def predict_weather(request: WeatherPredictRequest):
+    """
+    Predict next-day weather using AI model.
+    """
+    try:
+        from datetime import datetime
+        target_date = datetime.strptime(request.date, "%Y-%m-%d")
+        
+        current_weather = {
+            'temp': request.current_temp,
+            'humid': request.current_humid,
+            'rain': request.current_rain
+        }
+        
+        result = weather_forecaster.predict(
+            date=target_date,
+            province_id=request.province_id,
+            region_id=request.region_id,
+            current_weather=current_weather
+        )
+        
+        return WeatherPredictResponse(**result)
+    
+    except Exception as e:
+        print(f"[API] Error in predict_weather: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ===================== Hazard Zone Endpoints =====================
