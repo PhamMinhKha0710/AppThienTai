@@ -1,94 +1,126 @@
-# Tài liệu Chi tiết các Thuật toán
+# 📚 Tài liệu Chi tiết các Thuật toán
+# AppThienTai - Hệ thống Cứu trợ Thiên tai
 
-Thư mục này chứa tài liệu chi tiết về các thuật toán được sử dụng trong Hệ thống Cảnh báo Thông minh.
+**Phiên bản**: 2.0.0  
+**Cập nhật**: Tháng 01/2026
 
-## Danh sách Thuật toán
+---
 
-### 1. Multi-factor Severity Scoring Algorithm
+## 📑 Mục lục
 
-**File implementation**: `lib/domain/services/alert_scoring_service.dart`
+1. [Tổng quan Thuật toán](#1-tổng-quan-thuật-toán)
+2. [Mobile App (Flutter/Dart)](#2-mobile-app-flutterdart)
+   - [Multi-factor Severity Scoring](#21-multi-factor-severity-scoring)
+   - [Time Decay (Exponential)](#22-time-decay-exponential)
+   - [Haversine Distance](#23-haversine-distance)
+   - [Inverse Distance Weighting](#24-inverse-distance-weighting)
+   - [Priority Queue (Max-Heap)](#25-priority-queue-max-heap)
+   - [Jaccard Similarity](#26-jaccard-similarity)
+   - [Smart Notification Batching](#27-smart-notification-batching)
+   - [Geofencing with Deduplication](#28-geofencing-with-deduplication)
+3. [Routing Service](#3-routing-service)
+   - [OSRM Routing (Dijkstra/CH)](#31-osrm-routing-dijkstrach)
+4. [AI Service (Python/FastAPI)](#4-ai-service-pythonfastapi)
+   - [XGBoost Hazard Prediction](#41-xgboost-hazard-prediction)
+   - [Random Forest Alert Scoring](#42-random-forest-alert-scoring)
+   - [Sentence Transformers Duplicate Detection](#43-sentence-transformers-duplicate-detection)
+   - [Thompson Sampling (Contextual Bandit)](#44-thompson-sampling-contextual-bandit)
+5. [Bảng So sánh Complexity](#5-bảng-so-sánh-complexity)
+6. [References](#6-references)
 
-Thuật toán tính điểm ưu tiên tổng hợp cho mỗi cảnh báo dựa trên 5 yếu tố.
+---
+
+## 1. Tổng quan Thuật toán
+
+### Phân loại theo Layer
+
+| Layer | Thuật toán | Ngôn ngữ | Use case |
+|-------|-----------|----------|----------|
+| **Mobile** | Multi-factor Scoring | Dart | Sắp xếp ưu tiên cảnh báo |
+| **Mobile** | Exponential Decay | Dart | Ưu tiên tin mới |
+| **Mobile** | Haversine Distance | Dart | Tính khoảng cách GPS |
+| **Mobile** | Max-Heap | Dart | Priority Queue |
+| **Mobile** | Jaccard Similarity | Dart | Phát hiện trùng lặp |
+| **Mobile** | Smart Batching | Dart | Gộp notification |
+| **Routing** | OSRM (Dijkstra/CH) | API | Tìm đường đi ngắn nhất |
+| **AI** | XGBoost | Python | Dự báo thiên tai |
+| **AI** | Random Forest | Python | Scoring cảnh báo ML |
+| **AI** | Sentence BERT | Python | Semantic duplicate |
+| **AI** | Thompson Sampling | Python | Tối ưu thời điểm gửi |
+
+---
+
+## 2. Mobile App (Flutter/Dart)
+
+### 2.1. Multi-factor Severity Scoring
+
+**File**: `lib/domain/services/alert_scoring_service.dart`
+
+Thuật toán tính điểm ưu tiên tổng hợp cho cảnh báo dựa trên **5 yếu tố**.
 
 **Độ phức tạp**: O(1) - Constant time
-
-**Use case**: Sắp xếp và ưu tiên hiển thị cảnh báo cho người dùng
-
-**Đặc điểm**:
-- Kết hợp weighted scoring từ nhiều yếu tố
-- Có thể tùy chỉnh trọng số
-- Điểm output từ 0-100 để dễ so sánh
 
 **Công thức**:
 ```
 FinalScore = Σ(Wi × Scorei) 
-           = W1×Severity + W2×Type + W3×TimeDecay + W4×Distance + W5×Audience
+           = W₁×Severity + W₂×Type + W₃×TimeDecay + W₄×Distance + W₅×Audience
 ```
 
-**Bảng điểm chi tiết**:
+**Bảng trọng số và điểm**:
 
-| Yếu tố | Trọng số | Phạm vi điểm | Công thức/Logic |
-|--------|----------|--------------|-----------------|
-| Severity | 35% | 25-100 | Critical:100, High:75, Medium:50, Low:25 |
-| Type | 20% | 30-100 | Disaster:100, Evacuation:90, Weather:70, Resource:50, General:30 |
-| Time Decay | 15% | 0-100 | 100 × e^(-λt) |
-| Distance | 20% | 0-100 | 100 × (1 - d/r)² |
-| Audience | 10% | 50-100 | Match:100, All:100, LocationBased:80, Other:50 |
+| Yếu tố | Trọng số | Phạm vi điểm | Logic |
+|--------|----------|--------------|-------|
+| **Severity** | 35% | 25-100 | Critical:100, High:75, Medium:50, Low:25 |
+| **Type** | 20% | 30-100 | Disaster:100, Evacuation:90, Weather:70, Resource:50, General:30 |
+| **Time Decay** | 15% | 0-100 | 100 × e^(-λt) với λ=0.05 |
+| **Distance** | 20% | 0-100 | 100 × (1 - d/r)² với r=50km |
+| **Audience** | 10% | 50-100 | Match:100, All:100, LocationBased:80, Other:50 |
 
 **Ví dụ tính toán**:
-
 ```
 Alert: "Bão cấp 12 đang vào bờ"
-- Severity: Critical -> 100 điểm
-- Type: Disaster -> 100 điểm
-- Time: 2 giờ trước -> 90.5 điểm (decay)
-- Distance: 5km -> 98.0 điểm
-- Audience: Victims (matching) -> 100 điểm
+├── Severity: Critical → 100 điểm
+├── Type: Disaster → 100 điểm
+├── Time: 2 giờ trước → 90.5 điểm (decay)
+├── Distance: 5km → 98.0 điểm
+└── Audience: Victims (matching) → 100 điểm
 
 FinalScore = 0.35×100 + 0.20×100 + 0.15×90.5 + 0.20×98.0 + 0.10×100
            = 35 + 20 + 13.58 + 19.6 + 10
            = 98.18
 ```
 
-**Trade-offs**:
-- ✅ Linh hoạt, dễ điều chỉnh
-- ✅ Kết quả trực quan (0-100)
-- ❌ Cần fine-tuning trọng số cho từng use case
-- ❌ Không xử lý edge cases phức tạp
-
 ---
 
-### 2. Time Decay Algorithm
+### 2.2. Time Decay (Exponential)
 
-**File implementation**: `lib/domain/services/alert_scoring_service.dart` (method `_calculateTimeDecay`)
+**File**: `lib/domain/services/alert_scoring_service.dart` → `_calculateTimeDecay()`
 
 Thuật toán suy giảm điểm theo thời gian sử dụng **Exponential Decay**.
 
 **Độ phức tạp**: O(1)
 
-**Use case**: Ưu tiên cảnh báo mới hơn cảnh báo cũ
-
-**Công thức Exponential Decay**:
+**Công thức**:
 ```
 Score(t) = S₀ × e^(-λt)
 
 Trong đó:
 - S₀ = 100 (điểm ban đầu)
-- λ = 0.05 (hệ số suy giảm, configurable)
-- t = thời gian tính bằng giờ
+- λ = 0.05 (hệ số suy giảm)
+- t = thời gian (giờ)
 - e = số Euler (~2.71828)
 ```
 
-**Phân tích suy giảm**:
+**Half-life**: `t_half = ln(2) / λ = 13.86 giờ`
+
+**Bảng suy giảm**:
 
 | Thời gian | Score | % còn lại |
 |-----------|-------|-----------|
 | 0 giờ | 100.00 | 100% |
 | 6 giờ | 74.08 | 74% |
 | 12 giờ | 54.88 | 55% |
-| 18 giờ | 40.66 | 41% |
 | 24 giờ | 30.12 | 30% |
-| 36 giờ | 16.53 | 17% |
 | 48 giờ | 9.07 | 9% |
 | 72 giờ | 2.73 | 3% |
 
@@ -109,99 +141,59 @@ Score
     0  12  24  36  48  60  72  84  hours
 ```
 
-**Half-life calculation**:
-```
-t_half = ln(2) / λ = 0.693 / 0.05 = 13.86 giờ
-```
-Sau ~14 giờ, điểm giảm còn một nửa.
-
 **Implementation**:
 ```dart
 double _calculateTimeDecay(DateTime createdAt, DateTime? expiresAt) {
   const double lambda = 0.05;
   final now = DateTime.now();
   
-  // Nếu đã hết hạn, trả về 0
-  if (expiresAt != null && now.isAfter(expiresAt)) {
-    return 0.0;
-  }
+  if (expiresAt != null && now.isAfter(expiresAt)) return 0.0;
   
-  // Tính giờ đã trôi qua
   final hoursElapsed = now.difference(createdAt).inMinutes / 60.0;
-  
-  // Exponential decay
   final decayScore = 100 * math.exp(-lambda * hoursElapsed);
   
   return decayScore.clamp(0.0, 100.0);
 }
 ```
 
-**Tại sao chọn Exponential Decay?**:
-- ✅ Mô phỏng tự nhiên: Thông tin cũ mất giá trị nhanh ban đầu, chậm dần sau đó
-- ✅ Smooth transition: Không có điểm nhảy đột ngột
-- ✅ Toán học đơn giản: Dễ tính toán và giải thích
-- ✅ Được chứng minh: Sử dụng rộng rãi trong information retrieval
-
-**Alternative algorithms đã xem xét**:
-1. **Linear Decay**: `Score = 100 - (t × k)`
-   - ❌ Quá đơn giản, không tự nhiên
-2. **Step Function**: Giảm theo từng bước thời gian
-   - ❌ Có điểm nhảy đột ngột
-3. **Logarithmic Decay**: `Score = 100 × log(1 + 1/t)`
-   - ❌ Giảm quá chậm
-
 ---
 
-### 3. Location-based Priority Boost
+### 2.3. Haversine Distance
 
-**File implementation**: `lib/domain/services/alert_scoring_service.dart` (methods `_calculateDistanceScore`, `_haversineDistance`)
+**File**: `lib/domain/services/alert_scoring_service.dart` → `_haversineDistance()`  
+**File**: `lib/data/services/geofencing_service.dart` → `_calculateDistance()`
 
-Thuật toán tăng điểm ưu tiên dựa trên khoảng cách địa lý.
+Công thức tính khoảng cách chính xác giữa 2 điểm trên **mặt cầu Trái Đất**.
 
 **Độ phức tạp**: O(1)
 
-**Gồm 2 components**:
-
-#### 3.1. Haversine Formula (Tính khoảng cách)
-
-Công thức tính khoảng cách chính xác giữa 2 điểm trên mặt cầu.
-
-**Công thức đầy đủ**:
+**Công thức**:
 ```
 a = sin²(Δlat/2) + cos(lat₁) × cos(lat₂) × sin²(Δlng/2)
 c = 2 × atan2(√a, √(1-a))
 d = R × c
 
 Trong đó:
-- lat₁, lng₁: Tọa độ điểm 1
-- lat₂, lng₂: Tọa độ điểm 2
-- Δlat = lat₂ - lat₁
-- Δlng = lng₂ - lng₁
+- lat₁, lng₁: Tọa độ điểm 1 (radian)
+- lat₂, lng₂: Tọa độ điểm 2 (radian)
 - R = 6371 km (bán kính Trái Đất)
 - d = khoảng cách (km)
 ```
 
-**Độ chính xác**: 
-- Sai số < 0.5% cho hầu hết trường hợp
-- Phù hợp với khoảng cách < 1000km
+**Độ chính xác**: Sai số < 0.5% cho khoảng cách < 1000km
 
 **Implementation**:
 ```dart
-double _haversineDistance(
-  double lat1, double lng1,
-  double lat2, double lng2,
-) {
+double _haversineDistance(double lat1, double lng1, double lat2, double lng2) {
   const double earthRadius = 6371.0; // km
   
-  // Chuyển sang radian
   final dLat = _toRadians(lat2 - lat1);
   final dLng = _toRadians(lng2 - lng1);
   
   final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
       math.cos(_toRadians(lat1)) *
-          math.cos(_toRadians(lat2)) *
-          math.sin(dLng / 2) *
-          math.sin(dLng / 2);
+      math.cos(_toRadians(lat2)) *
+      math.sin(dLng / 2) * math.sin(dLng / 2);
   
   final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   
@@ -209,131 +201,74 @@ double _haversineDistance(
 }
 ```
 
-**Ví dụ tính toán**:
+**Ví dụ**:
 ```
-Point A: Hồ Chí Minh City (10.762622, 106.660172)
-Point B: Biên Hòa (10.951572, 106.843395)
-
-Δlat = 0.188950 rad
-Δlng = 0.183223 rad
-
-a = 0.00893
-c = 0.18946 rad
-d = 6371 × 0.18946 = 23.8 km
+HCM City: (10.762622, 106.660172)
+Biên Hòa: (10.951572, 106.843395)
+→ Khoảng cách: 23.8 km
 ```
 
-#### 3.2. Inverse Distance Weighting (Tính điểm)
+---
 
-Công thức điểm dựa trên khoảng cách với quadratic falloff.
+### 2.4. Inverse Distance Weighting
+
+**File**: `lib/domain/services/alert_scoring_service.dart` → `_calculateDistanceScore()`
+
+Công thức điểm dựa trên khoảng cách với **quadratic falloff**.
+
+**Độ phức tạp**: O(1)
 
 **Công thức**:
 ```
 DistanceScore = 100 × (1 - d/r)²
 
 Trong đó:
-- d = khoảng cách (km)
+- d = khoảng cách từ user đến alert (km)
 - r = bán kính tối đa (mặc định 50km)
 ```
 
-**Bảng điểm chi tiết**:
+**Bảng điểm**:
 
-| Khoảng cách | Ratio (1-d/r) | Score | Ý nghĩa |
-|-------------|---------------|-------|---------|
+| Khoảng cách | Ratio | Score | Ý nghĩa |
+|-------------|-------|-------|---------|
 | 0 km | 1.00 | 100.0 | Ngay tại chỗ |
 | 5 km | 0.90 | 81.0 | Rất gần |
 | 10 km | 0.80 | 64.0 | Gần |
-| 15 km | 0.70 | 49.0 | Khá gần |
 | 20 km | 0.60 | 36.0 | Trung bình |
-| 25 km | 0.50 | 25.0 | Hơi xa |
 | 30 km | 0.40 | 16.0 | Xa |
-| 40 km | 0.20 | 4.0 | Rất xa |
 | 50+ km | 0.00 | 0.0 | Ngoài phạm vi |
 
-**Đồ thị**:
-```
-Score
-100 |●
-    | ●●
- 80 |   ●●
-    |     ●●
- 60 |       ●●
-    |         ●●
- 40 |           ●●
-    |             ●●●
- 20 |                ●●●
-    |                   ●●●●
-  0 |_______________________●●●●●●
-    0   10   20   30   40   50  km
-```
-
-**Tại sao quadratic (mũ 2)?**:
-- ✅ Phạt nặng khoảng cách xa hơn
-- ✅ Tạo sự phân biệt rõ ràng
-- ✅ Khuyến khích ưu tiên cảnh báo gần
-
-**Alternative weighting functions**:
-
-1. **Linear**: `Score = 100 × (1 - d/r)`
-   ```
-   - Giảm đều đặn
-   - ❌ Không đủ phân biệt
-   ```
-
-2. **Exponential**: `Score = 100 × e^(-d/k)`
-   ```
-   - Giảm rất nhanh
-   - ❌ Quá nhạy cảm với khoảng cách nhỏ
-   ```
-
-3. **Cubic**: `Score = 100 × (1 - d/r)³`
-   ```
-   - Giảm cực nhanh
-   - ❌ Quá khắt khe
-   ```
+**Tại sao chọn Quadratic?**
+- ✅ Phạt nặng khoảng cách xa
+- ✅ Tạo phân biệt rõ ràng
+- ✅ Ưu tiên cảnh báo gần người dùng
 
 ---
 
-### 4. Priority Queue (Max-Heap)
+### 2.5. Priority Queue (Max-Heap)
 
-**File implementation**: `lib/core/data_structures/alert_priority_queue.dart`
+**File**: `lib/core/data_structures/alert_priority_queue.dart`
 
-Cấu trúc dữ liệu Heap để quản lý hàng đợi theo ưu tiên.
+Cấu trúc dữ liệu **Heap** để quản lý cảnh báo theo ưu tiên.
 
 **Độ phức tạp**:
-- Insert: O(log n)
-- Extract Max: O(log n)
-- Peek: O(1)
-- Build Heap: O(n)
-- Space: O(n)
+| Operation | Time | Space |
+|-----------|------|-------|
+| Insert | O(log n) | O(1) |
+| Extract Max | O(log n) | O(1) |
+| Peek | O(1) | O(1) |
+| Build Heap | O(n) | O(n) |
 
-**Heap Property**: 
-- **Max-Heap**: `parent.score >= children.score` cho mọi node
+**Heap Property**: `parent.score >= children.score` (Max-Heap)
 
-**Cấu trúc trong Array**:
+**Quan hệ index trong Array**:
 ```
-Array: [90, 75, 80, 50, 60, 70, 65]
-Index:  0   1   2   3   4   5   6
-
-Tree:
-            90 [0]
-           /  \
-        75[1]  80[2]
-       /  \    /  \
-     50[3] 60[4] 70[5] 65[6]
-```
-
-**Quan hệ Parent-Child**:
-```
-Parent của node i:    (i-1) / 2
+Parent của node i:     (i-1) / 2
 Left child của node i:  2*i + 1
 Right child của node i: 2*i + 2
 ```
 
-#### Bubble Up Algorithm
-
-Được gọi sau insert, di chuyển node lên đến vị trí đúng.
-
-**Pseudocode**:
+**Bubble Up** (sau Insert):
 ```
 function bubbleUp(index):
     while index > 0:
@@ -344,30 +279,7 @@ function bubbleUp(index):
         index = parentIndex
 ```
 
-**Ví dụ**:
-```
-Insert 95 vào heap [90, 75, 80, 50, 60, 70]
-
-1. Thêm vào cuối:
-   [90, 75, 80, 50, 60, 70, 95]
-                            ^^
-
-2. Bubble up (95 > 80):
-   [90, 75, 95, 50, 60, 70, 80]
-            ^^
-
-3. Bubble up (95 > 90):
-   [95, 75, 90, 50, 60, 70, 80]
-    ^^
-```
-
-**Độ phức tạp**: O(log n) - Tối đa log₂(n) swaps
-
-#### Bubble Down Algorithm
-
-Được gọi sau extract max, di chuyển node xuống đến vị trí đúng.
-
-**Pseudocode**:
+**Bubble Down** (sau Extract):
 ```
 function bubbleDown(index):
     while true:
@@ -387,1223 +299,467 @@ function bubbleDown(index):
         index = largest
 ```
 
-**Ví dụ**:
-```
-Extract max từ [95, 75, 90, 50, 60, 70, 80]
-
-1. Lấy root (95), di chuyển cuối (80) lên:
-   [80, 75, 90, 50, 60, 70]
-    ^^
-
-2. Bubble down (80 < 90):
-   [90, 75, 80, 50, 60, 70]
-    ^^      ^^
-
-3. Xong! (80 >= con của nó)
-```
-
-**Độ phức tạp**: O(log n)
-
-#### Build Heap
-
-Xây dựng heap từ array unsorted.
-
-**Phương pháp 1**: Insert lần lượt
-```
-Complexity: O(n log n)
-```
-
-**Phương pháp 2**: Heapify từ dưới lên (tối ưu hơn)
-```
-for i from n/2 - 1 down to 0:
-    bubbleDown(i)
-
-Complexity: O(n) - Tốt hơn!
-```
-
 ---
 
-### 5. Jaccard Similarity (Deduplication)
+### 2.6. Jaccard Similarity
 
-**File implementation**: `lib/domain/services/alert_deduplication_service.dart`
+**File**: `lib/domain/services/alert_deduplication_service.dart`
 
-Thuật toán đo độ tương tự giữa 2 tập hợp.
+Thuật toán đo **độ tương tự** giữa 2 tập hợp từ.
 
-**Độ phức tạp**: O(n + m) với n, m là số từ trong 2 text
-
-**Use case**: Phát hiện cảnh báo trùng lặp
+**Độ phức tạp**: O(n + m) với n, m là số từ
 
 **Công thức**:
 ```
 J(A, B) = |A ∩ B| / |A ∪ B|
 
 Trong đó:
-- A, B: Tập hợp các từ
+- A, B: Tập hợp các từ đã tokenize
 - |A ∩ B|: Số phần tử chung (intersection)
 - |A ∪ B|: Tổng phần tử unique (union)
-- J: Jaccard coefficient (0-1)
 ```
 
-**Ví dụ chi tiết**:
+**Ngưỡng**: ≥ 0.80 (80%) → Coi là duplicate
 
+**Ví dụ**:
 ```
 Text 1: "Bão cấp 12 đang tiến vào bờ biển miền Trung"
 Text 2: "Bão cấp 12 sắp vào bờ biển miền Trung"
 
---- Tokenization ---
 Words₁ = {bão, cấp, 12, đang, tiến, vào, bờ, biển, miền, trung}
 Words₂ = {bão, cấp, 12, sắp, vào, bờ, biển, miền, trung}
 
---- Calculate Intersection ---
-A ∩ B = {bão, cấp, 12, vào, bờ, biển, miền, trung}
-|A ∩ B| = 8
+A ∩ B = 8 từ chung
+A ∪ B = 11 từ unique
 
---- Calculate Union ---
-A ∪ B = {bão, cấp, 12, đang, tiến, sắp, vào, bờ, biển, miền, trung}
-|A ∪ B| = 11
-
---- Jaccard Similarity ---
-J(A,B) = 8 / 11 = 0.727 (72.7%)
-```
-
-**Ngưỡng similarity**: 0.80 (80%)
-
-```
-> 0.80: Coi là duplicate
-≤ 0.80: Coi là khác nhau
+J(A,B) = 8/11 = 0.727 (72.7%) → Không phải duplicate
 ```
 
 **Tokenization Process**:
-
 ```dart
 Set<String> _tokenize(String text) {
   return text
-      .toLowerCase()           // "Bão Cấp 12" -> "bão cấp 12"
-      .replaceAll(            // Loại bỏ dấu câu
-          RegExp(r'[^\w\s]'), 
-          ''
-      )
-      .split(RegExp(r'\s+'))  // Tách từ: ["bão", "cấp", "12"]
-      .where((w) =>           // Lọc từ ngắn (stopwords)
-          w.length > 2
-      )
-      .toSet();               // Chuyển thành Set (loại trùng)
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\w\s]'), '')
+      .split(RegExp(r'\s+'))
+      .where((w) => w.length > 2)
+      .toSet();
 }
 ```
 
-**Ví dụ Tokenization**:
-```
-Input:  "Mưa lớn, gió mạnh! Cần sơ tán gấp!!!"
-Step 1: "mưa lớn, gió mạnh! cần sơ tán gấp!!!"  (lowercase)
-Step 2: "mưa lớn gió mạnh cần sơ tán gấp"       (remove punct)
-Step 3: ["mưa", "lớn", "gió", "mạnh", "cần", "sơ", "tán", "gấp"]
-Step 4: ["mưa", "lớn", "gió", "mạnh", "cần", "tán", "gấp"]  (filter len>2)
-Output: {"mưa", "lớn", "gió", "mạnh", "cần", "tán", "gấp"}
-```
-
-**Tại sao chọn Jaccard?**:
-
-✅ **Ưu điểm**:
-- Đơn giản, dễ hiểu
-- Không bị ảnh hưởng bởi độ dài text
-- Hiệu quả với short text
-- Xử lý tốt từ lặp lại (dùng Set)
-
-❌ **Nhược điểm**:
-- Không quan tâm thứ tự từ
-- Không xử lý synonym (từ đồng nghĩa)
-- Không xử lý typo
-
-**Alternative algorithms**:
-
-1. **Cosine Similarity**:
-   ```
-   - Dùng vector, xử lý frequency
-   - ❌ Phức tạp hơn cho task này
-   ```
-
-2. **Levenshtein Distance**:
-   ```
-   - Edit distance giữa 2 string
-   - ❌ O(n×m) complexity, chậm
-   ```
-
-3. **TF-IDF + Cosine**:
-   ```
-   - Tốt cho long documents
-   - ❌ Overkill cho short alerts
-   ```
-
 ---
 
-### 6. Smart Notification Batching
+### 2.7. Smart Notification Batching
 
-**File implementation**: `lib/data/services/smart_notification_service.dart`
+**File**: `lib/data/services/smart_notification_service.dart`
 
-Kỹ thuật gộp nhiều notification thành một để giảm spam.
+Kỹ thuật **gộp notification** thông minh với batching và cooldown.
 
 **Độ phức tạp**: O(1) per notification
 
-**Components**:
+**Quy tắc Batching**:
 
-#### 6.1. Batching Strategy
-
-**Quy tắc**:
-
-| Severity | Batch Size | Delay | Logic |
-|----------|-----------|-------|-------|
-| Critical | 1 (không batch) | 0s | Gửi ngay |
+| Severity | Batch Size | Delay | Action |
+|----------|-----------|-------|--------|
+| Critical | 1 | 0s | Gửi ngay lập tức |
 | High | Max 3 | 5 phút | Batch nhỏ |
 | Medium/Low | Max 5 | 15 phút | Batch lớn |
 
+**Cooldown**: 2 phút giữa mỗi lần gửi (theo audience group)
+
 **State Machine**:
-
 ```
-┌─────────────────────────────────────┐
-│  Notification arrives                │
-└───────────────┬─────────────────────┘
-                │
-                v
-        ┌───────────────┐
-        │  Is Critical? │
-        └───────┬───────┘
-                │
-        ┌───────┴────────┐
-        │ Yes            │ No
-        v                v
-  ┌──────────┐    ┌─────────────┐
-  │ Send Now │    │ Check       │
-  │          │    │ Cooldown    │
-  └──────────┘    └─────┬───────┘
-                        │
-                ┌───────┴────────┐
-                │ Yes            │ No
-                v                v
-         ┌──────────┐     ┌─────────────┐
-         │ Add to   │     │ Schedule    │
-         │ Batch    │     │ with Timer  │
-         └──────────┘     └─────────────┘
+Notification arrives
+        │
+        v
+  Is Critical? ──Yes──> Send Immediately
+        │
+       No
+        v
+  In Cooldown? ──Yes──> Add to Batch
+        │
+       No
+        v
+  Schedule with Timer (5/15 min)
+        │
+        v
+  Timer expires → Process Batch → Send
 ```
 
-**Implementation**:
-
-```dart
-void scheduleNotification(ScoredAlert alert) {
-  // Critical - gửi ngay
-  if (alert.severity == AlertSeverity.critical) {
-    _sendImmediate(alert);
-    return;
-  }
-  
-  // Check cooldown
-  if (_isInCooldown(audienceKey)) {
-    _addToBatch(audienceKey, alert);
-    return;
-  }
-  
-  // High - batch với delay 5 phút
-  if (alert.severity == AlertSeverity.high) {
-    _scheduleWithDelay(alert, Duration(minutes: 5), maxBatch: 3);
-    return;
-  }
-  
-  // Medium/Low - batch với delay 15 phút
-  _scheduleWithDelay(alert, Duration(minutes: 15), maxBatch: 5);
-}
+**Batch Notification Format**:
 ```
-
-#### 6.2. Cooldown Management
-
-**Mục đích**: Tránh gửi notification quá dày
-
-**Thời gian**: 2 phút giữa mỗi lần gửi
-
-**Scope**: Theo audience group (victims, volunteers, all)
-
-**Logic**:
-```
-lastTime = lastNotificationTime[audienceKey]
-elapsed = now - lastTime
-isInCooldown = (elapsed < 2 minutes)
-```
-
-**Timeline Example**:
-```
-Time    Event
------   -----
-00:00   Alert 1 (Critical) -> Gửi ngay
-00:01   Alert 2 (High) -> In cooldown, add to batch
-00:02   Alert 3 (High) -> Still in cooldown, add to batch
-00:03   Cooldown expires (2min passed)
-00:03   Alert 4 (High) -> Can send now (or batch)
-```
-
-#### 6.3. Batch Content Creation
-
-**Title Format**:
-
-```dart
-if (batch.length == 1):
-    title = alert.title
-else:
-    icon = getSeverityIcon(highestSeverity)
-    title = "$icon ${batch.length} Cảnh báo mới"
-```
-
-**Body Format**:
-
-```dart
-if (batch.length == 1):
-    body = alert.content
-else:
-    // Liệt kê tối đa 3 cái đầu
-    for (i = 0; i < min(3, batch.length); i++):
-        icon = getTypeIcon(alert.type)
-        lines.add("$icon ${alert.title}")
-    
-    if (batch.length > 3):
-        lines.add("...và ${batch.length - 3} cảnh báo khác")
-```
-
-**Ví dụ Batch Notification**:
-
-```
-Batch: 4 alerts (2 high, 2 medium)
-
 Title: "⚠️ 4 Cảnh báo mới"
-
 Body:
-"🌧️ Mưa lớn khu vực Quận 1
- 🌪️ Nguy cơ lũ quét tại Quận 7
- 📦 Trung tâm cứu trợ mở cửa
- ...và 1 cảnh báo khác"
+  🌧️ Mưa lớn khu vực Quận 1
+  🌪️ Nguy cơ lũ quét tại Quận 7
+  📦 Trung tâm cứu trợ mở cửa
+  ...và 1 cảnh báo khác
 ```
 
 ---
 
-## So sánh Complexity
+### 2.8. Geofencing with Deduplication
 
-| Algorithm | Time | Space | Notes |
-|-----------|------|-------|-------|
-| Scoring | O(1) | O(1) | Mỗi alert |
-| Time Decay | O(1) | O(1) | Math formula |
-| Haversine | O(1) | O(1) | Trig functions |
-| Heap Insert | O(log n) | O(1) | n = queue size |
-| Heap Extract | O(log n) | O(1) | |
-| Jaccard | O(n+m) | O(n+m) | n,m = word counts |
-| Batching | O(1) | O(k) | k = batch size |
+**File**: `lib/data/services/geofencing_service.dart`
+
+Hệ thống cảnh báo tự động khi user vào **vùng nguy hiểm**.
+
+**Components**:
+1. **Location Tracking**: GPS update mỗi 100m
+2. **Zone Checking**: Haversine distance calculation
+3. **Deduplication**: Tránh gửi trùng cùng một cảnh báo
+4. **Priority Scoring**: AI tính điểm ưu tiên
+
+**Flow**:
+```
+User moves (100m)
+      │
+      v
+Check all active alerts
+      │
+      v
+For each alert:
+  ├── Calculate distance (Haversine)
+  ├── If distance <= alert.radius:
+  │     ├── Check deduplication
+  │     ├── Calculate priority score
+  │     └── Send via SmartNotificationService
+  └── Skip if already triggered
+```
 
 ---
 
-## Performance Tips
+## 3. Routing Service
 
-### 1. Tránh tính score nhiều lần
+### 3.1. OSRM Routing (Dijkstra/Contraction Hierarchies)
 
+**File**: `lib/data/services/routing_service.dart`
+
+Dịch vụ tìm đường đi ngắn nhất sử dụng **OSRM** (Open Source Routing Machine).
+
+**API Endpoint**: `https://router.project-osrm.org`
+
+**Thuật toán bên trong OSRM**:
+
+| Thuật toán | Mục đích |
+|------------|----------|
+| **Contraction Hierarchies (CH)** | Tiền xử lý graph, tăng tốc query |
+| **Multi-Level Dijkstra (MLD)** | Tìm đường phân cấp |
+| **Dijkstra's Algorithm** | Thuật toán nền tảng |
+
+**Độ phức tạp (OSRM)**:
+- Preprocessing: O(n log n)
+- Query: O(log n) - Rất nhanh!
+
+**API Request**:
+```
+GET /route/v1/driving/{lng1},{lat1};{lng2},{lat2}
+    ?overview=full
+    &geometries=geojson
+```
+
+**Fallback Strategy**:
 ```dart
-// ❌ Bad
-for (alert in alerts) {
-  if (scoringService.calculateScore(alert) > 50) {
-    display(alert);
-  }
-}
-
-// ✅ Good
-final scored = scoringService.calculateMultiple(alerts);
-final filtered = scored.where((s) => s.score > 50);
-```
-
-### 2. Cache distance calculations
-
-```dart
-// ✅ Good
-final distanceCache = <String, double>{};
-
-double getDistance(String alertId) {
-  return distanceCache.putIfAbsent(alertId, () {
-    return haversineDistance(...);
-  });
-}
-```
-
-### 3. Batch process alerts
-
-```dart
-// ✅ Good
-final queue = AlertPriorityQueue();
-queue.insertAll(scoredAlerts);  // Batch insert
-
-final top10 = queue.peekN(10);  // Batch peek
-```
-
----
-
-## Testing Guidelines
-
-### Unit Test Coverage
-
-Mỗi algorithm cần test:
-
-1. **Happy path**: Input thông thường
-2. **Edge cases**: Empty, null, boundary values
-3. **Performance**: Large datasets
-4. **Accuracy**: So sánh với expected results
-
-### Example Test Cases
-
-**Alert Scoring**:
-```
-✓ Critical > High > Medium > Low
-✓ Nearby > Far
-✓ New > Old
-✓ Matching audience > Non-matching
-✓ Custom weights work correctly
-```
-
-**Priority Queue**:
-```
-✓ Extract in correct order
-✓ Heap property maintained
-✓ Handle duplicates
-✓ Performance with 1000+ items
-```
-
-**Deduplication**:
-```
-✓ Identical content = 1.0 similarity
-✓ Different content = low similarity
-✓ Filter removes duplicates
-✓ Clustering works correctly
-```
-
----
-
-## References
-
-### Academic Papers
-- ["Efficient Priority Queue"](https://en.wikipedia.org/wiki/Heap_(data_structure))
-- ["Similarity Measures"](https://en.wikipedia.org/wiki/Jaccard_index)
-
-### Implementation Guides
-- Flutter Performance Best Practices
-- Dart Math Library Documentation
-- Firebase Cloud Messaging Guidelines
-
----
-
-**Cập nhật**: 2024  
-**Version**: 1.0.0
-
-
-
-Thư mục này chứa tài liệu chi tiết về các thuật toán được sử dụng trong Hệ thống Cảnh báo Thông minh.
-
-## Danh sách Thuật toán
-
-### 1. Multi-factor Severity Scoring Algorithm
-
-**File implementation**: `lib/domain/services/alert_scoring_service.dart`
-
-Thuật toán tính điểm ưu tiên tổng hợp cho mỗi cảnh báo dựa trên 5 yếu tố.
-
-**Độ phức tạp**: O(1) - Constant time
-
-**Use case**: Sắp xếp và ưu tiên hiển thị cảnh báo cho người dùng
-
-**Đặc điểm**:
-- Kết hợp weighted scoring từ nhiều yếu tố
-- Có thể tùy chỉnh trọng số
-- Điểm output từ 0-100 để dễ so sánh
-
-**Công thức**:
-```
-FinalScore = Σ(Wi × Scorei) 
-           = W1×Severity + W2×Type + W3×TimeDecay + W4×Distance + W5×Audience
-```
-
-**Bảng điểm chi tiết**:
-
-| Yếu tố | Trọng số | Phạm vi điểm | Công thức/Logic |
-|--------|----------|--------------|-----------------|
-| Severity | 35% | 25-100 | Critical:100, High:75, Medium:50, Low:25 |
-| Type | 20% | 30-100 | Disaster:100, Evacuation:90, Weather:70, Resource:50, General:30 |
-| Time Decay | 15% | 0-100 | 100 × e^(-λt) |
-| Distance | 20% | 0-100 | 100 × (1 - d/r)² |
-| Audience | 10% | 50-100 | Match:100, All:100, LocationBased:80, Other:50 |
-
-**Ví dụ tính toán**:
-
-```
-Alert: "Bão cấp 12 đang vào bờ"
-- Severity: Critical -> 100 điểm
-- Type: Disaster -> 100 điểm
-- Time: 2 giờ trước -> 90.5 điểm (decay)
-- Distance: 5km -> 98.0 điểm
-- Audience: Victims (matching) -> 100 điểm
-
-FinalScore = 0.35×100 + 0.20×100 + 0.15×90.5 + 0.20×98.0 + 0.10×100
-           = 35 + 20 + 13.58 + 19.6 + 10
-           = 98.18
-```
-
-**Trade-offs**:
-- ✅ Linh hoạt, dễ điều chỉnh
-- ✅ Kết quả trực quan (0-100)
-- ❌ Cần fine-tuning trọng số cho từng use case
-- ❌ Không xử lý edge cases phức tạp
-
----
-
-### 2. Time Decay Algorithm
-
-**File implementation**: `lib/domain/services/alert_scoring_service.dart` (method `_calculateTimeDecay`)
-
-Thuật toán suy giảm điểm theo thời gian sử dụng **Exponential Decay**.
-
-**Độ phức tạp**: O(1)
-
-**Use case**: Ưu tiên cảnh báo mới hơn cảnh báo cũ
-
-**Công thức Exponential Decay**:
-```
-Score(t) = S₀ × e^(-λt)
-
-Trong đó:
-- S₀ = 100 (điểm ban đầu)
-- λ = 0.05 (hệ số suy giảm, configurable)
-- t = thời gian tính bằng giờ
-- e = số Euler (~2.71828)
-```
-
-**Phân tích suy giảm**:
-
-| Thời gian | Score | % còn lại |
-|-----------|-------|-----------|
-| 0 giờ | 100.00 | 100% |
-| 6 giờ | 74.08 | 74% |
-| 12 giờ | 54.88 | 55% |
-| 18 giờ | 40.66 | 41% |
-| 24 giờ | 30.12 | 30% |
-| 36 giờ | 16.53 | 17% |
-| 48 giờ | 9.07 | 9% |
-| 72 giờ | 2.73 | 3% |
-
-**Đồ thị**:
-```
-Score
-100 |●
-    | ●
- 80 |  ●
-    |   ●
- 60 |    ●●
-    |      ●
- 40 |       ●●
-    |         ●●
- 20 |           ●●●
-    |              ●●●●●●
-  0 |____________________●●●●●●●●
-    0  12  24  36  48  60  72  84  hours
-```
-
-**Half-life calculation**:
-```
-t_half = ln(2) / λ = 0.693 / 0.05 = 13.86 giờ
-```
-Sau ~14 giờ, điểm giảm còn một nửa.
-
-**Implementation**:
-```dart
-double _calculateTimeDecay(DateTime createdAt, DateTime? expiresAt) {
-  const double lambda = 0.05;
-  final now = DateTime.now();
-  
-  // Nếu đã hết hạn, trả về 0
-  if (expiresAt != null && now.isAfter(expiresAt)) {
-    return 0.0;
-  }
-  
-  // Tính giờ đã trôi qua
-  final hoursElapsed = now.difference(createdAt).inMinutes / 60.0;
-  
-  // Exponential decay
-  final decayScore = 100 * math.exp(-lambda * hoursElapsed);
-  
-  return decayScore.clamp(0.0, 100.0);
+try {
+  // Gọi OSRM API
+  final distance = await osrmGetRouteDistance(...);
+  return distance;
+} catch (e) {
+  // Fallback: Haversine (đường thẳng)
+  return Geolocator.distanceBetween(lat1, lng1, lat2, lng2) / 1000;
 }
 ```
 
-**Tại sao chọn Exponential Decay?**:
-- ✅ Mô phỏng tự nhiên: Thông tin cũ mất giá trị nhanh ban đầu, chậm dần sau đó
-- ✅ Smooth transition: Không có điểm nhảy đột ngột
-- ✅ Toán học đơn giản: Dễ tính toán và giải thích
-- ✅ Được chứng minh: Sử dụng rộng rãi trong information retrieval
+**Các method chính**:
 
-**Alternative algorithms đã xem xét**:
-1. **Linear Decay**: `Score = 100 - (t × k)`
-   - ❌ Quá đơn giản, không tự nhiên
-2. **Step Function**: Giảm theo từng bước thời gian
-   - ❌ Có điểm nhảy đột ngột
-3. **Logarithmic Decay**: `Score = 100 × log(1 + 1/t)`
-   - ❌ Giảm quá chậm
+| Method | Chức năng |
+|--------|-----------|
+| `getRouteDistance()` | Khoảng cách routing (km) |
+| `getFormattedRouteDistance()` | Khoảng cách format đẹp |
+| `getBatchRouteDistances()` | Batch nhiều điểm |
+| `getRoutePoints()` | Lấy tọa độ vẽ polyline |
 
 ---
 
-### 3. Location-based Priority Boost
+## 4. AI Service (Python/FastAPI)
 
-**File implementation**: `lib/domain/services/alert_scoring_service.dart` (methods `_calculateDistanceScore`, `_haversineDistance`)
+### 4.1. XGBoost Hazard Prediction
 
-Thuật toán tăng điểm ưu tiên dựa trên khoảng cách địa lý.
+**File**: `ai_service/models/hazard_predictor.py`
 
-**Độ phức tạp**: O(1)
+Mô hình **Gradient Boosting** dự báo mức độ rủi ro thiên tai (1-5 sao).
 
-**Gồm 2 components**:
-
-#### 3.1. Haversine Formula (Tính khoảng cách)
-
-Công thức tính khoảng cách chính xác giữa 2 điểm trên mặt cầu.
-
-**Công thức đầy đủ**:
-```
-a = sin²(Δlat/2) + cos(lat₁) × cos(lat₂) × sin²(Δlng/2)
-c = 2 × atan2(√a, √(1-a))
-d = R × c
-
-Trong đó:
-- lat₁, lng₁: Tọa độ điểm 1
-- lat₂, lng₂: Tọa độ điểm 2
-- Δlat = lat₂ - lat₁
-- Δlng = lng₂ - lng₁
-- R = 6371 km (bán kính Trái Đất)
-- d = khoảng cách (km)
-```
-
-**Độ chính xác**: 
-- Sai số < 0.5% cho hầu hết trường hợp
-- Phù hợp với khoảng cách < 1000km
-
-**Implementation**:
-```dart
-double _haversineDistance(
-  double lat1, double lng1,
-  double lat2, double lng2,
-) {
-  const double earthRadius = 6371.0; // km
-  
-  // Chuyển sang radian
-  final dLat = _toRadians(lat2 - lat1);
-  final dLng = _toRadians(lng2 - lng1);
-  
-  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-      math.cos(_toRadians(lat1)) *
-          math.cos(_toRadians(lat2)) *
-          math.sin(dLng / 2) *
-          math.sin(dLng / 2);
-  
-  final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-  
-  return earthRadius * c;
-}
-```
-
-**Ví dụ tính toán**:
-```
-Point A: Hồ Chí Minh City (10.762622, 106.660172)
-Point B: Biên Hòa (10.951572, 106.843395)
-
-Δlat = 0.188950 rad
-Δlng = 0.183223 rad
-
-a = 0.00893
-c = 0.18946 rad
-d = 6371 × 0.18946 = 23.8 km
-```
-
-#### 3.2. Inverse Distance Weighting (Tính điểm)
-
-Công thức điểm dựa trên khoảng cách với quadratic falloff.
-
-**Công thức**:
-```
-DistanceScore = 100 × (1 - d/r)²
-
-Trong đó:
-- d = khoảng cách (km)
-- r = bán kính tối đa (mặc định 50km)
-```
-
-**Bảng điểm chi tiết**:
-
-| Khoảng cách | Ratio (1-d/r) | Score | Ý nghĩa |
-|-------------|---------------|-------|---------|
-| 0 km | 1.00 | 100.0 | Ngay tại chỗ |
-| 5 km | 0.90 | 81.0 | Rất gần |
-| 10 km | 0.80 | 64.0 | Gần |
-| 15 km | 0.70 | 49.0 | Khá gần |
-| 20 km | 0.60 | 36.0 | Trung bình |
-| 25 km | 0.50 | 25.0 | Hơi xa |
-| 30 km | 0.40 | 16.0 | Xa |
-| 40 km | 0.20 | 4.0 | Rất xa |
-| 50+ km | 0.00 | 0.0 | Ngoài phạm vi |
-
-**Đồ thị**:
-```
-Score
-100 |●
-    | ●●
- 80 |   ●●
-    |     ●●
- 60 |       ●●
-    |         ●●
- 40 |           ●●
-    |             ●●●
- 20 |                ●●●
-    |                   ●●●●
-  0 |_______________________●●●●●●
-    0   10   20   30   40   50  km
-```
-
-**Tại sao quadratic (mũ 2)?**:
-- ✅ Phạt nặng khoảng cách xa hơn
-- ✅ Tạo sự phân biệt rõ ràng
-- ✅ Khuyến khích ưu tiên cảnh báo gần
-
-**Alternative weighting functions**:
-
-1. **Linear**: `Score = 100 × (1 - d/r)`
-   ```
-   - Giảm đều đặn
-   - ❌ Không đủ phân biệt
-   ```
-
-2. **Exponential**: `Score = 100 × e^(-d/k)`
-   ```
-   - Giảm rất nhanh
-   - ❌ Quá nhạy cảm với khoảng cách nhỏ
-   ```
-
-3. **Cubic**: `Score = 100 × (1 - d/r)³`
-   ```
-   - Giảm cực nhanh
-   - ❌ Quá khắt khe
-   ```
-
----
-
-### 4. Priority Queue (Max-Heap)
-
-**File implementation**: `lib/core/data_structures/alert_priority_queue.dart`
-
-Cấu trúc dữ liệu Heap để quản lý hàng đợi theo ưu tiên.
+**Algorithm**: XGBoost (Scikit-learn GradientBoostingClassifier)
 
 **Độ phức tạp**:
-- Insert: O(log n)
-- Extract Max: O(log n)
-- Peek: O(1)
-- Build Heap: O(n)
-- Space: O(n)
+- Training: O(n × m × d × k) với n samples, m features, d depth, k trees
+- Prediction: O(k × d)
 
-**Heap Property**: 
-- **Max-Heap**: `parent.score >= children.score` cho mọi node
-
-**Cấu trúc trong Array**:
-```
-Array: [90, 75, 80, 50, 60, 70, 65]
-Index:  0   1   2   3   4   5   6
-
-Tree:
-            90 [0]
-           /  \
-        75[1]  80[2]
-       /  \    /  \
-     50[3] 60[4] 70[5] 65[6]
+**Features Input** (11 features):
+```python
+[
+    lat,                    # Vĩ độ
+    lng,                    # Kinh độ
+    province_id,            # ID tỉnh (0-63)
+    region_id,              # Vùng (0-3)
+    month,                  # Tháng (1-12)
+    season,                 # Mùa (0-2)
+    hazard_type_id,         # Loại thiên tai (0-2)
+    base_flood_risk,        # Rủi ro ngập cơ bản
+    base_landslide_risk,    # Rủi ro sạt lở cơ bản
+    base_storm_risk,        # Rủi ro bão cơ bản
+    seasonal_multiplier     # Hệ số mùa
+]
 ```
 
-**Quan hệ Parent-Child**:
-```
-Parent của node i:    (i-1) / 2
-Left child của node i:  2*i + 1
-Right child của node i: 2*i + 2
-```
+**Output**: Risk Level (1-5)
 
-#### Bubble Up Algorithm
+| Level | Label | Ý nghĩa |
+|-------|-------|---------|
+| 1 | very_low | Rất thấp |
+| 2 | low | Thấp |
+| 3 | medium | Trung bình |
+| 4 | high | Cao |
+| 5 | very_high | Rất cao |
 
-Được gọi sau insert, di chuyển node lên đến vị trí đúng.
-
-**Pseudocode**:
-```
-function bubbleUp(index):
-    while index > 0:
-        parentIndex = (index - 1) / 2
-        if heap[index] <= heap[parentIndex]:
-            break
-        swap(heap[index], heap[parentIndex])
-        index = parentIndex
+**Seasonal Multiplier**:
+```python
+# Tháng 9-10: Mùa mưa bão → multiplier = 1.0
+# Tháng 1-4: Mùa khô → multiplier = 0.2-0.3
 ```
 
-**Ví dụ**:
-```
-Insert 95 vào heap [90, 75, 80, 50, 60, 70]
+**Training Data**: 50,000+ samples từ 25 tỉnh thành Việt Nam
 
-1. Thêm vào cuối:
-   [90, 75, 80, 50, 60, 70, 95]
-                            ^^
-
-2. Bubble up (95 > 80):
-   [90, 75, 95, 50, 60, 70, 80]
-            ^^
-
-3. Bubble up (95 > 90):
-   [95, 75, 90, 50, 60, 70, 80]
-    ^^
-```
-
-**Độ phức tạp**: O(log n) - Tối đa log₂(n) swaps
-
-#### Bubble Down Algorithm
-
-Được gọi sau extract max, di chuyển node xuống đến vị trí đúng.
-
-**Pseudocode**:
-```
-function bubbleDown(index):
-    while true:
-        largest = index
-        leftChild = 2 * index + 1
-        rightChild = 2 * index + 2
-        
-        if leftChild < size && heap[leftChild] > heap[largest]:
-            largest = leftChild
-        if rightChild < size && heap[rightChild] > heap[largest]:
-            largest = rightChild
-        
-        if largest == index:
-            break
-        
-        swap(heap[index], heap[largest])
-        index = largest
-```
-
-**Ví dụ**:
-```
-Extract max từ [95, 75, 90, 50, 60, 70, 80]
-
-1. Lấy root (95), di chuyển cuối (80) lên:
-   [80, 75, 90, 50, 60, 70]
-    ^^
-
-2. Bubble down (80 < 90):
-   [90, 75, 80, 50, 60, 70]
-    ^^      ^^
-
-3. Xong! (80 >= con của nó)
-```
-
-**Độ phức tạp**: O(log n)
-
-#### Build Heap
-
-Xây dựng heap từ array unsorted.
-
-**Phương pháp 1**: Insert lần lượt
-```
-Complexity: O(n log n)
-```
-
-**Phương pháp 2**: Heapify từ dưới lên (tối ưu hơn)
-```
-for i from n/2 - 1 down to 0:
-    bubbleDown(i)
-
-Complexity: O(n) - Tốt hơn!
+**API Endpoint**:
+```http
+POST /api/v1/hazard/predict
+{
+    "lat": 16.0544,
+    "lng": 108.2022,
+    "month": 10,
+    "hazard_type": "flood"
+}
+→ Response: {"risk_level": 4, "confidence": 0.85, ...}
 ```
 
 ---
 
-### 5. Jaccard Similarity (Deduplication)
+### 4.2. Random Forest Alert Scoring
 
-**File implementation**: `lib/domain/services/alert_deduplication_service.dart`
+**File**: `ai_service/models/alert_scorer.py`
 
-Thuật toán đo độ tương tự giữa 2 tập hợp.
+Mô hình **Random Forest** dự đoán điểm ưu tiên cảnh báo (0-100).
 
-**Độ phức tạp**: O(n + m) với n, m là số từ trong 2 text
+**Algorithm**: Scikit-learn RandomForestRegressor
 
-**Use case**: Phát hiện cảnh báo trùng lặp
-
-**Công thức**:
+**Hyperparameters**:
+```python
+n_estimators = 100      # Số cây
+max_depth = 10          # Độ sâu tối đa
+random_state = 42       # Seed
+n_jobs = -1             # Song song tất cả CPU
 ```
-J(A, B) = |A ∩ B| / |A ∪ B|
+
+**Features Input** (15 features):
+```python
+[
+    severity_score,           # 1-4
+    alert_type_score,         # 1-4
+    hours_since_created,      # Giờ từ khi tạo
+    distance_km,              # Khoảng cách từ user
+    target_audience_match,    # 0/1
+    user_previous_interactions,  # Số lần tương tác trước
+    time_of_day,              # 0-23
+    day_of_week,              # 0-6
+    weather_severity,         # 0-4
+    content_length,           # Độ dài nội dung
+    has_images,               # 0/1
+    has_safety_guide,         # 0/1
+    similar_alerts_count,     # Số cảnh báo tương tự
+    alert_engagement_rate,    # Tỷ lệ engage
+    source_reliability        # Độ tin cậy nguồn
+]
+```
+
+**Output**: Priority Score (0-100) + Confidence (0-1)
+
+**Cold Start Strategy**:
+```python
+# Nếu chưa có model, bootstrap từ rule-based scoring
+X_synthetic = generate_synthetic_features(n_samples=5000)
+y_synthetic = apply_rule_based_scoring(X_synthetic)
+model.fit(X_synthetic, y_synthetic)
+```
+
+**Predict with Confidence**:
+```python
+def predict_with_confidence(features):
+    # Lấy predictions từ tất cả cây
+    tree_predictions = [tree.predict(X) for tree in model.estimators_]
+    
+    score = np.mean(tree_predictions)
+    confidence = 1.0 - (np.std(tree_predictions) / 100.0)
+    
+    return score, confidence
+```
+
+---
+
+### 4.3. Sentence Transformers Duplicate Detection
+
+**File**: `ai_service/models/duplicate_detector.py`
+
+Phát hiện tin trùng lặp sử dụng **Semantic Similarity** với Sentence BERT.
+
+**Model**: `paraphrase-multilingual-MiniLM-L12-v2`
+- **Multilingual**: Hỗ trợ tiếng Việt và English
+- **Output**: 384-dimensional embedding vector
+
+**Algorithm**: Cosine Similarity giữa embeddings
+
+**Độ phức tạp**:
+- Embedding: O(n) với n = token count
+- Similarity: O(d) với d = embedding dimension (384)
+
+**Công thức Cosine Similarity**:
+```
+similarity = (A · B) / (||A|| × ||B||)
 
 Trong đó:
-- A, B: Tập hợp các từ
-- |A ∩ B|: Số phần tử chung (intersection)
-- |A ∪ B|: Tổng phần tử unique (union)
-- J: Jaccard coefficient (0-1)
+- A, B: Embedding vectors
+- · : Dot product
+- ||x||: Euclidean norm
 ```
 
-**Ví dụ chi tiết**:
+**Ngưỡng**: ≥ 0.85 → Duplicate
 
-```
-Text 1: "Bão cấp 12 đang tiến vào bờ biển miền Trung"
-Text 2: "Bão cấp 12 sắp vào bờ biển miền Trung"
-
---- Tokenization ---
-Words₁ = {bão, cấp, 12, đang, tiến, vào, bờ, biển, miền, trung}
-Words₂ = {bão, cấp, 12, sắp, vào, bờ, biển, miền, trung}
-
---- Calculate Intersection ---
-A ∩ B = {bão, cấp, 12, vào, bờ, biển, miền, trung}
-|A ∩ B| = 8
-
---- Calculate Union ---
-A ∪ B = {bão, cấp, 12, đang, tiến, sắp, vào, bờ, biển, miền, trung}
-|A ∪ B| = 11
-
---- Jaccard Similarity ---
-J(A,B) = 8 / 11 = 0.727 (72.7%)
-```
-
-**Ngưỡng similarity**: 0.80 (80%)
-
-```
-> 0.80: Coi là duplicate
-≤ 0.80: Coi là khác nhau
-```
-
-**Tokenization Process**:
-
-```dart
-Set<String> _tokenize(String text) {
-  return text
-      .toLowerCase()           // "Bão Cấp 12" -> "bão cấp 12"
-      .replaceAll(            // Loại bỏ dấu câu
-          RegExp(r'[^\w\s]'), 
-          ''
-      )
-      .split(RegExp(r'\s+'))  // Tách từ: ["bão", "cấp", "12"]
-      .where((w) =>           // Lọc từ ngắn (stopwords)
-          w.length > 2
-      )
-      .toSet();               // Chuyển thành Set (loại trùng)
-}
-```
-
-**Ví dụ Tokenization**:
-```
-Input:  "Mưa lớn, gió mạnh! Cần sơ tán gấp!!!"
-Step 1: "mưa lớn, gió mạnh! cần sơ tán gấp!!!"  (lowercase)
-Step 2: "mưa lớn gió mạnh cần sơ tán gấp"       (remove punct)
-Step 3: ["mưa", "lớn", "gió", "mạnh", "cần", "sơ", "tán", "gấp"]
-Step 4: ["mưa", "lớn", "gió", "mạnh", "cần", "tán", "gấp"]  (filter len>2)
-Output: {"mưa", "lớn", "gió", "mạnh", "cần", "tán", "gấp"}
-```
-
-**Tại sao chọn Jaccard?**:
-
-✅ **Ưu điểm**:
-- Đơn giản, dễ hiểu
-- Không bị ảnh hưởng bởi độ dài text
-- Hiệu quả với short text
-- Xử lý tốt từ lặp lại (dùng Set)
-
-❌ **Nhược điểm**:
-- Không quan tâm thứ tự từ
-- Không xử lý synonym (từ đồng nghĩa)
-- Không xử lý typo
-
-**Alternative algorithms**:
-
-1. **Cosine Similarity**:
-   ```
-   - Dùng vector, xử lý frequency
-   - ❌ Phức tạp hơn cho task này
-   ```
-
-2. **Levenshtein Distance**:
-   ```
-   - Edit distance giữa 2 string
-   - ❌ O(n×m) complexity, chậm
-   ```
-
-3. **TF-IDF + Cosine**:
-   ```
-   - Tốt cho long documents
-   - ❌ Overkill cho short alerts
-   ```
-
----
-
-### 6. Smart Notification Batching
-
-**File implementation**: `lib/data/services/smart_notification_service.dart`
-
-Kỹ thuật gộp nhiều notification thành một để giảm spam.
-
-**Độ phức tạp**: O(1) per notification
-
-**Components**:
-
-#### 6.1. Batching Strategy
-
-**Quy tắc**:
-
-| Severity | Batch Size | Delay | Logic |
-|----------|-----------|-------|-------|
-| Critical | 1 (không batch) | 0s | Gửi ngay |
-| High | Max 3 | 5 phút | Batch nhỏ |
-| Medium/Low | Max 5 | 15 phút | Batch lớn |
-
-**State Machine**:
-
-```
-┌─────────────────────────────────────┐
-│  Notification arrives                │
-└───────────────┬─────────────────────┘
-                │
-                v
-        ┌───────────────┐
-        │  Is Critical? │
-        └───────┬───────┘
-                │
-        ┌───────┴────────┐
-        │ Yes            │ No
-        v                v
-  ┌──────────┐    ┌─────────────┐
-  │ Send Now │    │ Check       │
-  │          │    │ Cooldown    │
-  └──────────┘    └─────┬───────┘
-                        │
-                ┌───────┴────────┐
-                │ Yes            │ No
-                v                v
-         ┌──────────┐     ┌─────────────┐
-         │ Add to   │     │ Schedule    │
-         │ Batch    │     │ with Timer  │
-         └──────────┘     └─────────────┘
-```
-
-**Implementation**:
-
-```dart
-void scheduleNotification(ScoredAlert alert) {
-  // Critical - gửi ngay
-  if (alert.severity == AlertSeverity.critical) {
-    _sendImmediate(alert);
-    return;
-  }
-  
-  // Check cooldown
-  if (_isInCooldown(audienceKey)) {
-    _addToBatch(audienceKey, alert);
-    return;
-  }
-  
-  // High - batch với delay 5 phút
-  if (alert.severity == AlertSeverity.high) {
-    _scheduleWithDelay(alert, Duration(minutes: 5), maxBatch: 3);
-    return;
-  }
-  
-  // Medium/Low - batch với delay 15 phút
-  _scheduleWithDelay(alert, Duration(minutes: 15), maxBatch: 5);
-}
-```
-
-#### 6.2. Cooldown Management
-
-**Mục đích**: Tránh gửi notification quá dày
-
-**Thời gian**: 2 phút giữa mỗi lần gửi
-
-**Scope**: Theo audience group (victims, volunteers, all)
-
-**Logic**:
-```
-lastTime = lastNotificationTime[audienceKey]
-elapsed = now - lastTime
-isInCooldown = (elapsed < 2 minutes)
-```
-
-**Timeline Example**:
-```
-Time    Event
------   -----
-00:00   Alert 1 (Critical) -> Gửi ngay
-00:01   Alert 2 (High) -> In cooldown, add to batch
-00:02   Alert 3 (High) -> Still in cooldown, add to batch
-00:03   Cooldown expires (2min passed)
-00:03   Alert 4 (High) -> Can send now (or batch)
-```
-
-#### 6.3. Batch Content Creation
-
-**Title Format**:
-
-```dart
-if (batch.length == 1):
-    title = alert.title
-else:
-    icon = getSeverityIcon(highestSeverity)
-    title = "$icon ${batch.length} Cảnh báo mới"
-```
-
-**Body Format**:
-
-```dart
-if (batch.length == 1):
-    body = alert.content
-else:
-    // Liệt kê tối đa 3 cái đầu
-    for (i = 0; i < min(3, batch.length); i++):
-        icon = getTypeIcon(alert.type)
-        lines.add("$icon ${alert.title}")
+**Flow**:
+```python
+def is_duplicate(alert1, alert2):
+    # 1. Pre-filter (rule-based)
+    if not basic_match(alert1, alert2):  # type, severity, province
+        return False
     
-    if (batch.length > 3):
-        lines.add("...và ${batch.length - 3} cảnh báo khác")
+    # 2. Semantic similarity
+    emb1 = model.encode(alert1['content'])
+    emb2 = model.encode(alert2['content'])
+    
+    similarity = cosine_similarity(emb1, emb2)
+    
+    return similarity >= 0.85
 ```
 
-**Ví dụ Batch Notification**:
+**Caching**: LRU cache 1000 embeddings để tăng tốc
 
+**Fallback**: Jaccard Similarity nếu Sentence Transformers không available
+
+---
+
+### 4.4. Thompson Sampling (Contextual Bandit)
+
+**File**: `ai_service/models/notification_timing.py`
+
+Thuật toán **Multi-Armed Bandit** để tối ưu thời điểm gửi notification.
+
+**Algorithm**: Thompson Sampling với Beta Distribution
+
+**Độ phức tạp**: O(k) với k = số time slots (24)
+
+**Beta Distribution**:
 ```
-Batch: 4 alerts (2 high, 2 medium)
+Beta(α, β)
 
-Title: "⚠️ 4 Cảnh báo mới"
+Trong đó:
+- α = số lần engaged (click, view)
+- β = số lần dismissed
+- Prior: α = β = 1 (uniform)
+```
 
-Body:
-"🌧️ Mưa lớn khu vực Quận 1
- 🌪️ Nguy cơ lũ quét tại Quận 7
- 📦 Trung tâm cứu trợ mở cửa
- ...và 1 cảnh báo khác"
+**Thompson Sampling Flow**:
+```python
+def select_time_slot():
+    # 1. Epsilon-greedy exploration
+    if random() < epsilon:
+        return random_slot()
+    
+    # 2. Sample from Beta distributions
+    samples = [np.random.beta(alpha[i], beta[i]) for i in range(24)]
+    
+    # 3. Choose slot with highest sample
+    return argmax(samples)
+```
+
+**Online Learning Update**:
+```python
+def update_feedback(time_slot, engaged):
+    if engaged:
+        alpha[time_slot] += 1  # Success
+    else:
+        beta[time_slot] += 1   # Failure
+```
+
+**Exploration vs Exploitation**:
+- **Exploration (epsilon=0.1)**: Thử ngẫu nhiên 10% để học
+- **Exploitation (90%)**: Chọn thời điểm tốt nhất đã biết
+
+**Typical Day Pattern** (sau học):
+```
+Morning (6-9):   60% engagement
+Work (9-17):     30% engagement
+Evening (17-22): 80% engagement  ← Best!
+Night (22-6):    10% engagement
 ```
 
 ---
 
-## So sánh Complexity
+## 5. Bảng So sánh Complexity
 
-| Algorithm | Time | Space | Notes |
+| Algorithm | Time | Space | Layer |
 |-----------|------|-------|-------|
-| Scoring | O(1) | O(1) | Mỗi alert |
-| Time Decay | O(1) | O(1) | Math formula |
-| Haversine | O(1) | O(1) | Trig functions |
-| Heap Insert | O(log n) | O(1) | n = queue size |
-| Heap Extract | O(log n) | O(1) | |
-| Jaccard | O(n+m) | O(n+m) | n,m = word counts |
-| Batching | O(1) | O(k) | k = batch size |
+| Multi-factor Scoring | O(1) | O(1) | Mobile |
+| Time Decay | O(1) | O(1) | Mobile |
+| Haversine | O(1) | O(1) | Mobile |
+| Inverse Distance | O(1) | O(1) | Mobile |
+| Heap Insert | O(log n) | O(1) | Mobile |
+| Heap Extract | O(log n) | O(1) | Mobile |
+| Jaccard Similarity | O(n+m) | O(n+m) | Mobile |
+| Smart Batching | O(1) | O(k) | Mobile |
+| OSRM Query | O(log n) | O(1) | Routing |
+| XGBoost Predict | O(k×d) | O(1) | AI |
+| Random Forest Predict | O(k×d) | O(1) | AI |
+| Sentence Embedding | O(n) | O(d) | AI |
+| Cosine Similarity | O(d) | O(1) | AI |
+| Thompson Sampling | O(k) | O(k) | AI |
+
+**Legend**:
+- n, m: Số phần tử input
+- k: Số cây (RF) hoặc số slots (Bandit)
+- d: Độ sâu cây hoặc embedding dimension
 
 ---
 
-## Performance Tips
-
-### 1. Tránh tính score nhiều lần
-
-```dart
-// ❌ Bad
-for (alert in alerts) {
-  if (scoringService.calculateScore(alert) > 50) {
-    display(alert);
-  }
-}
-
-// ✅ Good
-final scored = scoringService.calculateMultiple(alerts);
-final filtered = scored.where((s) => s.score > 50);
-```
-
-### 2. Cache distance calculations
-
-```dart
-// ✅ Good
-final distanceCache = <String, double>{};
-
-double getDistance(String alertId) {
-  return distanceCache.putIfAbsent(alertId, () {
-    return haversineDistance(...);
-  });
-}
-```
-
-### 3. Batch process alerts
-
-```dart
-// ✅ Good
-final queue = AlertPriorityQueue();
-queue.insertAll(scoredAlerts);  // Batch insert
-
-final top10 = queue.peekN(10);  // Batch peek
-```
-
----
-
-## Testing Guidelines
-
-### Unit Test Coverage
-
-Mỗi algorithm cần test:
-
-1. **Happy path**: Input thông thường
-2. **Edge cases**: Empty, null, boundary values
-3. **Performance**: Large datasets
-4. **Accuracy**: So sánh với expected results
-
-### Example Test Cases
-
-**Alert Scoring**:
-```
-✓ Critical > High > Medium > Low
-✓ Nearby > Far
-✓ New > Old
-✓ Matching audience > Non-matching
-✓ Custom weights work correctly
-```
-
-**Priority Queue**:
-```
-✓ Extract in correct order
-✓ Heap property maintained
-✓ Handle duplicates
-✓ Performance with 1000+ items
-```
-
-**Deduplication**:
-```
-✓ Identical content = 1.0 similarity
-✓ Different content = low similarity
-✓ Filter removes duplicates
-✓ Clustering works correctly
-```
-
----
-
-## References
+## 6. References
 
 ### Academic Papers
-- ["Efficient Priority Queue"](https://en.wikipedia.org/wiki/Heap_(data_structure))
-- ["Similarity Measures"](https://en.wikipedia.org/wiki/Jaccard_index)
+- [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula)
+- [Heap Data Structure](https://en.wikipedia.org/wiki/Heap_(data_structure))
+- [Jaccard Index](https://en.wikipedia.org/wiki/Jaccard_index)
+- [Exponential Decay](https://en.wikipedia.org/wiki/Exponential_decay)
+- [Thompson Sampling](https://en.wikipedia.org/wiki/Thompson_sampling)
+- [Contraction Hierarchies](https://en.wikipedia.org/wiki/Contraction_hierarchies)
+
+### ML Libraries
+- [XGBoost](https://xgboost.readthedocs.io/)
+- [Scikit-learn Random Forest](https://scikit-learn.org/)
+- [Sentence Transformers](https://www.sbert.net/)
 
 ### Implementation Guides
-- Flutter Performance Best Practices
-- Dart Math Library Documentation
-- Firebase Cloud Messaging Guidelines
+- [OSRM API Documentation](http://project-osrm.org/docs/)
+- [Flutter Performance Best Practices](https://docs.flutter.dev/perf)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 
 ---
 
-**Cập nhật**: 2024  
-**Version**: 1.0.0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+**Cập nhật**: Tháng 01/2026  
+**Version**: 2.0.0  
+**Tác giả**: Team AppThienTai
